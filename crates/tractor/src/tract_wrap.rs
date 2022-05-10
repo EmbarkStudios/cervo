@@ -1,7 +1,7 @@
 #![allow(clippy::explicit_counter_loop)]
 
 use super::inferer::{Inferer, Observation, Response};
-use anyhow::{bail, Error};
+use anyhow::{bail, Error, Result};
 use rand_distr::{Distribution, Normal};
 use std::collections::HashMap;
 
@@ -12,21 +12,19 @@ use tract_core::{
 use tract_hir::{infer::Factoid, prelude::*, shapefactoid};
 
 pub struct TractInstance {
-    plan_single: TypedSimplePlan<TypedModel>,
-    plan_batched: TypedSimplePlan<TypedModel>,
-
     normal_distribution: Normal<f32>,
-    count: usize,
-    batch_size: usize,
-
+    symbol: Symbol,
+    model: TypedModel,
     inputs: Vec<(String, Vec<usize>)>,
     outputs: Vec<(String, Vec<usize>)>,
+
+    model_cache: HashMap<usize, TypedSimplePlan<TypedModel>>,
 }
 
-pub fn create_plan_with_batchsize(
+pub fn build_model(
     mut model: InferenceModel,
     inputs: &[(String, Vec<usize>)],
-) -> TractResult<TypedSimplePlan<TypedModel>> {
+) -> Result<(Symbol, TypedModel)> {
     let s = Symbol::new('N');
     for (idx, (_name, shape)) in inputs.iter().enumerate() {
         let mut full_shape = tvec!(s.to_dim());
@@ -36,14 +34,12 @@ pub fn create_plan_with_batchsize(
     }
 
     // optimize the model and get an execution plan
-    let model = model.into_optimized()?;
-
-    let plan = SimplePlan::new(model)?;
-    Ok(plan)
+    let model = model.into_typed()?.into_decluttered()?;
+    Ok((s, model))
 }
 
 impl TractInstance {
-    pub fn from_model(model: InferenceModel, batch_size: usize) -> TractResult<Self> {
+    pub fn from_model(model: InferenceModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
         let mut inputs: Vec<(String, Vec<usize>)> = Default::default();
 
         for input_outlet in model.input_outlets()? {
@@ -80,20 +76,24 @@ impl TractInstance {
             ));
         }
 
-        let plan_single = create_plan_with_batchsize(model.clone(), &inputs)?;
+        let (symbol, model) = build_model(model, &inputs)?;
+        let mut this = Self {
+            symbol,
+            model,
 
-        let plan_batched = create_plan_with_batchsize(model.clone(), &inputs)?;
-
-        Ok(Self {
-            plan_single,
-            plan_batched,
-
-            batch_size,
             normal_distribution: Normal::new(0.0, 1.0).unwrap(),
-            count: 0,
+
             inputs,
             outputs,
-        })
+
+            model_cache: Default::default(),
+        };
+
+        for size in preloaded_sizes {
+            this.get_concrete_model(*size)?;
+        }
+
+        Ok(this)
     }
 
     fn build_inputs(&mut self, obs: Vec<Observation>) -> (TVec<Tensor>, usize) {
@@ -145,53 +145,29 @@ impl TractInstance {
         (inputs, size)
     }
 
-    pub fn infer_single(
-        &mut self,
-        obs: Vec<Observation>,
-        vec_out: &mut Vec<Response>,
-    ) -> TractResult<()> {
-        let (inputs, count) = self.build_inputs(obs);
-        // Run the optimized plan to get actions back!
-        let result = self.plan_single.run(inputs)?;
+    fn get_concrete_model(&mut self, size: usize) -> Result<&TypedSimplePlan<TypedModel>> {
+        if !self.model_cache.contains_key(&size) {
+            let p = self
+                .model
+                .concretize_dims(&SymbolValues::default().with(self.symbol, size as i64))?
+                .into_optimized()?
+                .into_decluttered()?
+                .into_runnable()?;
 
-        for _ in 0..count {
-            vec_out.push(Response {
-                response: Default::default(),
-            });
+            self.model_cache.insert(size, p);
         }
 
-        for (idx, (name, shape)) in self.outputs.iter().enumerate() {
-            for (response_idx, value) in result[idx]
-                .to_array_view::<f32>()?
-                .as_slice()
-                .unwrap()
-                .chunks(shape.iter().product())
-                .map(|value| value.to_vec())
-                .enumerate()
-            {
-                vec_out[response_idx]
-                    .response
-                    .insert(name.to_owned(), value);
-            }
-        }
-
-        Ok(())
+        Ok(&self.model_cache[&size])
     }
-
     pub fn infer_batched(
         &mut self,
         obs: Vec<Observation>,
         vec_out: &mut Vec<Response>,
     ) -> TractResult<()> {
         let (inputs, count) = self.build_inputs(obs);
-        // Run the optimized plan to get actions back!
-        let result = self.plan_batched.run(inputs)?;
 
-        for _ in 0..count {
-            vec_out.push(Response {
-                response: Default::default(),
-            });
-        }
+        // Run the optimized plan to get actions back!
+        let result = self.get_concrete_model(count)?.run(inputs)?;
 
         for (idx, (name, shape)) in self.outputs.iter().enumerate() {
             for (response_idx, value) in result[idx]
@@ -218,11 +194,7 @@ impl TractInstance {
         let mut responses: Vec<Response> = vec![Response::default(); observations.len()];
         let (ids, obs): (Vec<_>, Vec<_>) = observations.into_iter().unzip();
 
-        if obs.len() == 1 {
-            self.infer_single(obs, &mut responses)?;
-        } else {
-            self.infer_batched(obs, &mut responses)?;
-        }
+        self.infer_batched(obs, &mut responses)?;
 
         let results: HashMap<u64, Response> = ids.into_iter().zip(responses.drain(..)).collect();
 

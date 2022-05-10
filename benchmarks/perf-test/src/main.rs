@@ -23,8 +23,9 @@ fn try_load_local_model(filename: &str, bs: usize) -> Result<TractInstance, Erro
     let tract = if bs == 1 {
         inferer_from_stream(&mut file)
     } else {
-        batched_inferer_from_stream(&mut file, bs)
+        batched_inferer_from_stream(&mut file, &[1, bs])
     };
+
     if tract.is_ok() {
         Ok(tract.unwrap())
     } else {
@@ -65,7 +66,7 @@ fn measure_per_step_time(file: &str, count: u64, observations: &HashMap<u64, Obs
     for bs in 1..count + 2 {
         let mut instance = try_load_local_model(file, bs as usize).unwrap();
 
-        for step in 0..100 {
+        for step in 0..10 {
             let o = observations.clone();
             let start = Instant::now();
             instance.infer(o).unwrap();

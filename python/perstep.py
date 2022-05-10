@@ -23,6 +23,7 @@ def main(statsfile, bs):
     plt.title(f"Time per element (batch={bs})")
 
     # adding Label to the x-axis
+    plt.ylim(top=1000, bottom=0)
     plt.xlabel("step")
     plt.ylabel("us")
     # adding legend to the curve

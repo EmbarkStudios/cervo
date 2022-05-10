@@ -11,13 +11,13 @@ pub fn inferer_from_stream(reader: &mut dyn Read) -> Result<TractInstance> {
     let onnx = tract_onnx::onnx();
     let model = onnx.model_for_read(reader)?;
 
-    TractInstance::from_model(model, 1)
+    TractInstance::from_model(model, &[1])
 }
 
 /// Create an batched inferer from the provided bytes reader
 pub fn batched_inferer_from_stream(
     reader: &mut dyn Read,
-    batch_size: usize,
+    batch_size: &[usize],
 ) -> Result<TractInstance> {
     let onnx = tract_onnx::onnx();
     let model = onnx.model_for_read(reader)?;
