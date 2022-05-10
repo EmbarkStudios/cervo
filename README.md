@@ -9,10 +9,8 @@
 <!--- FIXME: Pick an emoji and name your project! --->
 # `🚜 tractor`
 
-<!--- FIXME: Write short catchy description/tagline of project --->
-**Template for creating new open source repositories that follow the Embark open source guidelines**
 
-<!--- FIXME: Update crate, repo and CI workflow names here! Remove any that are not relevant --->
+**Wrapper around [tract](https://github.com/sonos/tract) used for ML workloads in our games.**
 
 [![Embark](https://img.shields.io/badge/embark-open%20source-blueviolet.svg)](https://embark.dev)
 [![Embark](https://img.shields.io/badge/discord-ark-%237289da.svg?logo=discord)](https://discord.gg/dAuKfZS)
