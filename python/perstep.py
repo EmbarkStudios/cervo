@@ -14,7 +14,7 @@ def main(statsfile, bs):
     fig, ax = plt.subplots()
 
     for count in range(1, 11):
-        data.where((data["batch_size"] == count) & (data["count"] == bs)).plot(
+        data.where((data["batch_size"] == bs) & (data["count"] == count)).plot(
             x="step", y="t", ax=ax, label=f"count={count}"
         )
 
