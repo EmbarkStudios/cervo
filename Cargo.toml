@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "crates/tractor",
+    "benchmarks/perf-test"
+]

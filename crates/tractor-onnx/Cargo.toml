@@ -1,0 +1,15 @@
+[package]
+name = "tractor-onnx"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Tom Solberg <tom.solberg@embark-studios.com"
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.57"
+tract-onnx = { version = "^0.16" }
+tract-nnef = { version = "^0.16" }
+tractor = { path = "../tractor" }
