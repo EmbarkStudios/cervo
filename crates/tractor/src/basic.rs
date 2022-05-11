@@ -1,12 +1,12 @@
 #![allow(clippy::explicit_counter_loop)]
 
-use crate::model_api::ModelAPI;
-
+/**
+A basic unbatched inferer that doesn't require a lot of custom setup or management.
+ */
 use super::inferer::{Inferer, Observation, Response};
-use anyhow::{bail, Error, Result};
-
+use crate::model_api::ModelAPI;
+use anyhow::{Error, Result};
 use std::collections::HashMap;
-
 use tract_core::{ndarray::IntoDimension, prelude::*};
 use tract_hir::prelude::*;
 
@@ -30,13 +30,28 @@ fn build_model(
     Ok(model)
 }
 
+/// The most basic inferer provided will deal with a single element at
+/// a time, at the cost of performance.
+///
+/// # Pros
+///
+/// * Requires no tuning
+/// * Very predictable performance across different workloads
+///
+/// # Cons
+///
+/// * Scales linearly unless it's the only code executing
 pub struct BasicInferer {
     model: TypedSimplePlan<TypedModel>,
-
     model_api: ModelAPI,
 }
 
 impl BasicInferer {
+    /// Create an inferer for the provided `inference` model.
+    ///
+    /// # Errors
+    ///
+    /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel) -> TractResult<Self> {
         let model_api = ModelAPI::for_model(&model)?;
         let model = build_model(model, &model_api.inputs)?;
@@ -67,6 +82,11 @@ impl BasicInferer {
         inputs
     }
 
+    /// Run a single pass through the model.
+    ///
+    /// # Errors
+    ///
+    /// Will only forward errors from the [`tract_core::plan::SimplePlan::run`] call.
     pub fn infer_once(&mut self, obs: Observation) -> TractResult<Response> {
         let inputs = self.build_inputs(obs);
 
@@ -87,19 +107,6 @@ impl BasicInferer {
 
         Ok(response)
     }
-
-    pub fn infer_tract(
-        &mut self,
-        observations: HashMap<u64, Observation>,
-    ) -> TractResult<HashMap<u64, Response>> {
-        let mut responses = HashMap::default();
-        for (id, obs) in observations.into_iter() {
-            let response = self.infer_once(obs)?;
-            responses.insert(id, response);
-        }
-
-        Ok(responses)
-    }
 }
 
 impl Inferer for BasicInferer {
@@ -107,11 +114,13 @@ impl Inferer for BasicInferer {
         &mut self,
         observations: HashMap<u64, Observation>,
     ) -> Result<HashMap<u64, Response>, Error> {
-        let tract_result = self.infer_tract(observations);
-        match tract_result {
-            Ok(results) => Ok(results),
-            Err(error) => bail!(format!("{:?}", error)),
+        let mut responses = HashMap::default();
+        for (id, obs) in observations.into_iter() {
+            let response = self.infer_once(obs)?;
+            responses.insert(id, response);
         }
+
+        Ok(responses)
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {
