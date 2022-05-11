@@ -39,35 +39,3 @@ pub fn fixed_batch_inferer_from_stream(
     let model = model_for_reader(reader)?;
     FixedBatchingInferer::from_model(model, batch_size)
 }
-
-/// Convert an ONNX model to a NNEF model.
-pub fn to_nnef(reader: &mut dyn Read) -> Result<Vec<u8>> {
-    let mut model = model_for_reader(reader)?;
-
-    let batch = Symbol::new('N');
-    let input_outlets = model.input_outlets()?.to_vec();
-
-    for input_outlet in input_outlets {
-        let input_shape = &model.input_fact(input_outlet.node)?.shape;
-        let mut shape: Vec<_> = input_shape
-            .dims()
-            .skip(1)
-            .map(|fact| fact.concretize().unwrap())
-            .collect();
-
-        shape.insert(0, batch.to_dim());
-
-        model.set_input_fact(
-            input_outlet.node,
-            InferenceFact::dt_shape(DatumType::F32, &shape),
-        )?;
-    }
-
-    let model = model.into_typed()?.into_decluttered()?;
-
-    let mut output = vec![];
-    let nnef = tract_nnef::nnef().with_tract_core().with_onnx();
-
-    nnef.write(&model, &mut output)?;
-    Ok(output)
-}
