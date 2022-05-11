@@ -1,26 +1,39 @@
 // Author: Tom Solberg <tom.solberg@embark-studios.com>
-// Copyright © 2022, Tom Solberg, all rights reserved.
+// Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 11 May 2022
 
 /*!
-
+Utilities
 */
-
-use std::collections::HashMap;
 
 use crate::inferer::{Inferer, Observation, Response};
 use anyhow::{bail, Result};
+use perchance::PerchanceContext;
 use rand::thread_rng;
 use rand_distr::{Distribution, StandardNormal};
+use std::collections::HashMap;
 
-use perchance::PerchanceContext;
-
+/// NoiseGenerators are consumed by the [`EpsilonInjector`] by generating noise sampled for a standard normal
+/// distribution. Custom noise-generators can be implemented and passed via [`EpsilonInjector::with_generator`].
 pub trait NoiseGenerator: Default {
     fn generate(&mut self, count: usize) -> Vec<f32>;
 }
 
+/// A low quality noise generator which is about twice as fast as the built-in [`HighQualityNoiseGenerator`]. This uses
+/// an XORSHIFT algorithm internally which isn't cryptographically secure.
+///
+/// The default implementation will seed the generator from the current time.
 pub struct LowQualityNoiseGenerator {
     ctx: PerchanceContext,
+}
+
+impl LowQualityNoiseGenerator {
+    /// Create a new LQNG with the provided fixed seed.
+    pub fn new(seed: u128) -> Self {
+        Self {
+            ctx: PerchanceContext::new(seed),
+        }
+    }
 }
 
 impl Default for LowQualityNoiseGenerator {
@@ -32,11 +45,17 @@ impl Default for LowQualityNoiseGenerator {
 }
 
 impl NoiseGenerator for LowQualityNoiseGenerator {
+    /// Generate `count` random values.
     fn generate(&mut self, count: usize) -> Vec<f32> {
         (0..count).map(|_| self.ctx.normal_f32()).collect()
     }
 }
 
+/// A high quality noise generator which is measurably slower than the LQGN, but still fast enough for most real-time
+/// use-cases.
+///
+/// This implementation uses [`rand::thread_rng`] internally as the entropy source, and uses the optimized
+/// StandardNormal distribution for sampling.
 pub struct HighQualityNoiseGenerator {
     normal_distribution: StandardNormal,
 }
@@ -48,7 +67,9 @@ impl Default for HighQualityNoiseGenerator {
         }
     }
 }
+
 impl NoiseGenerator for HighQualityNoiseGenerator {
+    /// Generate `count` random values.
     fn generate(&mut self, count: usize) -> Vec<f32> {
         let mut rng = thread_rng();
         (0..count)
@@ -57,6 +78,12 @@ impl NoiseGenerator for HighQualityNoiseGenerator {
     }
 }
 
+/// The [`EpsilonInjector`] wraps an inferer to add noise values as one of the input data points. This is useful for
+/// continuous action policies where you might have trained your agent to follow a stochastic policy trained with the
+/// reparametrization trick.
+///
+/// Note that it's fully possible to pass an epsilon directly in your observation, and this is purely a convenience
+/// wrapper.
 pub struct EpsilonInjector<T: Inferer, NG: NoiseGenerator = HighQualityNoiseGenerator> {
     inner: T,
     key: String,

@@ -1,5 +1,5 @@
 // Author: Tom Solberg <tom.solberg@embark-studios.com>
-// Copyright © 2022, Tom Solberg, all rights reserved.
+// Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 10 May 2022
 
 use tractor::{EpsilonInjector, Inferer};
