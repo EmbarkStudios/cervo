@@ -2,9 +2,7 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 11 May 2022
 
-/*!
-
-*/
+#![allow(dead_code)]
 
 use std::{collections::HashMap, fs::File, path};
 

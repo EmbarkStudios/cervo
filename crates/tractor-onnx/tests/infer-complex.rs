@@ -2,10 +2,6 @@
 // Copyright © 2022, Tom Solberg, all rights reserved.
 // Created: 10 May 2022
 
-/*!
-
-*/
-
 use tractor::{EpsilonInjector, Inferer};
 use tractor_onnx::{
     batched_inferer_from_stream, fixed_batch_inferer_from_stream, simple_inferer_from_stream,

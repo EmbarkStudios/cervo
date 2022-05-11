@@ -6,15 +6,22 @@
 
 */
 
-use std::path;
 use tractor_onnx::to_nnef;
+
+#[path = "./helpers.rs"]
+mod helpers;
+
+#[test]
+fn test_to_nnef_simple() {
+    let mut reader = helpers::get_file("test.onnx").unwrap();
+
+    let result = to_nnef(&mut reader);
+    result.unwrap();
+}
 
 #[test]
 fn test_to_nnef_complex() {
-    let crate_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-    let mut path = path::PathBuf::from(&crate_dir);
-    path.push("foo.onnx");
-    let mut reader = std::fs::File::open(path).unwrap();
+    let mut reader = helpers::get_file("test-complex.onnx").unwrap();
 
     let result = to_nnef(&mut reader);
     result.unwrap();
