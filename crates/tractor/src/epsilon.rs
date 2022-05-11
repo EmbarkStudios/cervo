@@ -122,9 +122,10 @@ where
     }
 }
 
-impl<T> Inferer for EpsilonInjector<T>
+impl<T, NG> Inferer for EpsilonInjector<T, NG>
 where
     T: Inferer,
+    NG: NoiseGenerator,
 {
     fn infer(
         &mut self,

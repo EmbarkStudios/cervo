@@ -7,8 +7,6 @@
 */
 
 use std::{
-    collections::HashMap,
-    fmt::write,
     io::Write,
     path::{Path, PathBuf},
     time::{Duration, Instant},
@@ -16,10 +14,7 @@ use std::{
 
 use anyhow::Result;
 use structopt::StructOpt;
-use tractor::{
-    DynamicBatchingInferer, EpsilonInjector, FixedBatchingInferer, HighQualityNoiseGenerator,
-    Inferer, Observation,
-};
+use tractor::{EpsilonInjector, Inferer};
 use tractor_onnx::{
     batched_inferer_from_stream, fixed_batch_inferer_from_stream, simple_inferer_from_stream,
 };
@@ -57,15 +52,13 @@ fn execute_steps(
 
     let mut measurements = vec![];
     for step in 0..steps {
-        let (obs, denom) = if batch_size > 0 {
-            (observations.clone(), batch_size)
+        let obs = if batch_size > 0 {
+            observations.clone()
         } else {
             let batch_size = perchance::global().uniform_range_usize(1..10);
-            (
-                crate::helpers::build_inputs_from_desc(batch_size as u64, inferer.input_shapes()),
-                batch_size,
-            )
+            crate::helpers::build_inputs_from_desc(batch_size as u64, inferer.input_shapes())
         };
+
         let start = Instant::now();
         let res = inferer.infer(obs)?;
         black_box(&res);

@@ -9,7 +9,6 @@ use tract_hir::prelude::*;
 
 pub struct FixedBatchingInferer {
     model_api: ModelAPI,
-
     models: Vec<BatchedModel>,
 }
 
@@ -109,7 +108,7 @@ impl FixedBatchingInferer {
         if !sizes.contains(&1) {
             sizes.push(1);
         }
-        sizes.sort();
+        sizes.sort_unstable();
         sizes.reverse();
 
         let models = sizes

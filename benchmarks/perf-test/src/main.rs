@@ -6,37 +6,22 @@
 #![warn(rust_2018_idioms)]
 
 mod compare_batchers;
+mod compare_noise;
 mod helpers;
 
-use anyhow::Error;
 use compare_batchers::BatcherComparison;
-use tractor::{Inferer, Observation};
-use tractor_onnx::batched_inferer_from_stream;
+use compare_noise::NoiseComparison;
 
-use std::collections::HashMap;
-use std::fs::File;
 use std::path::PathBuf;
-use std::time::Instant;
 
 use structopt::StructOpt;
-
-// fn try_load_local_model(filename: &str, bs: usize) -> Result<TractInstance, Error> {
-//     let mut file = File::open(filename)?;
-
-//     let tract = if bs == 1 {
-//         inferer_from_stream(&mut file)
-//     } else {
-//         batched_inferer_from_stream(&mut file, &[1, bs])
-//     };
-
-//     tract.map_err(|err| anyhow::anyhow!("Failed to load model from file: {}, {:?}", filename, err))
-// }
 
 #[derive(Debug, StructOpt)]
 enum MeasureMode {
     BatchScaling,
     PerStep,
     Batchers(BatcherComparison),
+    Noise(NoiseComparison),
 }
 
 #[derive(Debug, StructOpt)]
@@ -102,6 +87,9 @@ fn main() {
         MeasureMode::PerStep => {} //measure_per_step_time(&args.file, count, &observations),
         MeasureMode::Batchers(config) => {
             compare_batchers::execute_comparison(&args.file, config).unwrap()
+        }
+        MeasureMode::Noise(config) => {
+            compare_noise::execute_comparison(&args.file, config).unwrap()
         }
     }
 }
