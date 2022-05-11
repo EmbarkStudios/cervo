@@ -3,7 +3,7 @@
 // Created: 11 May 2022
 
 /*!
-Utilities
+Utilities for filling noise inputs for an inference model.
 */
 
 use crate::inferer::{Inferer, Observation, Response};
@@ -96,20 +96,15 @@ impl<T> EpsilonInjector<T, HighQualityNoiseGenerator>
 where
     T: Inferer,
 {
+    /// Wraps the provided `inferer` to automatically generate noise for the input named by `key`.
+    ///
+    /// This function will use [`HighQualityNoiseGenerator`] as the noise source.
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if the provided key doesn't match an input on the model.
     pub fn wrap(inferer: T, key: &str) -> Result<EpsilonInjector<T, HighQualityNoiseGenerator>> {
-        let inputs = inferer.input_shapes();
-
-        let count = match inputs.iter().find(|(k, _)| k == key) {
-            Some((_, shape)) => shape.iter().product(),
-            None => bail!("model has no input key {:?}", key),
-        };
-
-        Ok(Self {
-            inner: inferer,
-            key: key.to_owned(),
-            count,
-            generator: HighQualityNoiseGenerator::default(),
-        })
+        Self::with_generator(inferer, HighQualityNoiseGenerator::default(), key)
     }
 }
 
@@ -118,6 +113,11 @@ where
     T: Inferer,
     NG: NoiseGenerator,
 {
+    /// Create a new injector for the provided `key`, using the custom `generator` as the noise source.
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if the provided key doesn't match an input on the model.
     pub fn with_generator(inferer: T, generator: NG, key: &str) -> Result<Self> {
         let inputs = inferer.input_shapes();
 
@@ -133,13 +133,7 @@ where
             generator,
         })
     }
-}
 
-impl<T, NG> EpsilonInjector<T, NG>
-where
-    T: Inferer,
-    NG: NoiseGenerator,
-{
     fn inject_epsilons(&mut self, observations: &mut HashMap<u64, Observation>) -> Result<()> {
         for v in observations.values_mut() {
             v.data
