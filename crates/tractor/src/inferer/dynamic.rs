@@ -1,4 +1,4 @@
-/**
+/*!
 The dynamic batcher has the highest potential throughput when the amount of data isn't known. It does so by dynamically
 generating execution plans to fit the exact amount of elements in each batch. The downside of this is that setting up a
 new plan is fairly costly, so doing this for a batch size that is only seen once will be a waste of energy.

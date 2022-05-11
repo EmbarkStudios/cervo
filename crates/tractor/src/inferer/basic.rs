@@ -1,6 +1,4 @@
-#![allow(clippy::explicit_counter_loop)]
-
-/**
+/*!
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
 use super::{Inferer, Response, State};

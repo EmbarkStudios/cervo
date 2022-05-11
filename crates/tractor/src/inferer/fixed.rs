@@ -1,4 +1,4 @@
-/**
+/*!
 A reliable batched inferer that is a good fit if you know how much data you'll have and want stable performance.
 
 As an added bonus, it'll subdivide your data into minibatches if the batching doesn't fit perfectly. To make this ork,
