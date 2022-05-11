@@ -4,9 +4,6 @@
 
 #![warn(clippy::all)]
 
-/*!
-*/
-
 use anyhow::Error;
 use std::collections::HashMap;
 
