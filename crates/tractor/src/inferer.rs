@@ -17,11 +17,6 @@ pub struct Response {
     pub data: HashMap<String, Vec<f32>>,
 }
 
-#[derive(Clone)]
-pub struct ModelData {
-    pub data: Vec<u8>,
-}
-
 pub trait Inferer {
     fn infer(&mut self, observations: HashMap<u64, State>)
         -> Result<HashMap<u64, Response>, Error>;
