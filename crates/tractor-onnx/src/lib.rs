@@ -1,8 +1,7 @@
 /// Contains utilities for using tractor with ONNX.
 use anyhow::Result;
 use std::io::Read;
-use tract_onnx::WithOnnx;
-use tract_onnx::{prelude::*, tract_hir::infer::Factoid};
+use tract_onnx::prelude::*;
 use tractor::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 
 fn model_for_reader(reader: &mut dyn Read) -> Result<InferenceModel> {
