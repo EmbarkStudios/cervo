@@ -1,21 +1,36 @@
-#![allow(clippy::explicit_counter_loop)]
+/**
+The dynamic batcher has the highest potential throughput when the amount of data isn't known. It does so by dynamically
+generating execution plans to fit the exact amount of elements in each batch. The downside of this is that setting up a
+new plan is fairly costly, so doing this for a batch size that is only seen once will be a waste of energy.
 
+While plans are cached; this still means that if your expected batch size is between 1 and 100 elements, you'll end up
+with noticeable spikes each time a new plan is generated. If you know you'll have one or a few batch sizes - but not the
+exact value - this batcher will end up providing good value and inform tuning for a fixed batcher later.
+
+If you know some batch sizes but not all, you can preload the dynamic batcher with those plans to avoid having to build
+them at runtime.
+*/
+use super::{Inferer, Response, State};
 use crate::model_api::ModelAPI;
-
-use super::inferer::{Inferer, Response, State};
-use anyhow::{bail, Error, Result};
-
+use anyhow::{Error, Result};
 use std::collections::{hash_map::Entry, HashMap};
-
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
 
+/// The dynamic batch inferer generates (cached) execution plans to fit each batch perfectly, achieving near-perfect performance no matter how much data you have - with a hefty up-front cost for each new batch size.
+///
+/// # Pros
+///
+/// * Optimal amortized performance without tuning
+/// * Requires no tuning for good results
+///
+/// # Cons
+///
+/// * For small amounts of data and large models the spikes can offset amortized gains signifcantly
 pub struct DynamicBatchingInferer {
     symbol: Symbol,
     model: TypedModel,
-
     model_api: ModelAPI,
-
     model_cache: HashMap<usize, TypedSimplePlan<TypedModel>>,
 }
 
@@ -37,6 +52,11 @@ fn build_model(
 }
 
 impl DynamicBatchingInferer {
+    /// Create an inferer for the provided `inference` model.
+    ///
+    /// # Errors
+    ///
+    /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
         let model_api = ModelAPI::for_model(&model)?;
 
@@ -100,7 +120,8 @@ impl DynamicBatchingInferer {
 
         Ok(&self.model_cache[&size])
     }
-    pub fn infer_batched(&mut self, obs: Vec<State>, vec_out: &mut [Response]) -> TractResult<()> {
+
+    fn infer_batched(&mut self, obs: Vec<State>, vec_out: &mut [Response]) -> TractResult<()> {
         let (inputs, count) = self.build_inputs(obs);
 
         // Run the optimized plan to get actions back!
@@ -121,11 +142,13 @@ impl DynamicBatchingInferer {
 
         Ok(())
     }
+}
 
-    pub fn infer_tract(
+impl Inferer for DynamicBatchingInferer {
+    fn infer(
         &mut self,
         observations: HashMap<u64, State>,
-    ) -> TractResult<HashMap<u64, Response>> {
+    ) -> Result<HashMap<u64, Response>, Error> {
         let mut responses: Vec<Response> = vec![Response::default(); observations.len()];
         let (ids, obs): (Vec<_>, Vec<_>) = observations.into_iter().unzip();
 
@@ -134,19 +157,6 @@ impl DynamicBatchingInferer {
         let results: HashMap<u64, Response> = ids.into_iter().zip(responses.drain(..)).collect();
 
         Ok(results)
-    }
-}
-
-impl Inferer for DynamicBatchingInferer {
-    fn infer(
-        &mut self,
-        observations: HashMap<u64, State>,
-    ) -> Result<HashMap<u64, Response>, Error> {
-        let tract_result = self.infer_tract(observations);
-        match tract_result {
-            Ok(results) => Ok(results),
-            Err(error) => bail!(format!("{:?}", error)),
-        }
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

@@ -1,16 +1,12 @@
 // Hive modules.
 
-mod basic;
-mod dynamic;
 pub mod epsilon;
-mod fixed;
-mod inferer;
+pub mod inferer;
 mod model_api;
 
-pub use basic::BasicInferer;
-pub use dynamic::DynamicBatchingInferer;
+pub use model_api::ModelAPI;
+
 pub use epsilon::{
     EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
 };
-pub use fixed::FixedBatchingInferer;
-pub use inferer::{Inferer, State};
+pub use inferer::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer, Inferer, State};

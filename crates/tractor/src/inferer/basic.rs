@@ -3,7 +3,7 @@
 /**
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
-use super::inferer::{Inferer, Response, State};
+use super::{Inferer, Response, State};
 use crate::model_api::ModelAPI;
 use anyhow::{Error, Result};
 use std::collections::HashMap;
