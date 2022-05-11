@@ -127,13 +127,15 @@ impl FixedBatchingInferer {
         obs: Vec<Observation>,
         vec_out: &mut [Response],
     ) -> TractResult<()> {
+        let mut offset = 0;
         let mut count = obs.len();
         let mut obs = obs.into_iter();
 
         for plan in &mut self.models {
             while (count / plan.size) > 0 {
-                plan.execute(&mut obs, &self.model_api, vec_out)?;
+                plan.execute(&mut obs, &self.model_api, &mut vec_out[offset..])?;
                 count -= plan.size;
+                offset += plan.size;
             }
         }
 
