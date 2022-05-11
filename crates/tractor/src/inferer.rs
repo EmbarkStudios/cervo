@@ -14,7 +14,7 @@ pub struct State {
 
 #[derive(Clone, Debug, Default)]
 pub struct Response {
-    pub response: HashMap<String, Vec<f32>>,
+    pub data: HashMap<String, Vec<f32>>,
 }
 
 #[derive(Clone)]

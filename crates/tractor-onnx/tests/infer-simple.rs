@@ -25,5 +25,5 @@ fn test_infer_once_simple() {
 
     let result = result.unwrap();
     assert_eq!(result.len(), 1);
-    assert_eq!(result[&0].response["Identity"].len(), 1);
+    assert_eq!(result[&0].data["Identity"].len(), 1);
 }

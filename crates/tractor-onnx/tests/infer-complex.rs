@@ -23,7 +23,7 @@ fn test_infer_once_complex() {
     assert!(result.is_ok());
     let result = result.unwrap();
     assert_eq!(result.len(), 1);
-    assert_eq!(result[&0].response["tanh_stretch"].len(), 36);
+    assert_eq!(result[&0].data["tanh_stretch"].len(), 36);
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn test_infer_once_complex_batched() {
 
     let result = result.unwrap();
     assert_eq!(result.len(), 10);
-    assert_eq!(result[&0].response["tanh_stretch"].len(), 36);
+    assert_eq!(result[&0].data["tanh_stretch"].len(), 36);
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn test_infer_once_complex_batched_not_loaded() {
 
     let result = result.unwrap();
     assert_eq!(result.len(), 10);
-    assert_eq!(result[&0].response["tanh_stretch"].len(), 36);
+    assert_eq!(result[&0].data["tanh_stretch"].len(), 36);
 }
 
 #[test]
@@ -80,5 +80,5 @@ fn test_infer_once_complex_fixed_batch() {
 
     let result = result.unwrap();
     assert_eq!(result.len(), 7);
-    assert_eq!(result[&0].response["tanh_stretch"].len(), 36);
+    assert_eq!(result[&0].data["tanh_stretch"].len(), 36);
 }

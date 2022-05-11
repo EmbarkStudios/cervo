@@ -71,9 +71,7 @@ impl BatchedModel {
                 .map(|value| value.to_vec())
                 .enumerate()
             {
-                vec_out[response_idx]
-                    .response
-                    .insert(name.to_owned(), value);
+                vec_out[response_idx].data.insert(name.to_owned(), value);
             }
         }
 

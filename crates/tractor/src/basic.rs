@@ -95,7 +95,7 @@ impl BasicInferer {
 
         let mut response = Response::default();
         for (idx, (name, _)) in self.model_api.outputs.iter().enumerate() {
-            response.response.insert(
+            response.data.insert(
                 name.clone(),
                 result[idx]
                     .to_array_view::<f32>()?
