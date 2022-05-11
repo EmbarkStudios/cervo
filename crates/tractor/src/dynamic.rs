@@ -1,27 +1,25 @@
 #![allow(clippy::explicit_counter_loop)]
 
+use crate::model_api::ModelAPI;
+
 use super::inferer::{Inferer, Observation, Response};
 use anyhow::{bail, Error, Result};
-use rand_distr::{Distribution, Normal};
-use std::collections::HashMap;
 
-use tract_core::{
-    ndarray::{Dim, IntoDimension},
-    prelude::*,
-};
-use tract_hir::{infer::Factoid, prelude::*, shapefactoid};
+use std::collections::{hash_map::Entry, HashMap};
 
-pub struct TractInstance {
-    normal_distribution: Normal<f32>,
+use tract_core::prelude::*;
+use tract_hir::prelude::*;
+
+pub struct DynamicBatchingInferer {
     symbol: Symbol,
     model: TypedModel,
-    inputs: Vec<(String, Vec<usize>)>,
-    outputs: Vec<(String, Vec<usize>)>,
+
+    model_api: ModelAPI,
 
     model_cache: HashMap<usize, TypedSimplePlan<TypedModel>>,
 }
 
-pub fn build_model(
+fn build_model(
     mut model: InferenceModel,
     inputs: &[(String, Vec<usize>)],
 ) -> Result<(Symbol, TypedModel)> {
@@ -38,54 +36,16 @@ pub fn build_model(
     Ok((s, model))
 }
 
-impl TractInstance {
+impl DynamicBatchingInferer {
     pub fn from_model(model: InferenceModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
-        let mut inputs: Vec<(String, Vec<usize>)> = Default::default();
+        let model_api = ModelAPI::for_model(&model)?;
 
-        for input_outlet in model.input_outlets()? {
-            let node = model.node(input_outlet.node);
-            let name = node.name.split(':').next().unwrap().to_owned();
-            let input_shape = &model.input_fact(input_outlet.node)?.shape;
-
-            inputs.push((
-                name,
-                input_shape
-                    .dims()
-                    .filter_map(|value| value.concretize().map(|v| v.to_i64().unwrap() as usize))
-                    .collect(),
-            ));
-        }
-
-        let mut outputs: Vec<(String, Vec<usize>)> = Default::default();
-
-        for output_outlet in &model.outputs {
-            let name = model.outlet_labels[output_outlet]
-                .split(':')
-                .next()
-                .unwrap()
-                .to_owned();
-
-            let output_shape = &model.output_fact(output_outlet.slot)?.shape;
-
-            outputs.push((
-                name,
-                output_shape
-                    .dims()
-                    .filter_map(|value| value.concretize().map(|v| v.to_i64().unwrap() as usize))
-                    .collect(),
-            ));
-        }
-
-        let (symbol, model) = build_model(model, &inputs)?;
+        let (symbol, model) = build_model(model, &model_api.inputs)?;
         let mut this = Self {
             symbol,
             model,
 
-            normal_distribution: Normal::new(0.0, 1.0).unwrap(),
-
-            inputs,
-            outputs,
-
+            model_api,
             model_cache: Default::default(),
         };
 
@@ -101,52 +61,33 @@ impl TractInstance {
         let mut inputs = TVec::default();
         let mut named_inputs = TVec::default();
 
-        for (name, shape) in self.inputs.iter() {
-            if name == "epsilon" {
-                let full_shape = tvec![size, shape.iter().product()];
+        for (name, shape) in &self.model_api.inputs {
+            let mut full_shape = tvec![size];
+            full_shape.extend_from_slice(shape);
 
-                named_inputs.push((name, (full_shape, vec![])));
-            } else {
-                let mut full_shape = tvec![size];
-                full_shape.extend_from_slice(&shape);
-                let total_count = full_shape.iter().product();
-                named_inputs.push((name, (full_shape, Vec::with_capacity(total_count))));
-            }
+            let total_count = full_shape.iter().product();
+            named_inputs.push((name, (full_shape, Vec::with_capacity(total_count))));
         }
 
         for observation in obs {
             for (name, (_, store)) in named_inputs.iter_mut() {
-                if *name == "epsilon" {
-                    continue;
-                }
                 store.extend_from_slice(&observation.data[*name]);
             }
         }
 
-        for (name, (shape, store)) in named_inputs {
-            if name == "epsilon" {
-                // Fill epsilon with normal noise
-                let mut rng = rand::thread_rng();
-                let input1: Tensor =
-                    tract_ndarray::Array2::from_shape_fn((size, shape[1]), |(_, _)| {
-                        self.normal_distribution.sample(&mut rng)
-                    })
-                    .into();
-                inputs.push(input1);
-            } else {
-                let tensor = unsafe {
-                    tract_ndarray::Array::from_shape_vec_unchecked(shape.into_vec(), store).into()
-                };
+        for (_, (shape, store)) in named_inputs {
+            let tensor = unsafe {
+                tract_ndarray::Array::from_shape_vec_unchecked(shape.into_vec(), store).into()
+            };
 
-                inputs.push(tensor);
-            }
+            inputs.push(tensor);
         }
 
         (inputs, size)
     }
 
     fn get_concrete_model(&mut self, size: usize) -> Result<&TypedSimplePlan<TypedModel>> {
-        if !self.model_cache.contains_key(&size) {
+        if let Entry::Vacant(e) = self.model_cache.entry(size) {
             let p = self
                 .model
                 .concretize_dims(&SymbolValues::default().with(self.symbol, size as i64))?
@@ -154,7 +95,7 @@ impl TractInstance {
                 .into_decluttered()?
                 .into_runnable()?;
 
-            self.model_cache.insert(size, p);
+            e.insert(p);
         }
 
         Ok(&self.model_cache[&size])
@@ -169,7 +110,7 @@ impl TractInstance {
         // Run the optimized plan to get actions back!
         let result = self.get_concrete_model(count)?.run(inputs)?;
 
-        for (idx, (name, shape)) in self.outputs.iter().enumerate() {
+        for (idx, (name, shape)) in self.model_api.outputs.iter().enumerate() {
             for (response_idx, value) in result[idx]
                 .to_array_view::<f32>()?
                 .as_slice()
@@ -202,7 +143,7 @@ impl TractInstance {
     }
 }
 
-impl Inferer for TractInstance {
+impl Inferer for DynamicBatchingInferer {
     fn infer(
         &mut self,
         observations: HashMap<u64, Observation>,
@@ -214,11 +155,11 @@ impl Inferer for TractInstance {
         }
     }
 
-    fn input_shapes(&self) -> &Vec<(String, Vec<usize>)> {
-        &self.inputs
+    fn input_shapes(&self) -> &[(String, Vec<usize>)] {
+        &self.model_api.inputs
     }
 
-    fn output_shapes(&self) -> &Vec<(String, Vec<usize>)> {
-        &self.outputs
+    fn output_shapes(&self) -> &[(String, Vec<usize>)] {
+        &self.model_api.outputs
     }
 }

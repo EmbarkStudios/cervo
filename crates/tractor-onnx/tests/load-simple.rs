@@ -7,8 +7,8 @@
 */
 
 use std::path;
-use tractor::inferer::Inferer;
-use tractor_onnx::inferer_from_stream;
+use tractor::Inferer;
+use tractor_onnx::simple_inferer_from_stream;
 
 #[test]
 fn test_load_onnx_simple() {
@@ -16,7 +16,7 @@ fn test_load_onnx_simple() {
     let mut path = path::PathBuf::from(&crate_dir);
     path.push("test.onnx");
     let mut reader = std::fs::File::open(path).unwrap();
-    inferer_from_stream(&mut reader).expect("loading success");
+    simple_inferer_from_stream(&mut reader).expect("loading success");
 }
 
 #[test]
@@ -25,7 +25,7 @@ fn test_load_input_shape_simple() {
     let mut path = path::PathBuf::from(&crate_dir);
     path.push("test.onnx");
     let mut reader = std::fs::File::open(path).expect("failed reading file");
-    let instance = inferer_from_stream(&mut reader).expect("failed reading instance");
+    let instance = simple_inferer_from_stream(&mut reader).expect("failed reading instance");
     assert_eq!(
         instance.input_shapes()[0].1,
         [2],
@@ -39,7 +39,7 @@ fn test_load_output_shape_simple() {
     let mut path = path::PathBuf::from(&crate_dir);
     path.push("test.onnx");
     let mut reader = std::fs::File::open(path).unwrap();
-    let instance = inferer_from_stream(&mut reader).unwrap();
+    let instance = simple_inferer_from_stream(&mut reader).unwrap();
 
     assert_eq!(
         instance.output_shapes()[0].1,

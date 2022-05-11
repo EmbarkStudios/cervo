@@ -31,6 +31,6 @@ pub trait Inferer {
         observations: HashMap<u64, Observation>,
     ) -> Result<HashMap<u64, Response>, Error>;
 
-    fn input_shapes(&self) -> &Vec<(String, Vec<usize>)>;
-    fn output_shapes(&self) -> &Vec<(String, Vec<usize>)>;
+    fn input_shapes(&self) -> &[(String, Vec<usize>)];
+    fn output_shapes(&self) -> &[(String, Vec<usize>)];
 }

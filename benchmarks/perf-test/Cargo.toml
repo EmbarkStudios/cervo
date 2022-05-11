@@ -11,3 +11,4 @@ anyhow = { version = "1.0"}
 tractor-onnx = { path = "../../crates/tractor-onnx" }
 tractor = { path = "../../crates/tractor" }
 structopt = "0.3.11"
+perchance = "*"

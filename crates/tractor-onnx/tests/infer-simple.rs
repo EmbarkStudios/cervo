@@ -6,30 +6,19 @@
 
 */
 
-use std::path;
-use tractor::inferer::{Inferer, Observation};
-use tractor_onnx::inferer_from_stream;
+use tractor::{EpsilonInjector, Inferer};
+use tractor_onnx::simple_inferer_from_stream;
+
+#[path = "./helpers.rs"]
+mod helpers;
 
 #[test]
 fn test_infer_once_simple() {
-    let crate_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-    let mut path = path::PathBuf::from(&crate_dir);
-    path.push("test.onnx");
-    let mut reader = std::fs::File::open(path).unwrap();
-    let mut instance = inferer_from_stream(&mut reader).unwrap();
+    let mut reader = helpers::get_file("test.onnx").unwrap();
+    let instance = simple_inferer_from_stream(&mut reader).unwrap();
+    let mut instance = EpsilonInjector::wrap(instance, "epsilon").unwrap();
 
-    let input = vec![Observation {
-        data: [("vector_observation".to_owned(), vec![0.0, 0.0])]
-            .iter()
-            .cloned()
-            .collect(),
-    }];
-
-    let observations = input
-        .into_iter()
-        .enumerate()
-        .map(|(i, v)| (i as u64, v))
-        .collect();
+    let observations = helpers::build_inputs_from_desc(1, instance.input_shapes());
 
     let result = instance.infer(observations);
     assert!(result.is_ok());

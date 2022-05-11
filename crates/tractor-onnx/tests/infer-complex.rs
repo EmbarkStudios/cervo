@@ -6,38 +6,83 @@
 
 */
 
-use std::path;
-use tractor::inferer::{Inferer, Observation};
-use tractor_onnx::inferer_from_stream;
+use tractor::{EpsilonInjector, Inferer};
+use tractor_onnx::{
+    batched_inferer_from_stream, fixed_batch_inferer_from_stream, simple_inferer_from_stream,
+};
+
+#[path = "./helpers.rs"]
+mod helpers;
 
 #[test]
 fn test_infer_once_complex() {
-    let crate_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-    let mut path = path::PathBuf::from(&crate_dir);
-    path.push("test-complex.onnx");
-    let mut reader = std::fs::File::open(path).unwrap();
-    let mut instance = inferer_from_stream(&mut reader).unwrap();
+    let mut reader = helpers::get_file("test-complex.onnx").unwrap();
 
-    let input = vec![Observation {
-        data: [
-            ("images".to_owned(), vec![0.0; 30 * 30 * 2]),
-            ("features".to_owned(), vec![0.0; 228]),
-        ]
-        .iter()
-        .cloned()
-        .collect(),
-    }];
+    let mut instance =
+        EpsilonInjector::wrap(simple_inferer_from_stream(&mut reader).unwrap(), "epsilon").unwrap();
 
-    let observations = input
-        .into_iter()
-        .enumerate()
-        .map(|(i, v)| (i as u64, v))
-        .collect();
+    let observations = helpers::build_inputs_from_desc(1, instance.input_shapes());
+    let result = instance.infer(observations);
 
+    assert!(result.is_ok());
+    let result = result.unwrap();
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[&0].response["tanh_stretch"].len(), 36);
+}
+
+#[test]
+fn test_infer_once_complex_batched() {
+    let mut reader = helpers::get_file("test-complex.onnx").unwrap();
+
+    let mut instance = EpsilonInjector::wrap(
+        batched_inferer_from_stream(&mut reader, &[10]).unwrap(),
+        "epsilon",
+    )
+    .unwrap();
+
+    let observations = helpers::build_inputs_from_desc(10, instance.input_shapes());
     let result = instance.infer(observations);
     assert!(result.is_ok());
 
     let result = result.unwrap();
-    assert_eq!(result.len(), 1);
+    assert_eq!(result.len(), 10);
+    assert_eq!(result[&0].response["tanh_stretch"].len(), 36);
+}
+
+#[test]
+fn test_infer_once_complex_batched_not_loaded() {
+    let mut reader = helpers::get_file("test-complex.onnx").unwrap();
+
+    let mut instance = EpsilonInjector::wrap(
+        batched_inferer_from_stream(&mut reader, &[5]).unwrap(),
+        "epsilon",
+    )
+    .unwrap();
+
+    let observations = helpers::build_inputs_from_desc(10, instance.input_shapes());
+    let result = instance.infer(observations);
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert_eq!(result.len(), 10);
+    assert_eq!(result[&0].response["tanh_stretch"].len(), 36);
+}
+
+#[test]
+fn test_infer_once_complex_fixed_batch() {
+    let mut reader = helpers::get_file("test-complex.onnx").unwrap();
+
+    let mut instance = EpsilonInjector::wrap(
+        fixed_batch_inferer_from_stream(&mut reader, &[4, 2, 1]).unwrap(),
+        "epsilon",
+    )
+    .unwrap();
+
+    let observations = helpers::build_inputs_from_desc(7, instance.input_shapes());
+    let result = instance.infer(observations);
+    assert!(result.is_ok());
+
+    let result = result.unwrap();
+    assert_eq!(result.len(), 7);
     assert_eq!(result[&0].response["tanh_stretch"].len(), 36);
 }

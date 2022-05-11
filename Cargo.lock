@@ -287,6 +287,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glam"
+version = "0.20.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f43e957e744be03f5801a55472f593d43fabdebf25a4585db250f04d86b1675f"
+
+[[package]]
 name = "half"
 version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -445,6 +451,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "macaw"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7781d94ea559f76030086786c74fdf28d768535269653382f39824562fd02e73"
+dependencies = [
+ "glam",
+ "num-traits",
+]
+
+[[package]]
 name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -581,6 +597,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
+name = "ordered-float"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96bcbab4bfea7a59c2c0fe47211a1ac4e3e96bea6eb446d704f310bc5c732ae2"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -593,11 +618,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
+name = "perchance"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b6268b17d3b26bf66d772097e4826f4d99d9661f427bcc02b361f31b38b443b"
+dependencies = [
+ "macaw",
+ "once_cell",
+ "ordered-float",
+]
+
+[[package]]
 name = "perf-test"
 version = "0.0.0"
 dependencies = [
  "anyhow",
  "clap",
+ "perchance",
  "structopt",
  "tractor",
  "tractor-onnx",
@@ -1049,9 +1086,8 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tract-core"
-version = "0.16.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ae63f5e21145b87b7812ac050f692ebd9fae5c31146c37e03f07b1a31ff7ab4"
+version = "0.16.7-pre"
+source = "git+https://github.com/sonos/tract#badfaf5aee98357da51509e443e9a7cb061a02c0"
 dependencies = [
  "anyhow",
  "bit-set",
@@ -1072,9 +1108,8 @@ dependencies = [
 
 [[package]]
 name = "tract-data"
-version = "0.16.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9aeb135db1d5d5824666edf10be35b01c8a84bf993cc64a5321bc13070624840"
+version = "0.16.7-pre"
+source = "git+https://github.com/sonos/tract#badfaf5aee98357da51509e443e9a7cb061a02c0"
 dependencies = [
  "anyhow",
  "educe",
@@ -1091,9 +1126,8 @@ dependencies = [
 
 [[package]]
 name = "tract-hir"
-version = "0.16.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd9b6e42023e0949688b47f512e36f0d4691e6ee7ddb014bc514ea03d2d5122f"
+version = "0.16.7-pre"
+source = "git+https://github.com/sonos/tract#badfaf5aee98357da51509e443e9a7cb061a02c0"
 dependencies = [
  "derive-new",
  "educe",
@@ -1103,9 +1137,8 @@ dependencies = [
 
 [[package]]
 name = "tract-linalg"
-version = "0.16.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a98190bce172d691ee230d423e5881cbb546b61df768f521611c51d52511d660"
+version = "0.16.7-pre"
+source = "git+https://github.com/sonos/tract#badfaf5aee98357da51509e443e9a7cb061a02c0"
 dependencies = [
  "cc",
  "derive-new",
@@ -1127,9 +1160,8 @@ dependencies = [
 
 [[package]]
 name = "tract-nnef"
-version = "0.16.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b2cc0350faa927c1d895e06ed28cebf4e4e9437642aa5ac65942462006ab342"
+version = "0.16.7-pre"
+source = "git+https://github.com/sonos/tract#badfaf5aee98357da51509e443e9a7cb061a02c0"
 dependencies = [
  "byteorder",
  "flate2",
@@ -1142,9 +1174,8 @@ dependencies = [
 
 [[package]]
 name = "tract-onnx"
-version = "0.16.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a904657135f9baeffc0f6ef6eca0a805788e82f517e956f2c632e6238c88594"
+version = "0.16.7-pre"
+source = "git+https://github.com/sonos/tract#badfaf5aee98357da51509e443e9a7cb061a02c0"
 dependencies = [
  "bytes",
  "derive-new",
@@ -1162,9 +1193,8 @@ dependencies = [
 
 [[package]]
 name = "tract-onnx-opl"
-version = "0.16.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22d3210700af398abe3279e7116cdf0fe09b7726061fc9bded590166f0c3d07a"
+version = "0.16.7-pre"
+source = "git+https://github.com/sonos/tract#badfaf5aee98357da51509e443e9a7cb061a02c0"
 dependencies = [
  "educe",
  "tract-nnef",
@@ -1175,6 +1205,7 @@ name = "tractor"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "perchance",
  "rand",
  "rand_distr",
  "tract-core",
