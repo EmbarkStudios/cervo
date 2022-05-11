@@ -5,8 +5,7 @@ edition = "2021"
 authors = [
     "Tom Solberg <tom.solberg@embark-studios.com"
 ]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "LicenseRef-Embark-Proprietary"
 
 [dependencies]
 anyhow = "1.0.57"

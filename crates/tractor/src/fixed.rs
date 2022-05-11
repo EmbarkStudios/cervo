@@ -56,7 +56,7 @@ impl BatchedModel {
         &mut self,
         observations: &mut It,
         model_api: &ModelAPI,
-        vec_out: &mut Vec<Response>,
+        vec_out: &mut [Response],
     ) -> Result<()> {
         let inputs = self.build_inputs(observations, model_api);
 
@@ -125,7 +125,7 @@ impl FixedBatchingInferer {
     pub fn infer_batched(
         &mut self,
         obs: Vec<Observation>,
-        vec_out: &mut Vec<Response>,
+        vec_out: &mut [Response],
     ) -> TractResult<()> {
         let mut count = obs.len();
         let mut obs = obs.into_iter();

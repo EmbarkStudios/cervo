@@ -103,7 +103,7 @@ impl DynamicBatchingInferer {
     pub fn infer_batched(
         &mut self,
         obs: Vec<Observation>,
-        vec_out: &mut Vec<Response>,
+        vec_out: &mut [Response],
     ) -> TractResult<()> {
         let (inputs, count) = self.build_inputs(obs);
 

@@ -6,6 +6,7 @@ authors = [
     "Tom Solberg <tom.solberg@embark-studios.com",
     "Henrik Rydgård <hrydgard@embark-studios.com>"
 ]
+license = "LicenseRef-Embark-Proprietary"
 
 [dependencies]
 anyhow = { version = "1.0"}
