@@ -13,4 +13,4 @@ pub use epsilon::{
     EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
 };
 pub use fixed::FixedBatchingInferer;
-pub use inferer::{Inferer, Observation};
+pub use inferer::{Inferer, State};

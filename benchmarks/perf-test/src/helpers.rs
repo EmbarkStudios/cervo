@@ -12,7 +12,7 @@ use std::{
     path::{self, Path},
 };
 
-use tractor::Observation;
+use tractor::State;
 
 pub fn get_file<T: AsRef<Path>>(name: T) -> std::io::Result<File> {
     let crate_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -23,15 +23,12 @@ pub fn get_file<T: AsRef<Path>>(name: T) -> std::io::Result<File> {
     std::fs::File::open(path)
 }
 
-pub fn build_inputs_from_desc(
-    count: u64,
-    inputs: &[(String, Vec<usize>)],
-) -> HashMap<u64, Observation> {
+pub fn build_inputs_from_desc(count: u64, inputs: &[(String, Vec<usize>)]) -> HashMap<u64, State> {
     (0..count)
         .map(|idx| {
             (
                 idx,
-                Observation {
+                State {
                     data: inputs
                         .iter()
                         .map(|(key, count)| ((*key).clone(), vec![0.0; count.iter().product()]))

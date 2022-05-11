@@ -2,7 +2,7 @@
 
 use crate::model_api::ModelAPI;
 
-use super::inferer::{Inferer, Observation, Response};
+use super::inferer::{Inferer, Response, State};
 use anyhow::{bail, Error, Result};
 
 use std::collections::{hash_map::Entry, HashMap};
@@ -56,7 +56,7 @@ impl DynamicBatchingInferer {
         Ok(this)
     }
 
-    fn build_inputs(&mut self, obs: Vec<Observation>) -> (TVec<Tensor>, usize) {
+    fn build_inputs(&mut self, obs: Vec<State>) -> (TVec<Tensor>, usize) {
         let size = obs.len();
         let mut inputs = TVec::default();
         let mut named_inputs = TVec::default();
@@ -100,11 +100,7 @@ impl DynamicBatchingInferer {
 
         Ok(&self.model_cache[&size])
     }
-    pub fn infer_batched(
-        &mut self,
-        obs: Vec<Observation>,
-        vec_out: &mut [Response],
-    ) -> TractResult<()> {
+    pub fn infer_batched(&mut self, obs: Vec<State>, vec_out: &mut [Response]) -> TractResult<()> {
         let (inputs, count) = self.build_inputs(obs);
 
         // Run the optimized plan to get actions back!
@@ -130,7 +126,7 @@ impl DynamicBatchingInferer {
 
     pub fn infer_tract(
         &mut self,
-        observations: HashMap<u64, Observation>,
+        observations: HashMap<u64, State>,
     ) -> TractResult<HashMap<u64, Response>> {
         let mut responses: Vec<Response> = vec![Response::default(); observations.len()];
         let (ids, obs): (Vec<_>, Vec<_>) = observations.into_iter().unzip();
@@ -146,7 +142,7 @@ impl DynamicBatchingInferer {
 impl Inferer for DynamicBatchingInferer {
     fn infer(
         &mut self,
-        observations: HashMap<u64, Observation>,
+        observations: HashMap<u64, State>,
     ) -> Result<HashMap<u64, Response>, Error> {
         let tract_result = self.infer_tract(observations);
         match tract_result {

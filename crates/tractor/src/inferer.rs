@@ -8,7 +8,7 @@ use anyhow::Error;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
-pub struct Observation {
+pub struct State {
     pub data: HashMap<String, Vec<f32>>,
 }
 
@@ -23,10 +23,8 @@ pub struct ModelData {
 }
 
 pub trait Inferer {
-    fn infer(
-        &mut self,
-        observations: HashMap<u64, Observation>,
-    ) -> Result<HashMap<u64, Response>, Error>;
+    fn infer(&mut self, observations: HashMap<u64, State>)
+        -> Result<HashMap<u64, Response>, Error>;
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)];
     fn output_shapes(&self) -> &[(String, Vec<usize>)];

@@ -3,7 +3,7 @@
 /**
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
-use super::inferer::{Inferer, Observation, Response};
+use super::inferer::{Inferer, Response, State};
 use crate::model_api::ModelAPI;
 use anyhow::{Error, Result};
 use std::collections::HashMap;
@@ -59,7 +59,7 @@ impl BasicInferer {
         Ok(Self { model, model_api })
     }
 
-    fn build_inputs(&mut self, mut obs: Observation) -> TVec<Tensor> {
+    fn build_inputs(&mut self, mut obs: State) -> TVec<Tensor> {
         let mut inputs = TVec::default();
 
         for (name, shape) in self.model_api.inputs.iter() {
@@ -87,7 +87,7 @@ impl BasicInferer {
     /// # Errors
     ///
     /// Will only forward errors from the [`tract_core::plan::SimplePlan::run`] call.
-    pub fn infer_once(&mut self, obs: Observation) -> TractResult<Response> {
+    pub fn infer_once(&mut self, obs: State) -> TractResult<Response> {
         let inputs = self.build_inputs(obs);
 
         // Run the optimized plan to get actions back!
@@ -112,7 +112,7 @@ impl BasicInferer {
 impl Inferer for BasicInferer {
     fn infer(
         &mut self,
-        observations: HashMap<u64, Observation>,
+        observations: HashMap<u64, State>,
     ) -> Result<HashMap<u64, Response>, Error> {
         let mut responses = HashMap::default();
         for (id, obs) in observations.into_iter() {

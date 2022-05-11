@@ -6,7 +6,7 @@
 Utilities for filling noise inputs for an inference model.
 */
 
-use crate::inferer::{Inferer, Observation, Response};
+use crate::inferer::{Inferer, Response, State};
 use anyhow::{bail, Result};
 use perchance::PerchanceContext;
 use rand::thread_rng;
@@ -134,7 +134,7 @@ where
         })
     }
 
-    fn inject_epsilons(&mut self, observations: &mut HashMap<u64, Observation>) -> Result<()> {
+    fn inject_epsilons(&mut self, observations: &mut HashMap<u64, State>) -> Result<()> {
         for v in observations.values_mut() {
             v.data
                 .insert(self.key.clone(), self.generator.generate(self.count));
@@ -148,10 +148,7 @@ where
     T: Inferer,
     NG: NoiseGenerator,
 {
-    fn infer(
-        &mut self,
-        mut observations: HashMap<u64, Observation>,
-    ) -> Result<HashMap<u64, Response>> {
+    fn infer(&mut self, mut observations: HashMap<u64, State>) -> Result<HashMap<u64, Response>> {
         self.inject_epsilons(&mut observations)?;
         self.inner.infer(observations)
     }
