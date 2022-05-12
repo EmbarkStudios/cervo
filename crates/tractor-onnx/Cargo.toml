@@ -1,0 +1,14 @@
+[package]
+name = "tractor-onnx"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Tom Solberg <tom.solberg@embark-studios.com"
+]
+license = "LicenseRef-Embark-Proprietary"
+
+[dependencies]
+anyhow = "1.0.57"
+tract-onnx =  { version = "0.16.7-pre", git = "https://github.com/sonos/tract" }    # { version = "^0.16" }
+tract-nnef = { version = "0.16.7-pre", git = "https://github.com/sonos/tract" }
+tractor = { path = "../tractor" }
