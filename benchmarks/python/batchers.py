@@ -11,6 +11,7 @@ def parse_stats_file(statsfile) -> pandas.DataFrame:
 
 def main(statsfile, bs, outfile=None):
     df = parse_stats_file(statsfile)
+    plt.figure(figsize=(16, 10))
     seaborn.lineplot(x="step", y="t", hue="kind", data=df).set(
         title=f"Time per element by batcher, batch_size={bs}", ylabel="µs"
     )

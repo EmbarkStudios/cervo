@@ -12,6 +12,7 @@ def parse_stats_file(statsfile) -> pandas.DataFrame:
 def main(statsfile, its, outfile=None):
     df = parse_stats_file(statsfile)
 
+    plt.figure(figsize=(16, 10))
     seaborn.barplot(x="kind", y="t", hue="format", data=df).set(
         title=f"Mean load time by format and kind, its={its}",
         ylabel="milliseconds",
