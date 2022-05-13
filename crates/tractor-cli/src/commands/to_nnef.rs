@@ -1,5 +1,5 @@
 // Author: Tom Solberg <tom.solberg@embark-studios.com>
-// Copyright © 2022, Tom Solberg, all rights reserved.
+// Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 13 May 2022
 
 /*!
@@ -10,13 +10,64 @@ use clap::Parser;
 use std::{fs::File, io::Write, path::PathBuf};
 
 /// Convert ONNX files to NNEF.
+///
+/// Output files will be have same name as the ONNX file.
+#[derive(Parser, Debug)]
+#[clap()]
+pub(crate) struct BatchToNnefArgs {
+    /// One or more input ONNX files.
+    in_files: Vec<PathBuf>,
+
+    /// The desired batch size. Default: a symbolic batch size.
+    #[clap(short = 'b', long = "batch-size")]
+    batch_size: Option<usize>,
+}
+
+/// Convert an ONNX file to NNEF.
 #[derive(Parser, Debug)]
 #[clap()]
 pub(crate) struct ToNnefArgs {
-    in_files: Vec<PathBuf>,
+    /// The source ONNX file
+    in_file: PathBuf,
+
+    /// The destination NNEF tar file
+    out_file: PathBuf,
+
+    /// The desired batch size. Default: a symbolic batch size.
+    #[clap(short = 'b', long = "batch-size")]
+    batch_size: Option<usize>,
 }
 
-pub(super) fn batch_onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
+pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
+    let ToNnefArgs {
+        in_file,
+        out_file,
+        batch_size,
+    } = config;
+
+    match in_file.extension().and_then(|ext| ext.to_str()) {
+        Some(ext) if ext == "onnx" => {}
+        Some(ext) => bail!("unexpected extension: {:?}", ext),
+        None => bail!("file without extension: {:?}", in_file),
+    }
+
+    match tractor_nnef::is_nnef_tar(&out_file) {
+        true => {}
+        false => bail!("unexpected extension: {:?}", out_file),
+    }
+
+    let mut reader = File::open(in_file)?;
+    let bytes = tractor_onnx::to_nnef(&mut reader, batch_size)?;
+
+    let mut out = tempfile::NamedTempFile::new()?;
+    out.write_all(&bytes)?;
+
+    std::fs::rename(&out, out_file)?;
+
+    Ok(())
+}
+
+pub(super) fn batch_onnx_to_nnef(config: BatchToNnefArgs) -> Result<()> {
     for file in &config.in_files {
         match file.extension().and_then(|ext| ext.to_str()) {
             Some(ext) if ext == "onnx" => {}
@@ -25,20 +76,16 @@ pub(super) fn batch_onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
         }
     }
 
-    let mut tempfiles = vec![];
-    for file in &config.in_files {
-        let mut reader = File::open(file)?;
-        let bytes = tractor_onnx::to_nnef(&mut reader)?;
+    for in_file in config.in_files {
+        let out_file = in_file.with_extension("nnef.tar");
 
-        let mut out = tempfile::NamedTempFile::new()?;
-        out.write_all(&bytes)?;
+        let args = ToNnefArgs {
+            in_file,
+            out_file,
+            batch_size: config.batch_size,
+        };
 
-        let new_name = file.with_extension("nnef");
-        tempfiles.push((new_name, out));
-    }
-
-    for (path, file) in tempfiles {
-        std::fs::rename(&file, path)?;
+        onnx_to_nnef(args)?;
     }
 
     Ok(())

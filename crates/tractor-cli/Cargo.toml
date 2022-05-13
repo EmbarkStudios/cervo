@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Tom Solberg <tom.solberg@emark-studios.com"]
 license = "LicenseRef-Embark-Proprietary"
+# this ensures cargo run in the workspace root uses tractor-cli
+default-run = "tractor-cli"
 
 [dependencies]
 anyhow = "1.0.57"

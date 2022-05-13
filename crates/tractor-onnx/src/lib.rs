@@ -40,10 +40,12 @@ pub fn fixed_batch_inferer_from_stream(
 }
 
 /// Convert an ONNX model to a NNEF model.
-pub fn to_nnef(reader: &mut dyn Read) -> Result<Vec<u8>> {
+pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u8>> {
     let mut model = model_for_reader(reader)?;
 
-    let batch = Symbol::new('N');
+    let batch = batch_size
+        .map(|v| v.to_dim())
+        .unwrap_or_else(|| Symbol::from('N').to_dim());
     let input_outlets = model.input_outlets()?.to_vec();
 
     for input_outlet in input_outlets {
@@ -55,7 +57,7 @@ pub fn to_nnef(reader: &mut dyn Read) -> Result<Vec<u8>> {
             .map(|fact| fact.concretize().unwrap())
             .collect();
 
-        shape.insert(0, batch.to_dim());
+        shape.insert(0, batch.clone());
 
         model.set_input_fact(
             input_outlet.node,

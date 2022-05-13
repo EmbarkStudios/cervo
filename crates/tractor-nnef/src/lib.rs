@@ -1,8 +1,10 @@
 /// Contains utilities for using tractor with ONNX.
 use anyhow::Result;
-use std::cell::UnsafeCell;
+use std::ffi::OsStr;
 use std::io::Read;
+use std::path::PathBuf;
 use std::rc::Rc;
+use std::{cell::UnsafeCell, path::Path};
 use tract_nnef::{framework::Nnef, prelude::*};
 
 use tractor::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
@@ -13,6 +15,26 @@ thread_local!(
         Rc::new(UnsafeCell::new(tract_nnef::nnef().with_tract_core()))
     }
 );
+
+/// Utility function to check if a file is a valid NNEF file.
+pub fn is_nnef_tar(path: &Path) -> bool {
+    if let Some(ext) = path.extension().and_then(OsStr::to_str) {
+        if ext != "tar" {
+            return false;
+        }
+
+        let stem = match path.file_stem().and_then(OsStr::to_str).map(PathBuf::from) {
+            Some(p) => p,
+            None => return false,
+        };
+
+        if let Some(ext) = stem.extension().and_then(OsStr::to_str) {
+            return ext == "nnef";
+        }
+    }
+
+    false
+}
 
 pub fn model_for_reader(reader: &mut dyn Read) -> Result<TypedModel> {
     NNEF.with(|n| unsafe { (&*n.as_ref().get()).model_for_read(reader) })

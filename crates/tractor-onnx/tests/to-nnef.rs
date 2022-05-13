@@ -15,7 +15,7 @@ mod helpers;
 fn test_to_nnef_simple() {
     let mut reader = helpers::get_file("test.onnx").unwrap();
 
-    let result = to_nnef(&mut reader);
+    let result = to_nnef(&mut reader, None);
     result.unwrap();
 }
 
@@ -23,6 +23,14 @@ fn test_to_nnef_simple() {
 fn test_to_nnef_complex() {
     let mut reader = helpers::get_file("test-complex.onnx").unwrap();
 
-    let result = to_nnef(&mut reader);
+    let result = to_nnef(&mut reader, None);
+    result.unwrap();
+}
+
+#[test]
+fn test_to_nnef_large() {
+    let mut reader = helpers::get_file("test-large.onnx").unwrap();
+
+    let result = to_nnef(&mut reader, None);
     result.unwrap();
 }

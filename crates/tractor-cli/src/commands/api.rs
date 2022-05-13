@@ -1,5 +1,5 @@
 // Author: Tom Solberg <tom.solberg@embark-studios.com>
-// Copyright © 2022, Tom Solberg, all rights reserved.
+// Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 13 May 2022
 
 /*!
@@ -21,10 +21,14 @@ pub(crate) struct ApiArgs {
 pub(super) fn describe_api(config: ApiArgs) -> Result<()> {
     let mut reader = File::open(&config.file)?;
 
-    let model = match config.file.extension().and_then(|ext| ext.to_str()) {
-        Some("onnx") => tractor_onnx::simple_inferer_from_stream(&mut reader)?,
-        Some("nnef") => tractor_nnef::simple_inferer_from_stream(&mut reader)?,
-        other => bail!("unknown file type {:?}", other),
+    let model = if tractor_nnef::is_nnef_tar(&config.file) {
+        tractor_nnef::simple_inferer_from_stream(&mut reader)?
+    } else {
+        match config.file.extension().and_then(|ext| ext.to_str()) {
+            Some("onnx") => tractor_onnx::simple_inferer_from_stream(&mut reader)?,
+            Some(other) => bail!("unknown file type {:?}", other),
+            None => bail!("missing file extension {:?}", config.file),
+        }
     };
 
     println!("Inputs:");

@@ -14,13 +14,13 @@ mod helpers;
 
 #[test]
 fn test_load_nnef_complex() {
-    let mut reader = helpers::get_file("test-complex.nnef").unwrap();
+    let mut reader = helpers::get_file("test-complex.nnef.tar").unwrap();
     simple_inferer_from_stream(&mut reader).expect("loading success");
 }
 
 #[test]
 fn test_load_input_shape_complex() {
-    let mut reader = helpers::get_file("test-complex.nnef").unwrap();
+    let mut reader = helpers::get_file("test-complex.nnef.tar").unwrap();
     let instance = simple_inferer_from_stream(&mut reader).expect("failed reading instance");
 
     assert_eq!(
@@ -62,7 +62,7 @@ fn test_load_input_shape_complex() {
 
 #[test]
 fn test_load_output_shape_complex() {
-    let mut reader = helpers::get_file("test-complex.nnef").unwrap();
+    let mut reader = helpers::get_file("test-complex.nnef.tar").unwrap();
     let instance = simple_inferer_from_stream(&mut reader).unwrap();
 
     assert_eq!(
