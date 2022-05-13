@@ -1,4 +1,3 @@
-# TODO: Replace this line with the commented ones to actually run the action in your repo(s)
 on:
   push:
     branches:
@@ -36,11 +35,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        os: [
-          ubuntu-latest,
-          # windows-latest,
-          # macOS-latest
-        ]
+        os: [  ubuntu-latest ] # windows-latest, macOS-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -53,7 +48,7 @@ jobs:
         # Note the use of release here means longer compile time, but much
         # faster test execution time. If you don't have any heavy tests it
         # might be faster to take off release and just compile in debug
-        run: cargo build --tests --release
+        run: cargo build --tests
       - name: cargo test
         run: cargo test --release
 
