@@ -6,7 +6,7 @@
 
 */
 
-use tract_core::tract_data::TractResult;
+use tract_core::{model::TypedModel, tract_data::TractResult};
 use tract_hir::{infer::Factoid, prelude::InferenceModel};
 
 /// The ModelAPI describes the inputs and outputs for a model.
@@ -22,7 +22,6 @@ impl ModelAPI {
     /// Extract the model API from the provided inference model.
     pub fn for_model(model: &InferenceModel) -> TractResult<Self> {
         let mut inputs: Vec<(String, Vec<usize>)> = Default::default();
-
         for input_outlet in model.input_outlets()? {
             let node = model.node(input_outlet.node);
             let name = node.name.split(':').next().unwrap().to_owned();
@@ -55,6 +54,50 @@ impl ModelAPI {
                     .filter_map(|value| value.concretize().map(|v| v.to_i64().unwrap() as usize))
                     .collect(),
             ));
+        }
+
+        Ok(Self { outputs, inputs })
+    }
+
+    pub fn for_typed_model(model: &TypedModel) -> TractResult<Self> {
+        let mut inputs: Vec<(String, Vec<usize>)> = Default::default();
+
+        for input_outlet in model.input_outlets()? {
+            let node = model.node(input_outlet.node);
+            let mut name = node.name.split(':').next().unwrap().to_owned();
+            if name.ends_with("_0") {
+                name = name.strip_suffix("_0").unwrap().to_owned();
+            }
+            let input_shape = &model.input_fact(input_outlet.node)?.shape;
+
+            inputs.push((
+                name,
+                input_shape
+                    .iter()
+                    .filter_map(|dim| dim.to_i64().map(|v| v as usize).ok())
+                    .collect(),
+            ));
+        }
+
+        let mut outputs: Vec<(String, Vec<usize>)> = Default::default();
+
+        for output_outlet in &model.outputs {
+            let mut name = model.outlet_labels[output_outlet]
+                .split(':')
+                .next()
+                .unwrap()
+                .to_owned();
+            if name.ends_with("_0") {
+                name = name.strip_suffix("_0").unwrap().to_owned();
+            }
+
+            let output_shape = &model.output_fact(output_outlet.slot)?.shape;
+            let clean_shape = output_shape
+                .iter()
+                .filter_map(|dim| dim.to_i64().map(|v| v as usize).ok())
+                .collect();
+
+            outputs.push((name, clean_shape));
         }
 
         Ok(Self { outputs, inputs })

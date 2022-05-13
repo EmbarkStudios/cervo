@@ -8,25 +8,7 @@ use std::collections::HashMap;
 use tract_core::{ndarray::IntoDimension, prelude::*};
 use tract_hir::prelude::*;
 
-fn build_model(
-    mut model: InferenceModel,
-    inputs: &[(String, Vec<usize>)],
-) -> Result<TypedSimplePlan<TypedModel>> {
-    let s = 1;
-    for (idx, (_name, shape)) in inputs.iter().enumerate() {
-        let mut full_shape = tvec!(s.to_dim());
-
-        full_shape.extend(shape.iter().map(|v| (*v as i32).into()));
-        model.set_input_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
-    }
-
-    let model = model
-        .into_optimized()?
-        .into_decluttered()?
-        .into_runnable()?;
-
-    Ok(model)
-}
+use super::helpers;
 
 /// The most basic inferer provided will deal with a single element at
 /// a time, at the cost of performance.
@@ -52,7 +34,14 @@ impl BasicInferer {
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel) -> TractResult<Self> {
         let model_api = ModelAPI::for_model(&model)?;
-        let model = build_model(model, &model_api.inputs)?;
+        let model = helpers::build_model(model, &model_api.inputs, 1i32)?;
+
+        Ok(Self { model, model_api })
+    }
+
+    pub fn from_typed(model: TypedModel) -> TractResult<Self> {
+        let model_api = ModelAPI::for_typed_model(&model)?;
+        let model = helpers::build_typed(model, 1i32)?;
 
         Ok(Self { model, model_api })
     }

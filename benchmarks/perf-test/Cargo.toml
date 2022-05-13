@@ -10,6 +10,7 @@ license = "LicenseRef-Embark-Proprietary"
 clap = "2.33.0"
 anyhow = { version = "1.0"}
 tractor-onnx = { path = "../../crates/tractor-onnx" }
+tractor-nnef = { path = "../../crates/tractor-nnef" }
 tractor = { path = "../../crates/tractor" }
 structopt = "0.3.11"
 perchance = "*"

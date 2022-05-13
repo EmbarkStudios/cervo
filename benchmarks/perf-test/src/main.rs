@@ -6,13 +6,13 @@
 #![warn(rust_2018_idioms)]
 
 mod compare_batchers;
+mod compare_loading;
 mod compare_noise;
 mod helpers;
 
 use compare_batchers::BatcherComparison;
+use compare_loading::LoadComparison;
 use compare_noise::NoiseComparison;
-
-use std::path::PathBuf;
 
 use structopt::StructOpt;
 
@@ -22,12 +22,12 @@ enum MeasureMode {
     PerStep,
     Batchers(BatcherComparison),
     Noise(NoiseComparison),
+    Loading(LoadComparison),
 }
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "foo")]
 struct RustyPerf {
-    file: PathBuf,
     #[structopt(subcommand)] // Note that we mark a field as a subcommand
     mode: MeasureMode,
 }
@@ -85,11 +85,10 @@ fn main() {
             //measure_time_per_element_batched(&args.file, count, &observations)
         }
         MeasureMode::PerStep => {} //measure_per_step_time(&args.file, count, &observations),
-        MeasureMode::Batchers(config) => {
-            compare_batchers::execute_comparison(&args.file, config).unwrap()
-        }
-        MeasureMode::Noise(config) => {
-            compare_noise::execute_comparison(&args.file, config).unwrap()
+        MeasureMode::Batchers(config) => compare_batchers::execute_comparison(config).unwrap(),
+        MeasureMode::Noise(config) => compare_noise::execute_comparison(config).unwrap(),
+        MeasureMode::Loading(config) => {
+            compare_loading::compare_loadtimes(config);
         }
     }
 }

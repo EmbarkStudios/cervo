@@ -18,6 +18,7 @@ use std::collections::HashMap;
 mod basic;
 mod dynamic;
 mod fixed;
+mod helpers;
 
 pub use basic::BasicInferer;
 pub use dynamic::DynamicBatchingInferer;

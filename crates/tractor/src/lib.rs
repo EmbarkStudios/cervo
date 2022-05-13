@@ -1,5 +1,8 @@
 // Hive modules.
 
+pub use tract_core;
+pub use tract_hir;
+
 pub mod epsilon;
 pub mod inferer;
 mod model_api;
