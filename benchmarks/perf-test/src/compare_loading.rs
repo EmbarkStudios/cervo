@@ -8,7 +8,7 @@
 
 use anyhow::Result;
 use std::{
-    io::{Cursor, Read},
+    io::{Cursor, Read, Write},
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -21,6 +21,9 @@ pub(crate) struct LoadComparison {
     onnx: Option<PathBuf>,
     #[structopt(long = "nnef", short = "n")]
     nnef: Option<PathBuf>,
+
+    iterations: usize,
+    output_file: PathBuf,
 }
 
 fn mean(data: &[f64]) -> Option<f64> {
@@ -56,16 +59,23 @@ fn black_box<T>(dummy: T) -> T {
     unsafe { std::ptr::read_volatile(&dummy) }
 }
 
+struct Record {
+    format: String,
+    kind: String,
+    mean: f64,
+    stddev: f64,
+}
 fn execute_load_metrics<T: Fn(&mut dyn Read) -> Result<()>>(
     format: &str,
     kind: &str,
     file: &Path,
+    count: usize,
     load_fn: T,
-) -> Result<()> {
+) -> Result<Record> {
     let data = std::fs::read(file)?;
     let mut times = vec![];
 
-    for _ in 0..100 {
+    for _ in 0..count {
         let mut cursor = Cursor::new(&data);
         let start = Instant::now();
         black_box(&(load_fn(&mut cursor)?));
@@ -73,75 +83,93 @@ fn execute_load_metrics<T: Fn(&mut dyn Read) -> Result<()>>(
     }
 
     let (m, s) = (mean(&times).unwrap(), std_deviation(&times).unwrap());
-    eprintln!("{},{},{:6.2},{:6.2}", format, kind, m, s);
 
-    Ok(())
+    Ok(Record {
+        format: format.to_owned(),
+        kind: kind.to_owned(),
+        mean: m,
+        stddev: s,
+    })
 }
 
 #[inline(never)]
-fn check_onnx_simple(o: &Path) {
-    execute_load_metrics("onnx", "simple", o, |read| {
+fn check_onnx_simple(o: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics("onnx", "simple", o, iterations, |read| {
         simple_inferer_from_stream(read)?;
         Ok(())
     })
-    .unwrap();
 }
 
 #[inline(never)]
-fn check_nnef_simple(n: &Path) {
-    execute_load_metrics("nnef", "simple", n, |read| {
+fn check_nnef_simple(n: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics("nnef", "simple", n, iterations, |read| {
         tractor_nnef::simple_inferer_from_stream(read)?;
         Ok(())
     })
-    .unwrap();
 }
 
 #[inline(never)]
-fn check_onnx_dynamic(o: &Path) {
-    execute_load_metrics("onnx", "dynamic", o, |read| {
+fn check_onnx_dynamic(o: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics("onnx", "dynamic", o, iterations, |read| {
         tractor_onnx::batched_inferer_from_stream(read, &[])?;
         Ok(())
     })
-    .unwrap();
 }
 
 #[inline(never)]
-fn check_nnef_dynamic(n: &Path) {
-    execute_load_metrics("nnef", "dynamic", n, |read| {
+fn check_nnef_dynamic(n: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics("nnef", "dynamic", n, iterations, |read| {
         tractor_nnef::batched_inferer_from_stream(read, &[])?;
         Ok(())
     })
-    .unwrap();
 }
 
 #[inline(never)]
-fn check_onnx_fixed(o: &Path) {
-    execute_load_metrics("onnx", "fixed", o, |read| {
+fn check_onnx_fixed(o: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics("onnx", "fixed", o, iterations, |read| {
         tractor_onnx::fixed_batch_inferer_from_stream(read, &[1, 2, 4])?;
         Ok(())
     })
-    .unwrap();
 }
 
 #[inline(never)]
-fn check_nnef_fixed(n: &Path) {
-    execute_load_metrics("nnef", "fixed", n, |read| {
+fn check_nnef_fixed(n: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics("nnef", "fixed", n, iterations, |read| {
         tractor_nnef::fixed_batch_inferer_from_stream(read, &[1, 2, 4])?;
         Ok(())
     })
-    .unwrap();
 }
 
-pub(crate) fn compare_loadtimes(config: LoadComparison) {
-    if let Some(o) = config.onnx.as_ref() {
-        check_onnx_fixed(o);
-        check_onnx_dynamic(o);
-        check_onnx_simple(o);
-    }
+pub(crate) fn compare_loadtimes(config: LoadComparison) -> Result<()> {
+    let mut records = if let Some(o) = config.onnx.as_ref() {
+        vec![
+            check_onnx_fixed(o, config.iterations)?,
+            check_onnx_dynamic(o, config.iterations)?,
+            check_onnx_simple(o, config.iterations)?,
+        ]
+    } else {
+        vec![]
+    };
 
-    if let Some(n) = config.nnef.as_ref() {
-        check_nnef_fixed(n);
-        check_nnef_dynamic(n);
-        check_nnef_simple(n);
+    let r = if let Some(n) = config.nnef.as_ref() {
+        vec![
+            check_nnef_fixed(n, config.iterations)?,
+            check_nnef_dynamic(n, config.iterations)?,
+            check_nnef_simple(n, config.iterations)?,
+        ]
+    } else {
+        vec![]
+    };
+
+    records.extend(r);
+
+    let mut file = std::fs::File::create(config.output_file)?;
+    for record in records {
+        writeln!(
+            file,
+            "{},{},{},{}",
+            record.format, record.kind, record.mean, record.stddev
+        )?;
     }
+    Ok(())
 }

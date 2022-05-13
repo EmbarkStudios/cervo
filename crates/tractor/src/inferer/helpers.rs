@@ -29,12 +29,6 @@ pub(super) fn build_symbolic_model(
     Ok((s, model))
 }
 
-pub(super) fn build_symbolic_typed(model: &mut TypedModel) -> TractResult<Symbol> {
-    let s = Symbol::from('N');
-    model.declutter()?;
-    Ok(s)
-}
-
 pub(super) fn build_model<D: ToDim>(
     mut model: InferenceModel,
     inputs: &[(String, Vec<usize>)],
@@ -47,12 +41,16 @@ pub(super) fn build_model<D: ToDim>(
         model.set_input_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
     }
 
-    let model = model
-        .into_optimized()?
+    model
+        .into_typed()?
         .into_decluttered()?
-        .into_runnable()?;
+        .into_optimized()?
+        .into_runnable()
+}
 
-    Ok(model)
+pub(super) fn build_symbolic_typed(model: &mut TypedModel) -> TractResult<Symbol> {
+    model.declutter()?;
+    Ok(Symbol::from('N'))
 }
 
 pub(super) fn build_typed<D: ToDim>(
@@ -64,7 +62,5 @@ pub(super) fn build_typed<D: ToDim>(
         &SymbolValues::default().with(symbol, batch_dim.to_dim().to_i64().unwrap()),
     )?;
 
-    let model = model.into_optimized()?.into_runnable()?;
-
-    Ok(model)
+    model.into_decluttered()?.into_optimized()?.into_runnable()
 }

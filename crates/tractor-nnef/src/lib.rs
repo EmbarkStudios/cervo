@@ -1,4 +1,4 @@
-/// Contains utilities for using tractor with ONNX.
+/// Contains utilities for using tractor with NNEF.
 use anyhow::Result;
 use std::ffi::OsStr;
 use std::io::Read;
@@ -10,11 +10,21 @@ use tract_nnef::{framework::Nnef, prelude::*};
 use tractor::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 
 thread_local!(
+    /// We create and cache the NNEF on a per-thread basis. This is noticeably expensive to create, so we ensure it only has to happen once.
     static NNEF: Rc<UnsafeCell<Nnef>>  = {
-
         Rc::new(UnsafeCell::new(tract_nnef::nnef().with_tract_core()))
     }
 );
+
+/// Initialize the thread-local NNEF instance.
+///
+/// To ensure fast loading tractor uses a thread-local instance of the
+/// tractor-NNEF package. If you don't want to pay for initialization
+/// on first-time load you can call this earlier to ensure it's set up
+/// ahead of time.
+pub fn init_thread() {
+    NNEF.with(|_| {})
+}
 
 /// Utility function to check if a file is a valid NNEF file.
 pub fn is_nnef_tar(path: &Path) -> bool {
