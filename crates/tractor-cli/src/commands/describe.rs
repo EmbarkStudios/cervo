@@ -11,7 +11,7 @@ use cervo_asset::AssetData;
 use clap::Parser;
 use std::{fs::File, path::PathBuf};
 
-/// Print API for a model
+/// Shortly describe the model file.
 #[derive(Parser, Debug)]
 #[clap()]
 pub(crate) struct DescribeArgs {

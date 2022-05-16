@@ -11,16 +11,20 @@ use cervo_asset::{AssetData, AssetKind};
 use clap::Parser;
 use std::path::PathBuf;
 
-/// Print API for a model
+/// Package the file into a crvo file.
 #[derive(Parser, Debug)]
 #[clap()]
 pub(crate) struct PackageArgs {
+    /// The file to load. Must be .onnx or .nnef.tar
     infile: PathBuf,
+    /// The file to write. Extensions are ignored.
     outfile: PathBuf,
 
+    /// If set and reading an ONNX file, convert to NNEF on packaging.
     #[clap(short = 'O', long = "optimize")]
     optimize: bool,
 
+    /// If provided, specialize the model for the batch size.
     #[clap(short = 'N', long = "batch-size", requires = "optimize")]
     batch_size: Option<usize>,
 }
