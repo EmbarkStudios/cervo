@@ -3,7 +3,7 @@ use std::io::{Cursor, Read, Write};
 use tractor::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 
 /// Magic used to ensure assets are valid.
-pub const MAGIC: [u8; 4] = ['C' as u8, 'R' as u8, 'V' as u8, 'O' as u8];
+pub const MAGIC: [u8; 4] = [b'C', b'R', b'V', b'O'];
 
 /// AssetKind denotes what kind of policy is contained inside an [`AssetData`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +11,9 @@ pub const MAGIC: [u8; 4] = ['C' as u8, 'R' as u8, 'V' as u8, 'O' as u8];
 pub enum AssetKind {
     /// Used for an asset containing ONNX ModelProto data.
     Onnx = 1,
+
+    /// Used for an asset containing NNEF data.
+    Nnef = 2,
 }
 
 impl TryFrom<u8> for AssetKind {
@@ -19,6 +22,7 @@ impl TryFrom<u8> for AssetKind {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             1 => Ok(AssetKind::Onnx),
+            2 => Ok(AssetKind::Nnef),
             v => bail!("unexpected asset kind: {:?}", v),
         }
     }
@@ -81,10 +85,10 @@ impl AssetData {
     /// The buffer returned will not contain any extra unused bytes.
     pub fn serialize(&self) -> Result<Vec<u8>> {
         let mut output = vec![];
-        output.write(&MAGIC)?;
+        output.write_all(&MAGIC)?;
 
         let preamble: [u8; 4] = [0, 0, 0, self.kind as u8];
-        output.write(&preamble)?;
+        output.write_all(&preamble)?;
 
         output.extend(&self.data);
         output.shrink_to_fit();
@@ -108,6 +112,7 @@ impl AssetData {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
             AssetKind::Onnx => tractor_onnx::simple_inferer_from_stream(&mut cursor),
+            AssetKind::Nnef => tractor_nnef::simple_inferer_from_stream(&mut cursor),
         }
     }
 
@@ -118,6 +123,7 @@ impl AssetData {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
             AssetKind::Onnx => tractor_onnx::fixed_batch_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Nnef => tractor_nnef::fixed_batch_inferer_from_stream(&mut cursor, sizes),
         }
     }
 
@@ -128,17 +134,22 @@ impl AssetData {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
             AssetKind::Onnx => tractor_onnx::batched_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Nnef => tractor_nnef::batched_inferer_from_stream(&mut cursor, sizes),
         }
     }
 
     /// Convert this to an NNEF asset.
-    pub fn as_nnef(&self) -> Self {
-        match self.kind {
-            // NOTE(TSolberg): Actually a lie for debugging purposes; waiting on https://github.com/EmbarkStudios/tractor/pull/2
-            AssetKind::Onnx => Self {
-                kind: AssetKind::Onnx,
-                data: self.data.clone(),
-            },
+    pub fn as_nnef(&self, batch_size: Option<usize>) -> Result<Self> {
+        if self.kind == AssetKind::Nnef {
+            bail!("trying to convert from nnef to nnef");
         }
+
+        let mut cursor = Cursor::new(&self.data);
+        let data = tractor_onnx::to_nnef(&mut cursor, batch_size)?;
+
+        Ok(Self {
+            data,
+            kind: AssetKind::Nnef,
+        })
     }
 }
