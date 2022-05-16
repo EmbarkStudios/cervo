@@ -55,7 +55,7 @@ impl AssetData {
         }
     }
 
-    /// Create a new AssetData from parts.
+    /// Create a new AssetData from a reader and a kind.
     ///
     /// Note: Does not validate the data.
     pub fn from_reader<Reader: Read>(kind: AssetKind, mut reader: Reader) -> Result<Self> {
