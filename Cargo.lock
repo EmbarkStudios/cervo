@@ -1353,6 +1353,7 @@ name = "tractor-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cervo-asset",
  "clap 3.1.18",
  "log",
  "tempfile",

@@ -15,4 +15,5 @@ tempfile = "3.3"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 tractor-onnx = { path = "../tractor-onnx" }
 tractor-nnef = { path = "../tractor-nnef" }
+cervo-asset = { path = "../cervo-asset" }
 tractor = { path = "../tractor" }

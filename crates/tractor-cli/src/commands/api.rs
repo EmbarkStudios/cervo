@@ -7,6 +7,7 @@
 */
 
 use anyhow::{bail, Result};
+use cervo_asset::AssetData;
 use clap::Parser;
 use std::{fs::File, path::PathBuf};
 use tractor::Inferer;
@@ -26,6 +27,7 @@ pub(super) fn describe_api(config: ApiArgs) -> Result<()> {
     } else {
         match config.file.extension().and_then(|ext| ext.to_str()) {
             Some("onnx") => tractor_onnx::simple_inferer_from_stream(&mut reader)?,
+            Some("crvo") => AssetData::deserialize(&mut reader)?.load_simple()?,
             Some(other) => bail!("unknown file type {:?}", other),
             None => bail!("missing file extension {:?}", config.file),
         }

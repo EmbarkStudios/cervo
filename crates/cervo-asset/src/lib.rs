@@ -28,6 +28,14 @@ impl TryFrom<u8> for AssetKind {
     }
 }
 
+impl std::fmt::Display for AssetKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AssetKind::Onnx => f.pad("onnx"),
+            AssetKind::Nnef => f.pad("nnef"),
+        }
+    }
+}
 /// Contains a tagged buffer of policy data.
 #[derive(Debug, Clone)]
 #[repr(C)]
@@ -47,10 +55,20 @@ impl AssetData {
         }
     }
 
+    /// Create a new AssetData from parts.
+    ///
+    /// Note: Does not validate the data.
+    pub fn from_reader<Reader: Read>(kind: AssetKind, mut reader: Reader) -> Result<Self> {
+        let mut buf = vec![];
+        reader.read_to_end(&mut buf)?;
+
+        Ok(Self::new(kind, buf))
+    }
+
     /// Deserialize from raw bytes.
     ///
     /// Note: Does not validate data; only loads it as an asset. Validation happens when creating an inferer.
-    pub fn deserialize(reader: &mut dyn Read) -> Result<Self> {
+    pub fn deserialize(mut reader: impl Read) -> Result<Self> {
         let mut magic: [u8; 4] = [0; 4];
         let count = reader.read(&mut magic)?;
         if count < 4 {
@@ -127,7 +145,7 @@ impl AssetData {
         }
     }
 
-    /// Load a batching inferer from this asset with fixed batch sizes.
+    /// Load a batching inferer from this asset with dynamic batch sizes.
     ///
     /// See [`DynamicBatchingInferer`] for more details.
     pub fn load_dynamic_batcher(&self, sizes: &[usize]) -> Result<DynamicBatchingInferer> {
@@ -139,6 +157,8 @@ impl AssetData {
     }
 
     /// Convert this to an NNEF asset.
+    ///
+    /// Will return an error if this is already an NNEF asset.
     pub fn as_nnef(&self, batch_size: Option<usize>) -> Result<Self> {
         if self.kind == AssetKind::Nnef {
             bail!("trying to convert from nnef to nnef");
