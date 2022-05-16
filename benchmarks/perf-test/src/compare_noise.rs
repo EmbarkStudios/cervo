@@ -23,6 +23,7 @@ fn black_box<T>(dummy: T) -> T {
 
 #[derive(StructOpt, Debug)]
 pub(crate) struct NoiseComparison {
+    input_file: PathBuf,
     steps: usize,
     batch_size: usize,
     output_file: PathBuf,
@@ -80,7 +81,8 @@ fn test_lq(onnx: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measureme
     execute_steps(instance, "high", steps, batch_size)
 }
 
-pub(crate) fn execute_comparison(onnx_path: &Path, config: NoiseComparison) -> Result<()> {
+pub(crate) fn execute_comparison(config: NoiseComparison) -> Result<()> {
+    let onnx_path = &config.input_file;
     let lq = test_lq(onnx_path, config.steps, config.batch_size)?;
     let hq = test_hq(onnx_path, config.steps, config.batch_size)?;
 
