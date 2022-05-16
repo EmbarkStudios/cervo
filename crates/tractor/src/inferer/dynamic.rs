@@ -1,4 +1,4 @@
-/*!
+/**
 The dynamic batcher has the highest potential throughput when the amount of data isn't known. It does so by dynamically
 generating execution plans to fit the exact amount of elements in each batch. The downside of this is that setting up a
 new plan is fairly costly, so doing this for a batch size that is only seen once will be a waste of energy.
@@ -10,7 +10,7 @@ exact value - this batcher will end up providing good value and inform tuning fo
 If you know some batch sizes but not all, you can preload the dynamic batcher with those plans to avoid having to build
 them at runtime.
 */
-use super::{Inferer, Response, State};
+use super::{helpers, Inferer, Response, State};
 use crate::model_api::ModelAPI;
 use anyhow::{Error, Result};
 use std::collections::{hash_map::Entry, HashMap};
@@ -34,23 +34,6 @@ pub struct DynamicBatchingInferer {
     model_cache: HashMap<usize, TypedSimplePlan<TypedModel>>,
 }
 
-fn build_model(
-    mut model: InferenceModel,
-    inputs: &[(String, Vec<usize>)],
-) -> Result<(Symbol, TypedModel)> {
-    let s = Symbol::new('N');
-    for (idx, (_name, shape)) in inputs.iter().enumerate() {
-        let mut full_shape = tvec!(s.to_dim());
-
-        full_shape.extend(shape.iter().map(|v| (*v as i32).into()));
-        model.set_input_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
-    }
-
-    // optimize the model and get an execution plan
-    let model = model.into_typed()?.into_decluttered()?;
-    Ok((s, model))
-}
-
 impl DynamicBatchingInferer {
     /// Create an inferer for the provided `inference` model.
     ///
@@ -60,11 +43,33 @@ impl DynamicBatchingInferer {
     pub fn from_model(model: InferenceModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
         let model_api = ModelAPI::for_model(&model)?;
 
-        let (symbol, model) = build_model(model, &model_api.inputs)?;
+        let (symbol, model) = helpers::build_symbolic_model(model, &model_api.inputs)?;
         let mut this = Self {
             symbol,
             model,
+            model_api,
+            model_cache: Default::default(),
+        };
 
+        for size in preloaded_sizes {
+            this.get_concrete_model(*size)?;
+        }
+
+        Ok(this)
+    }
+
+    /// Create an inferer for the provided `typed` model.
+    ///
+    /// # Errors
+    ///
+    /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
+    pub fn from_typed(mut model: TypedModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
+        let model_api = ModelAPI::for_typed_model(&model)?;
+
+        let symbol = helpers::build_symbolic_typed(&mut model)?;
+        let mut this = Self {
+            symbol,
+            model,
             model_api,
             model_cache: Default::default(),
         };

@@ -15,9 +15,6 @@ use std::{
 use anyhow::Result;
 use structopt::StructOpt;
 use tractor::{EpsilonInjector, Inferer};
-use tractor_onnx::{
-    batched_inferer_from_stream, fixed_batch_inferer_from_stream, simple_inferer_from_stream,
-};
 
 fn black_box<T>(dummy: T) -> T {
     unsafe { std::ptr::read_volatile(&dummy) }
@@ -25,6 +22,11 @@ fn black_box<T>(dummy: T) -> T {
 
 #[derive(StructOpt, Debug)]
 pub(crate) struct BatcherComparison {
+    #[structopt(long = "onnx", short = "o")]
+    onnx: Option<PathBuf>,
+    #[structopt(long = "nnef", short = "n")]
+    nnef: Option<PathBuf>,
+
     #[structopt(short = "-f", long = "--fixed", use_delimiter = true)]
     fixed_sizes: Vec<usize>,
     #[structopt(short = "-d", long = "--dynamic", use_delimiter = true)]
@@ -74,7 +76,7 @@ fn execute_steps(
     Ok(measurements)
 }
 
-fn test_fixed_batcher(
+fn test_fixed_batcher_onnx(
     onnx: &Path,
     sizes: &[usize],
     steps: usize,
@@ -82,15 +84,13 @@ fn test_fixed_batcher(
 ) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(onnx).unwrap();
 
-    let instance = EpsilonInjector::wrap(
-        fixed_batch_inferer_from_stream(&mut reader, sizes)?,
-        "epsilon",
-    )?;
+    let raw = tractor_onnx::fixed_batch_inferer_from_stream(&mut reader, sizes)?;
+    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
 
-    execute_steps(instance, "fixed", steps, batch_size)
+    execute_steps(instance, "fixed+onnx", steps, batch_size)
 }
 
-fn test_dynamic_batcher(
+fn test_dynamic_batcher_onnx(
     onnx: &Path,
     sizes: &[usize],
     steps: usize,
@@ -98,54 +98,127 @@ fn test_dynamic_batcher(
 ) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(onnx).unwrap();
 
-    let raw = batched_inferer_from_stream(&mut reader, sizes)?;
+    let raw = tractor_onnx::batched_inferer_from_stream(&mut reader, sizes)?;
     let instance = EpsilonInjector::wrap(raw, "epsilon")?;
 
-    execute_steps(instance, "dynamic", steps, batch_size)
+    execute_steps(instance, "dynamic+onnx", steps, batch_size)
 }
 
-fn test_no_batcher(onnx: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measurement>> {
+fn test_no_batcher_onnx(onnx: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(onnx).unwrap();
 
-    let raw = simple_inferer_from_stream(&mut reader)?;
+    let raw = tractor_onnx::simple_inferer_from_stream(&mut reader)?;
     let instance = EpsilonInjector::wrap(raw, "epsilon")?;
 
-    execute_steps(instance, "none", steps, batch_size)
+    execute_steps(instance, "none+onnx", steps, batch_size)
 }
 
-pub(crate) fn execute_comparison(onnx_path: &Path, config: BatcherComparison) -> Result<()> {
-    let fixed = test_fixed_batcher(
-        onnx_path,
-        &config.fixed_sizes,
-        config.steps,
-        config.batch_size,
-    )?;
-    let dynamic = test_dynamic_batcher(
-        onnx_path,
-        &config.dynamic_sizes,
-        config.steps,
-        config.batch_size,
-    )?;
-    let unbatched = test_no_batcher(onnx_path, config.steps, config.batch_size)?;
+fn test_fixed_batcher_nnef(
+    nnef: &Path,
+    sizes: &[usize],
+    steps: usize,
+    batch_size: usize,
+) -> Result<Vec<Measurement>> {
+    let mut reader = crate::helpers::get_file(nnef).unwrap();
 
+    let raw = tractor_nnef::fixed_batch_inferer_from_stream(&mut reader, sizes)?;
+    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+
+    execute_steps(instance, "fixed+nnef", steps, batch_size)
+}
+
+fn test_dynamic_batcher_nnef(
+    nnef: &Path,
+    sizes: &[usize],
+    steps: usize,
+    batch_size: usize,
+) -> Result<Vec<Measurement>> {
+    let mut reader = crate::helpers::get_file(nnef).unwrap();
+
+    let raw = tractor_nnef::batched_inferer_from_stream(&mut reader, sizes)?;
+    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+
+    execute_steps(instance, "dynamic+nnef", steps, batch_size)
+}
+
+fn test_no_batcher_nnef(nnef: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measurement>> {
+    let mut reader = crate::helpers::get_file(nnef).unwrap();
+
+    let raw = tractor_nnef::simple_inferer_from_stream(&mut reader)?;
+    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+
+    execute_steps(instance, "none+nnef", steps, batch_size)
+}
+
+pub(crate) fn execute_comparison(config: BatcherComparison) -> Result<()> {
     let mut file = std::fs::File::create(config.output_file)?;
+    if let Some(onnx_path) = config.onnx {
+        let fixed = test_fixed_batcher_onnx(
+            &onnx_path,
+            &config.fixed_sizes,
+            config.steps,
+            config.batch_size,
+        )?;
+        let dynamic = test_dynamic_batcher_onnx(
+            &onnx_path,
+            &config.dynamic_sizes,
+            config.steps,
+            config.batch_size,
+        )?;
+        let unbatched = test_no_batcher_onnx(&onnx_path, config.steps, config.batch_size)?;
 
-    for series in [fixed, dynamic, unbatched] {
-        perchance::seed_global(0xff00ff00ff00ff00ff00ff00ff00ff00u128);
-        for row in series {
-            let denom = if config.batch_size > 0 {
-                config.batch_size as f64
-            } else {
-                perchance::global().uniform_range_usize(1..10) as f64
-            };
+        for series in [fixed, dynamic, unbatched] {
+            perchance::seed_global(0xff00ff00ff00ff00ff00ff00ff00ff00u128);
+            for row in series {
+                let denom = if config.batch_size > 0 {
+                    config.batch_size as f64
+                } else {
+                    perchance::global().uniform_range_usize(1..10) as f64
+                };
 
-            writeln!(
-                file,
-                "{:?},{},{}",
-                row.kind,
-                row.step,
-                row.time.as_secs_f64() * 1e6 / denom
-            )?;
+                writeln!(
+                    file,
+                    "{:?},{},{}",
+                    row.kind,
+                    row.step,
+                    row.time.as_secs_f64() * 1e6 / denom
+                )?;
+            }
+        }
+    }
+
+    if let Some(nnef_path) = config.nnef {
+        let fixed = test_fixed_batcher_nnef(
+            &nnef_path,
+            &config.fixed_sizes,
+            config.steps,
+            config.batch_size,
+        )?;
+        let dynamic = test_dynamic_batcher_nnef(
+            &nnef_path,
+            &config.dynamic_sizes,
+            config.steps,
+            config.batch_size,
+        )?;
+        let unbatched = test_no_batcher_nnef(&nnef_path, config.steps, config.batch_size)?;
+
+        for series in [fixed, dynamic, unbatched] {
+            perchance::seed_global(0xff00ff00ff00ff00ff00ff00ff00ff00u128);
+            for row in series {
+                let denom = if config.batch_size > 0 {
+                    config.batch_size as f64
+                } else {
+                    perchance::global().uniform_range_usize(1..10) as f64
+                };
+
+                writeln!(
+                    file,
+                    "{:?},{},{}",
+                    row.kind,
+                    row.step,
+                    row.time.as_secs_f64() * 1e6 / denom
+                )?;
+            }
         }
     }
 

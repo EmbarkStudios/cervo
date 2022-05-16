@@ -6,14 +6,16 @@ import seaborn
 
 
 def parse_stats_file(statsfile) -> pandas.DataFrame:
-    return pandas.read_csv(statsfile, names=["kind", "step", "t"])
+    return pandas.read_csv(statsfile, names=["format", "kind", "t", "stddev"])
 
 
-def main(statsfile, bs, outfile=None):
+def main(statsfile, its, outfile=None):
     df = parse_stats_file(statsfile)
+
     plt.figure(figsize=(16, 10))
-    seaborn.lineplot(x="step", y="t", hue="kind", data=df).set(
-        title=f"Time per element by batcher, batch_size={bs}", ylabel="µs"
+    seaborn.barplot(x="kind", y="t", hue="format", data=df).set(
+        title=f"Mean load time by format and kind, its={its}",
+        ylabel="milliseconds",
     )
 
     plt.legend(
@@ -40,6 +42,5 @@ def get_or_none(lst, idx):
 
 if __name__ == "__main__":
     filename = sys.argv[1]
-    bs = sys.argv[2]
-
-    main(filename, bs, get_or_none(sys.argv, 3))
+    its = sys.argv[2]
+    main(filename, its, get_or_none(sys.argv, 3))

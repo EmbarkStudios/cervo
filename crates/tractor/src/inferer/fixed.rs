@@ -9,32 +9,12 @@ You can configure a wide number of different batch sizes, and the largest one wi
 execution still is fairly large, but this helps amortize some of that cost away. For example; if you use a setup of [1,
 2, 4, 8] as your supported batch sizes a batch of 15 elements would run each plan once.
  */
-use super::{Inferer, Response, State};
+use super::{helpers, Inferer, Response, State};
 use crate::model_api::ModelAPI;
 use anyhow::{Error, Result};
 use std::collections::HashMap;
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
-
-fn build_model(
-    mut model: InferenceModel,
-    s: i32,
-    inputs: &[(String, Vec<usize>)],
-) -> Result<TypedSimplePlan<TypedModel>> {
-    for (idx, (_name, shape)) in inputs.iter().enumerate() {
-        let mut full_shape = tvec!(s.to_dim());
-
-        full_shape.extend(shape.iter().map(|v| (*v as i32).into()));
-        model.set_input_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
-    }
-
-    let model = model
-        .into_optimized()?
-        .into_decluttered()?
-        .into_runnable()?;
-
-    Ok(model)
-}
 
 /// The fixed batch inferer provided will subdivide your data into minibatches to efficiently use a set of preconfigured minibatch-sizes.
 ///
@@ -51,6 +31,17 @@ pub struct FixedBatchingInferer {
     models: Vec<BatchedModel>,
 }
 
+fn fixup_sizes(sizes: &[usize]) -> Vec<usize> {
+    let mut sizes = sizes.to_vec();
+    if !sizes.contains(&1) {
+        sizes.push(1);
+    }
+    sizes.sort_unstable();
+    sizes.reverse();
+
+    sizes
+}
+
 impl FixedBatchingInferer {
     /// Create an inferer for the provided `inference` model.
     ///
@@ -60,17 +51,33 @@ impl FixedBatchingInferer {
     pub fn from_model(model: InferenceModel, sizes: &[usize]) -> TractResult<Self> {
         let model_api = ModelAPI::for_model(&model)?;
 
-        let mut sizes = sizes.to_vec();
-        if !sizes.contains(&1) {
-            sizes.push(1);
-        }
-        sizes.sort_unstable();
-        sizes.reverse();
+        let sizes = fixup_sizes(sizes);
 
         let models = sizes
             .into_iter()
             .map(|size| {
-                build_model(model.clone(), size as i32, &model_api.inputs)
+                helpers::build_model(model.clone(), &model_api.inputs, size as i32)
+                    .map(|m| BatchedModel { size, plan: m })
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(Self { models, model_api })
+    }
+
+    /// Create an inferer for the provided typed model.
+    ///
+    /// # Errors
+    ///
+    /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
+    pub fn from_typed(model: TypedModel, sizes: &[usize]) -> TractResult<Self> {
+        let model_api = ModelAPI::for_typed_model(&model.clone())?;
+
+        let sizes = fixup_sizes(sizes);
+
+        let models = sizes
+            .into_iter()
+            .map(|size| {
+                helpers::build_typed(model.clone(), size as i32)
                     .map(|m| BatchedModel { size, plan: m })
             })
             .collect::<Result<Vec<_>>>()?;

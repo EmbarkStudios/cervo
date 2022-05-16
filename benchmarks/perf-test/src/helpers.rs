@@ -6,21 +6,12 @@
 
 */
 
-use std::{
-    collections::HashMap,
-    fs::File,
-    path::{self, Path},
-};
+use std::{collections::HashMap, fs::File, path::Path};
 
 use tractor::State;
 
 pub fn get_file<T: AsRef<Path>>(name: T) -> std::io::Result<File> {
-    let crate_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-
-    let mut path = path::PathBuf::from(&crate_dir);
-    path.push(name);
-
-    std::fs::File::open(path)
+    std::fs::File::open(name)
 }
 
 pub fn build_inputs_from_desc(count: u64, inputs: &[(String, Vec<usize>)]) -> HashMap<u64, State> {

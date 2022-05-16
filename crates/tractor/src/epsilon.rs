@@ -15,8 +15,36 @@ use std::collections::HashMap;
 
 /// NoiseGenerators are consumed by the [`EpsilonInjector`] by generating noise sampled for a standard normal
 /// distribution. Custom noise-generators can be implemented and passed via [`EpsilonInjector::with_generator`].
-pub trait NoiseGenerator: Default {
+pub trait NoiseGenerator {
     fn generate(&mut self, count: usize) -> Vec<f32>;
+}
+
+/// A non-noisy noise generator, primarily intended for debugging or testing purposes.
+pub struct ConstantGenerator {
+    value: f32,
+}
+
+impl ConstantGenerator {
+    /// Will generate the provided `value` when called.
+    pub fn for_value(value: f32) -> Self {
+        Self { value }
+    }
+
+    /// Convenience function for a constant generator for zeros.
+    pub fn zeros() -> Self {
+        Self::for_value(1.0)
+    }
+
+    /// Convenience function for a constant generator for ones.
+    pub fn ones() -> Self {
+        Self::for_value(1.0)
+    }
+}
+
+impl NoiseGenerator for ConstantGenerator {
+    fn generate(&mut self, count: usize) -> Vec<f32> {
+        vec![self.value; count]
+    }
 }
 
 /// A low quality noise generator which is about twice as fast as the built-in [`HighQualityNoiseGenerator`]. This uses
