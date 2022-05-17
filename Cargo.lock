@@ -122,6 +122,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
 
 [[package]]
+name = "cervo"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "perchance",
+ "rand",
+ "rand_distr",
+ "tract-core",
+ "tract-hir",
+]
+
+[[package]]
 name = "cervo-asset"
 version = "0.1.0"
 dependencies = [
@@ -129,6 +141,43 @@ dependencies = [
  "cervo",
  "cervo-nnef",
  "cervo-onnx",
+]
+
+[[package]]
+name = "cervo-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo",
+ "cervo-asset",
+ "cervo-nnef",
+ "cervo-onnx",
+ "clap 3.1.18",
+ "log",
+ "tempfile",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "cervo-nnef"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo",
+ "once_cell",
+ "tract-hir",
+ "tract-nnef",
+ "tract-onnx",
+]
+
+[[package]]
+name = "cervo-onnx"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo",
+ "tract-nnef",
+ "tract-onnx",
 ]
 
 [[package]]
@@ -694,12 +743,12 @@ name = "perf-test"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "clap 2.34.0",
- "perchance",
- "structopt",
  "cervo",
  "cervo-nnef",
  "cervo-onnx",
+ "clap 2.34.0",
+ "perchance",
+ "structopt",
 ]
 
 [[package]]
@@ -1334,55 +1383,6 @@ source = "git+https://github.com/sonos/tract?branch=issue-713#3434a9b88f7c7b1983
 dependencies = [
  "educe",
  "tract-nnef",
-]
-
-[[package]]
-name = "cervo"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "perchance",
- "rand",
- "rand_distr",
- "tract-core",
- "tract-hir",
-]
-
-[[package]]
-name = "cervo-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cervo-asset",
- "clap 3.1.18",
- "log",
- "tempfile",
- "tracing-subscriber",
- "cervo",
- "cervo-nnef",
- "cervo-onnx",
-]
-
-[[package]]
-name = "cervo-nnef"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "once_cell",
- "tract-hir",
- "tract-nnef",
- "tract-onnx",
- "cervo",
-]
-
-[[package]]
-name = "cervo-onnx"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "tract-nnef",
- "tract-onnx",
- "cervo",
 ]
 
 [[package]]
