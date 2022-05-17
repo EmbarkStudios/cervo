@@ -122,7 +122,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
 
 [[package]]
-name = "cervo"
+name = "cervo-asset"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo-core",
+ "cervo-nnef",
+ "cervo-onnx",
+]
+
+[[package]]
+name = "cervo-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo-asset",
+ "cervo-core",
+ "cervo-nnef",
+ "cervo-onnx",
+ "clap 3.1.18",
+ "log",
+ "tempfile",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "cervo-core"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -134,36 +159,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "cervo-asset"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cervo",
- "cervo-nnef",
- "cervo-onnx",
-]
-
-[[package]]
-name = "cervo-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cervo",
- "cervo-asset",
- "cervo-nnef",
- "cervo-onnx",
- "clap 3.1.18",
- "log",
- "tempfile",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "cervo-nnef"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cervo",
+ "cervo-core",
  "once_cell",
  "tract-hir",
  "tract-nnef",
@@ -175,7 +175,7 @@ name = "cervo-onnx"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cervo",
+ "cervo-core",
  "tract-nnef",
  "tract-onnx",
 ]
@@ -743,7 +743,7 @@ name = "perf-test"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "cervo",
+ "cervo-core",
  "cervo-nnef",
  "cervo-onnx",
  "clap 2.34.0",

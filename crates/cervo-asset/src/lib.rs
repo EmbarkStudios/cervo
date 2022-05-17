@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
+use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 use std::io::{Cursor, Read, Write};
-use cervo::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 
 /// Magic used to ensure assets are valid.
 pub const MAGIC: [u8; 4] = [b'C', b'R', b'V', b'O'];

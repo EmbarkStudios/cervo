@@ -11,4 +11,4 @@ license = "LicenseRef-Embark-Proprietary"
 anyhow = "1.0.57"
 tract-onnx =  { version = "0.16.7-pre" }
 tract-nnef = { version = "0.16.7-pre" }
-cervo = { path = "../cervo" }
+cervo-core = { path = "../cervo-core" }

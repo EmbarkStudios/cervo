@@ -11,6 +11,6 @@ clap = "2.33.0"
 anyhow = { version = "1.0"}
 cervo-onnx = { path = "../../crates/cervo-onnx" }
 cervo-nnef = { path = "../../crates/cervo-nnef" }
-cervo = { path = "../../crates/cervo" }
+cervo-core = { path = "../../crates/cervo-core" }
 structopt = "0.3.11"
 perchance = "*"

@@ -16,4 +16,4 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 cervo-onnx = { path = "../cervo-onnx" }
 cervo-nnef = { path = "../cervo-nnef" }
 cervo-asset = { path = "../cervo-asset" }
-cervo = { path = "../cervo" }
+cervo-core = { path = "../cervo-core" }

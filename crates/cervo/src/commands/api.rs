@@ -7,10 +7,10 @@
 */
 
 use anyhow::{bail, Result};
+use cervo_core::Inferer;
 use cervo_asset::AssetData;
 use clap::Parser;
 use std::{fs::File, path::PathBuf};
-use cervo::Inferer;
 
 /// Print API for a model
 #[derive(Parser, Debug)]

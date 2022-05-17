@@ -13,8 +13,8 @@ use std::{
 };
 
 use anyhow::Result;
+use cervo_core::{EpsilonInjector, Inferer};
 use structopt::StructOpt;
-use cervo::{EpsilonInjector, Inferer};
 
 fn black_box<T>(dummy: T) -> T {
     unsafe { std::ptr::read_volatile(&dummy) }

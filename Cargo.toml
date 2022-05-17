@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "crates/cervo",
-    "crates/cervo-cli",
+    "crates/cervo-core",
     "crates/cervo-nnef",
     "crates/cervo-onnx",
     "crates/cervo-asset",

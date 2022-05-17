@@ -1,8 +1,8 @@
 /// Contains utilities for using cervo with ONNX.
 use anyhow::Result;
+use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 use std::io::Read;
 use tract_onnx::{prelude::*, tract_hir::infer::Factoid};
-use cervo::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 
 fn model_for_reader(reader: &mut dyn Read) -> Result<InferenceModel> {
     let onnx = tract_onnx::onnx();

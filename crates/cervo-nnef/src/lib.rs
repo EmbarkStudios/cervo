@@ -7,7 +7,7 @@ use std::rc::Rc;
 use std::{cell::UnsafeCell, path::Path};
 use tract_nnef::{framework::Nnef, prelude::*};
 
-use cervo::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
+use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 
 thread_local!(
     /// We create and cache the NNEF on a per-thread basis. This is noticeably expensive to create, so we ensure it only has to happen once.

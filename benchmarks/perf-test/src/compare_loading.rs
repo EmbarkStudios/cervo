@@ -13,8 +13,9 @@ use std::{
     time::Instant,
 };
 
-use structopt::StructOpt;
 use cervo_onnx::simple_inferer_from_stream;
+use structopt::StructOpt;
+
 #[derive(Debug, StructOpt)]
 pub(crate) struct LoadComparison {
     #[structopt(long = "onnx", short = "o")]

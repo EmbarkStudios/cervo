@@ -1,5 +1,5 @@
 [package]
-name = "cervo"
+name = "cervo-core"
 version = "0.0.0"
 edition = "2018"
 authors = [
