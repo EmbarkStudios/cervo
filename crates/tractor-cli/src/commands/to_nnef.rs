@@ -57,7 +57,8 @@ pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
     }
 
     let mut reader = File::open(in_file)?;
-    let bytes = tractor_onnx::to_nnef(&mut reader, batch_size)?;
+    let mut bytes = tractor_onnx::to_nnef(&mut reader, batch_size)?;
+    bytes.shrink_to_fit();
 
     let mut out = tempfile::NamedTempFile::new()?;
     out.write_all(&bytes)?;

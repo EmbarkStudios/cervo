@@ -4,6 +4,7 @@ members = [
     "crates/tractor-cli",
     "crates/tractor-nnef",
     "crates/tractor-onnx",
+    "crates/cervo-asset",
     "benchmarks/perf-test"
 ]
 
