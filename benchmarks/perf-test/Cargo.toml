@@ -12,5 +12,6 @@ anyhow = { version = "1.0"}
 cervo-onnx = { path = "../../crates/cervo-onnx" }
 cervo-nnef = { path = "../../crates/cervo-nnef" }
 cervo-core = { path = "../../crates/cervo-core" }
+cervo-asset = { path = "../../crates/cervo-asset" }
 structopt = "0.3.11"
 perchance = "*"

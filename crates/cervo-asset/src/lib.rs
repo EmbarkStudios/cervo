@@ -1,6 +1,9 @@
 use anyhow::{bail, Result};
 use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
+use flate2::Compression;
 use std::io::{Cursor, Read, Write};
+
+pub const VERSION: u8 = 1;
 
 /// Magic used to ensure assets are valid.
 pub const MAGIC: [u8; 4] = [b'C', b'R', b'V', b'O'];
@@ -85,31 +88,88 @@ impl AssetData {
             );
         }
 
-        let mut preamble: [u8; 4] = [0; 4];
-        let count = reader.read(&mut preamble)?;
-        if count < 4 {
+        let mut version: [u8; 1] = [0];
+        let count = reader.read(&mut version)?;
+        if count < 1 {
             anyhow::bail!("too few bytes available, expected 4 but got {:?}", count);
         }
 
-        let kind = preamble[3].try_into()?;
+        let version = version[0];
+
+        let mut preamble: [u8; 3] = [0; 3];
+        let count = reader.read(&mut preamble)?;
+        if count < 3 {
+            anyhow::bail!("too few bytes available, expected 4 but got {:?}", count);
+        }
+
+        if version == 0 {
+            if preamble[0] != 0 || preamble[1] != 0 {
+                bail!(
+                    "unexpected non-zero bytes in bytes 2 and 3 of premable: {}{}",
+                    preamble[0],
+                    preamble[1]
+                );
+            }
+        }
+
+        if version == 1 {
+            if preamble[1] != 0 {
+                bail!(
+                    "unexpected non-zero bytes in byte 3 of premable: {}",
+                    preamble[1]
+                );
+            }
+        }
+
         let mut data = vec![];
         reader.read_to_end(&mut data)?;
+
+        if preamble[0] == 1 {
+            // use flate2::read::GzDecoder;
+
+            // let mut d = GzDecoder::new(std::io::Cursor::new(data));
+
+            // d.read_to_end(&mut data)?;
+
+            let mut d = snap::read::FrameDecoder::new(std::io::Cursor::new(data));
+            data = vec![];
+            d.read_to_end(&mut data)?;
+        }
+
+        let kind = preamble[2].try_into()?;
 
         Ok(Self { kind, data })
     }
 
     /// Serialize to raw bytes.
     ///
+    ///
+    /// If compression is enabled; will use the GZIP with the default compression level.
+    ///
     /// The buffer returned will not contain any extra unused bytes.
-    pub fn serialize(&self) -> Result<Vec<u8>> {
+    pub fn serialize(&self, compress: bool) -> Result<Vec<u8>> {
         let mut output = vec![];
         output.write_all(&MAGIC)?;
 
-        let preamble: [u8; 4] = [0, 0, 0, self.kind as u8];
+        let compress_flag: u8 = if compress { 1 } else { 0 };
+        let preamble: [u8; 4] = [VERSION, compress_flag, 0, self.kind as u8];
+
         output.write_all(&preamble)?;
 
-        output.extend(&self.data);
+        if compress {
+            //use flate2::write::GzEncoder;
+            // let mut d = GzEncoder::new(vec![], Compression::fast());
+            //             d.write_all(&self.data)?;
+            // output.extend(d.finish()?);
+
+            let mut d = snap::write::FrameEncoder::new(&mut output);
+            d.write_all(&self.data)?;
+        } else {
+            output.extend(&self.data);
+        }
+
         output.shrink_to_fit();
+
         Ok(output)
     }
 

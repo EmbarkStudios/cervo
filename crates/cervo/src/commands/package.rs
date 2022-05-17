@@ -24,6 +24,10 @@ pub(crate) struct PackageArgs {
     #[clap(short = 'O', long = "optimize")]
     optimize: bool,
 
+    /// If set will compress with Gzip.
+    #[clap(short = 'C', long = "compress")]
+    compress: bool,
+
     /// If provided, specialize the model for the batch size.
     #[clap(short = 'N', long = "batch-size", requires = "optimize")]
     batch_size: Option<usize>,
@@ -61,7 +65,7 @@ pub(super) fn package(config: PackageArgs) -> Result<()> {
     };
 
     let file = config.outfile.with_extension("crvo");
-    let data = asset.serialize()?;
+    let data = asset.serialize(config.compress)?;
     std::fs::write(&file, data)?;
     Ok(())
 }

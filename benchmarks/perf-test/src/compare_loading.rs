@@ -20,8 +20,21 @@ use structopt::StructOpt;
 pub(crate) struct LoadComparison {
     #[structopt(long = "onnx", short = "o")]
     onnx: Option<PathBuf>,
+
     #[structopt(long = "nnef", short = "n")]
     nnef: Option<PathBuf>,
+
+    #[structopt(long = "onnx-crvo")]
+    onnx_crvo: Option<PathBuf>,
+
+    #[structopt(long = "nnef-crvo")]
+    nnef_crvo: Option<PathBuf>,
+
+    #[structopt(long = "onnx-crvo-c")]
+    onnx_crvo_compressed: Option<PathBuf>,
+
+    #[structopt(long = "nnef-crvo-c")]
+    nnef_crvo_compressed: Option<PathBuf>,
 
     iterations: usize,
     output_file: PathBuf,
@@ -141,6 +154,90 @@ fn check_nnef_fixed(n: &Path, iterations: usize) -> Result<Record> {
     })
 }
 
+#[inline(never)]
+fn check_onnx_crvo_simple(name: &'static str, o: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics(
+        &format!("{}{}", "onnx_crvo", name),
+        "simple",
+        o,
+        iterations,
+        |read| {
+            cervo_asset::AssetData::deserialize(read)?.load_simple()?;
+            Ok(())
+        },
+    )
+}
+
+#[inline(never)]
+fn check_nnef_crvo_simple(name: &'static str, n: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics(
+        &format!("{}{}", "nnef_crvo", name),
+        "simple",
+        n,
+        iterations,
+        |read| {
+            cervo_asset::AssetData::deserialize(read)?.load_simple()?;
+            Ok(())
+        },
+    )
+}
+
+#[inline(never)]
+fn check_onnx_crvo_dynamic(name: &'static str, o: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics(
+        &format!("{}{}", "onnx_crvo", name),
+        "dynamic",
+        o,
+        iterations,
+        |read| {
+            cervo_asset::AssetData::deserialize(read)?.load_dynamic_batcher(&[1, 2, 4])?;
+            Ok(())
+        },
+    )
+}
+
+#[inline(never)]
+fn check_nnef_crvo_dynamic(name: &'static str, n: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics(
+        &format!("{}{}", "nnef_crvo", name),
+        "dynamic",
+        n,
+        iterations,
+        |read| {
+            cervo_asset::AssetData::deserialize(read)?.load_dynamic_batcher(&[1, 2, 4])?;
+            Ok(())
+        },
+    )
+}
+
+#[inline(never)]
+fn check_onnx_crvo_fixed(name: &'static str, o: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics(
+        &format!("{}{}", "onnx_crvo", name),
+        "fixed",
+        o,
+        iterations,
+        |read| {
+            cervo_asset::AssetData::deserialize(read)?.load_fixed_batcher(&[1, 2, 4])?;
+            Ok(())
+        },
+    )
+}
+
+#[inline(never)]
+fn check_nnef_crvo_fixed(name: &'static str, n: &Path, iterations: usize) -> Result<Record> {
+    execute_load_metrics(
+        &format!("{}{}", "nnef_crvo", name),
+        "fixed",
+        n,
+        iterations,
+        |read| {
+            cervo_asset::AssetData::deserialize(read)?.load_fixed_batcher(&[1, 2, 4])?;
+            Ok(())
+        },
+    )
+}
+
 pub(crate) fn compare_loadtimes(config: LoadComparison) -> Result<()> {
     let mut records = if let Some(o) = config.onnx.as_ref() {
         vec![
@@ -152,6 +249,29 @@ pub(crate) fn compare_loadtimes(config: LoadComparison) -> Result<()> {
         vec![]
     };
 
+    let r = if let Some(n) = config.onnx_crvo.as_ref() {
+        vec![
+            check_onnx_crvo_fixed("", n, config.iterations)?,
+            check_onnx_crvo_dynamic("", n, config.iterations)?,
+            check_onnx_crvo_simple("", n, config.iterations)?,
+        ]
+    } else {
+        vec![]
+    };
+
+    records.extend(r);
+
+    let r = if let Some(n) = config.onnx_crvo_compressed.as_ref() {
+        vec![
+            check_onnx_crvo_fixed("-compressed", n, config.iterations)?,
+            check_onnx_crvo_dynamic("-compressed", n, config.iterations)?,
+            check_onnx_crvo_simple("-compressed", n, config.iterations)?,
+        ]
+    } else {
+        vec![]
+    };
+    records.extend(r);
+
     let r = if let Some(n) = config.nnef.as_ref() {
         vec![
             check_nnef_fixed(n, config.iterations)?,
@@ -161,7 +281,28 @@ pub(crate) fn compare_loadtimes(config: LoadComparison) -> Result<()> {
     } else {
         vec![]
     };
+    records.extend(r);
 
+    let r = if let Some(n) = config.nnef_crvo.as_ref() {
+        vec![
+            check_nnef_crvo_fixed("", n, config.iterations)?,
+            check_nnef_crvo_dynamic("", n, config.iterations)?,
+            check_nnef_crvo_simple("", n, config.iterations)?,
+        ]
+    } else {
+        vec![]
+    };
+    records.extend(r);
+
+    let r = if let Some(n) = config.nnef_crvo_compressed.as_ref() {
+        vec![
+            check_nnef_crvo_fixed("-compressed", n, config.iterations)?,
+            check_nnef_crvo_dynamic("-compressed", n, config.iterations)?,
+            check_nnef_crvo_simple("-compressed", n, config.iterations)?,
+        ]
+    } else {
+        vec![]
+    };
     records.extend(r);
 
     let mut file = std::fs::File::create(config.output_file)?;

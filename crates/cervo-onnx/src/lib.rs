@@ -51,7 +51,6 @@ pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u
 
     for input_outlet in input_outlets {
         let input_shape = &model.input_fact(input_outlet.node)?.shape;
-
         let mut shape: Vec<_> = input_shape
             .dims()
             .skip(1)
@@ -59,7 +58,6 @@ pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u
             .collect();
 
         shape.insert(0, batch.clone());
-
         model.set_input_fact(
             input_outlet.node,
             InferenceFact::dt_shape(DatumType::F32, &shape),

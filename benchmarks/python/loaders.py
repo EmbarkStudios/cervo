@@ -23,7 +23,7 @@ def main(statsfile, its, outfile=None):
         bbox_to_anchor=(0.5, -0.05),
         fancybox=True,
         shadow=True,
-        ncol=3,
+        ncol=2,
     )
 
     if outfile:
