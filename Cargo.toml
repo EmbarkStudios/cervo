@@ -1,9 +1,9 @@
 [workspace]
 members = [
-    "crates/tractor",
-    "crates/tractor-cli",
-    "crates/tractor-nnef",
-    "crates/tractor-onnx",
+    "crates/cervo",
+    "crates/cervo-cli",
+    "crates/cervo-nnef",
+    "crates/cervo-onnx",
     "crates/cervo-asset",
     "benchmarks/perf-test"
 ]

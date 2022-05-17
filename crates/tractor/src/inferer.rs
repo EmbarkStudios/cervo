@@ -5,8 +5,8 @@
 #![warn(clippy::all)]
 
 /*!
-Inferers is the main access-point for tractor; providing a higher-level API on top of `tract`. Irregardless of
-inferer-flavour you choose, tractor tries to provide a uniform API for batched dictionary based inference.
+Inferers is the main access-point for cervo; providing a higher-level API on top of `tract`. Irregardless of
+inferer-flavour you choose, cervo tries to provide a uniform API for batched dictionary based inference.
 
 Using dictionary-based inference comes at a performance overhead; but helps maintain some generality. Our use-case
 hasn't shown that this is significant enough to warrant the fiddliness of other approaches - interning, slot-markers -

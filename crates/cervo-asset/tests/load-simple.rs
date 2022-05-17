@@ -3,7 +3,7 @@
 // Created: 10 May 2022
 
 use cervo_asset::AssetData;
-use tractor::Inferer;
+use cervo::Inferer;
 
 #[path = "./helpers.rs"]
 mod helpers;

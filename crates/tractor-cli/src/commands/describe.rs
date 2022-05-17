@@ -21,7 +21,7 @@ pub(crate) struct DescribeArgs {
 pub(super) fn describe(config: DescribeArgs) -> Result<()> {
     let mut reader = File::open(&config.file)?;
 
-    if tractor_nnef::is_nnef_tar(&config.file) {
+    if cervo_nnef::is_nnef_tar(&config.file) {
         println!("a NNEF file")
     } else {
         match config.file.extension().and_then(|ext| ext.to_str()) {

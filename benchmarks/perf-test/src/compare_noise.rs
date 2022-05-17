@@ -14,8 +14,8 @@ use std::{
 
 use anyhow::Result;
 use structopt::StructOpt;
-use tractor::{EpsilonInjector, Inferer, LowQualityNoiseGenerator};
-use tractor_onnx::fixed_batch_inferer_from_stream;
+use cervo::{EpsilonInjector, Inferer, LowQualityNoiseGenerator};
+use cervo_onnx::fixed_batch_inferer_from_stream;
 
 fn black_box<T>(dummy: T) -> T {
     unsafe { std::ptr::read_volatile(&dummy) }

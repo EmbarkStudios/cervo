@@ -6,8 +6,8 @@
 
 */
 
-use tractor::Inferer;
-use tractor_nnef::simple_inferer_from_stream;
+use cervo::Inferer;
+use cervo_nnef::simple_inferer_from_stream;
 
 #[path = "./helpers.rs"]
 mod helpers;

@@ -6,8 +6,8 @@
 
 */
 
-use tractor::{EpsilonInjector, Inferer};
-use tractor_nnef::simple_inferer_from_stream;
+use cervo::{EpsilonInjector, Inferer};
+use cervo_nnef::simple_inferer_from_stream;
 
 #[path = "./helpers.rs"]
 mod helpers;

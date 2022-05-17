@@ -126,9 +126,9 @@ name = "cervo-asset"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "tractor",
- "tractor-nnef",
- "tractor-onnx",
+ "cervo",
+ "cervo-nnef",
+ "cervo-onnx",
 ]
 
 [[package]]
@@ -697,9 +697,9 @@ dependencies = [
  "clap 2.34.0",
  "perchance",
  "structopt",
- "tractor",
- "tractor-nnef",
- "tractor-onnx",
+ "cervo",
+ "cervo-nnef",
+ "cervo-onnx",
 ]
 
 [[package]]
@@ -1337,7 +1337,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tractor"
+name = "cervo"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -1349,7 +1349,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tractor-cli"
+name = "cervo-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1358,13 +1358,13 @@ dependencies = [
  "log",
  "tempfile",
  "tracing-subscriber",
- "tractor",
- "tractor-nnef",
- "tractor-onnx",
+ "cervo",
+ "cervo-nnef",
+ "cervo-onnx",
 ]
 
 [[package]]
-name = "tractor-nnef"
+name = "cervo-nnef"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1372,17 +1372,17 @@ dependencies = [
  "tract-hir",
  "tract-nnef",
  "tract-onnx",
- "tractor",
+ "cervo",
 ]
 
 [[package]]
-name = "tractor-onnx"
+name = "cervo-onnx"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "tract-nnef",
  "tract-onnx",
- "tractor",
+ "cervo",
 ]
 
 [[package]]

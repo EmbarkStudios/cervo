@@ -2,8 +2,8 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 10 May 2022
 
-use tractor::Inferer;
-use tractor_onnx::simple_inferer_from_stream;
+use cervo::Inferer;
+use cervo_onnx::simple_inferer_from_stream;
 
 #[path = "./helpers.rs"]
 mod helpers;

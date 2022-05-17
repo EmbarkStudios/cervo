@@ -1,5 +1,5 @@
 [package]
-name = "tractor-onnx"
+name = "cervo-onnx"
 version = "0.1.0"
 edition = "2021"
 authors = [
@@ -11,4 +11,4 @@ license = "LicenseRef-Embark-Proprietary"
 anyhow = "1.0.57"
 tract-onnx =  { version = "0.16.7-pre" }
 tract-nnef = { version = "0.16.7-pre" }
-tractor = { path = "../tractor" }
+cervo = { path = "../cervo" }

@@ -1,5 +1,5 @@
 [package]
-name = "tractor"
+name = "cervo"
 version = "0.0.0"
 edition = "2018"
 authors = [

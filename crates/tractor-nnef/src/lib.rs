@@ -1,4 +1,4 @@
-/// Contains utilities for using tractor with NNEF.
+/// Contains utilities for using cervo with NNEF.
 use anyhow::Result;
 use std::ffi::OsStr;
 use std::io::Read;
@@ -7,7 +7,7 @@ use std::rc::Rc;
 use std::{cell::UnsafeCell, path::Path};
 use tract_nnef::{framework::Nnef, prelude::*};
 
-use tractor::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
+use cervo::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 
 thread_local!(
     /// We create and cache the NNEF on a per-thread basis. This is noticeably expensive to create, so we ensure it only has to happen once.
@@ -18,8 +18,8 @@ thread_local!(
 
 /// Initialize the thread-local NNEF instance.
 ///
-/// To ensure fast loading tractor uses a thread-local instance of the
-/// tractor-NNEF package. If you don't want to pay for initialization
+/// To ensure fast loading cervo uses a thread-local instance of the
+/// cervo-NNEF package. If you don't want to pay for initialization
 /// on first-time load you can call this earlier to ensure it's set up
 /// ahead of time.
 pub fn init_thread() {

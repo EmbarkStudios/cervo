@@ -1,5 +1,5 @@
 /*!
-Command line tools for tractor.
+Command line tools for cervo.
 */
 
 mod commands;

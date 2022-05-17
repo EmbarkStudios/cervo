@@ -14,7 +14,7 @@ use std::{
 };
 
 use structopt::StructOpt;
-use tractor_onnx::simple_inferer_from_stream;
+use cervo_onnx::simple_inferer_from_stream;
 #[derive(Debug, StructOpt)]
 pub(crate) struct LoadComparison {
     #[structopt(long = "onnx", short = "o")]
@@ -103,7 +103,7 @@ fn check_onnx_simple(o: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_nnef_simple(n: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("nnef", "simple", n, iterations, |read| {
-        tractor_nnef::simple_inferer_from_stream(read)?;
+        cervo_nnef::simple_inferer_from_stream(read)?;
         Ok(())
     })
 }
@@ -111,7 +111,7 @@ fn check_nnef_simple(n: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_onnx_dynamic(o: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("onnx", "dynamic", o, iterations, |read| {
-        tractor_onnx::batched_inferer_from_stream(read, &[])?;
+        cervo_onnx::batched_inferer_from_stream(read, &[])?;
         Ok(())
     })
 }
@@ -119,7 +119,7 @@ fn check_onnx_dynamic(o: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_nnef_dynamic(n: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("nnef", "dynamic", n, iterations, |read| {
-        tractor_nnef::batched_inferer_from_stream(read, &[])?;
+        cervo_nnef::batched_inferer_from_stream(read, &[])?;
         Ok(())
     })
 }
@@ -127,7 +127,7 @@ fn check_nnef_dynamic(n: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_onnx_fixed(o: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("onnx", "fixed", o, iterations, |read| {
-        tractor_onnx::fixed_batch_inferer_from_stream(read, &[1, 2, 4])?;
+        cervo_onnx::fixed_batch_inferer_from_stream(read, &[1, 2, 4])?;
         Ok(())
     })
 }
@@ -135,7 +135,7 @@ fn check_onnx_fixed(o: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_nnef_fixed(n: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("nnef", "fixed", n, iterations, |read| {
-        tractor_nnef::fixed_batch_inferer_from_stream(read, &[1, 2, 4])?;
+        cervo_nnef::fixed_batch_inferer_from_stream(read, &[1, 2, 4])?;
         Ok(())
     })
 }

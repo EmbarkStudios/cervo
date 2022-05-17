@@ -6,7 +6,7 @@
 
 */
 
-use tractor_onnx::to_nnef;
+use cervo_onnx::to_nnef;
 
 #[path = "./helpers.rs"]
 mod helpers;

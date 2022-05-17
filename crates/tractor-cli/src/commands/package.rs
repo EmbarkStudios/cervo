@@ -30,7 +30,7 @@ pub(crate) struct PackageArgs {
 }
 
 pub(super) fn package(config: PackageArgs) -> Result<()> {
-    let kind = if tractor_nnef::is_nnef_tar(&config.infile) {
+    let kind = if cervo_nnef::is_nnef_tar(&config.infile) {
         AssetKind::Nnef
     } else {
         match config.infile.extension().and_then(|ext| ext.to_str()) {
