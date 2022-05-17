@@ -6,7 +6,7 @@
 
 */
 
-use cervo::{EpsilonInjector, Inferer};
+use cervo_core::{EpsilonInjector, Inferer};
 use cervo_nnef::simple_inferer_from_stream;
 
 #[path = "./helpers.rs"]

@@ -2,7 +2,7 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 10 May 2022
 
-use cervo::{EpsilonInjector, Inferer};
+use cervo_core::{EpsilonInjector, Inferer};
 use cervo_nnef::{
     batched_inferer_from_stream, fixed_batch_inferer_from_stream, simple_inferer_from_stream,
 };

@@ -6,7 +6,7 @@
 
 */
 
-use cervo::Inferer;
+use cervo_core::Inferer;
 use cervo_onnx::simple_inferer_from_stream;
 
 #[path = "./helpers.rs"]

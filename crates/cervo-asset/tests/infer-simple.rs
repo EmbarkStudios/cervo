@@ -6,8 +6,8 @@
 
 */
 
-use cervo::{EpsilonInjector, Inferer};
 use cervo_asset::AssetData;
+use cervo_core::{EpsilonInjector, Inferer};
 
 #[path = "./helpers.rs"]
 mod helpers;

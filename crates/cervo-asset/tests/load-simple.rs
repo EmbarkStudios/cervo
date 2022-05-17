@@ -2,7 +2,7 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 10 May 2022
 
-use cervo::Inferer;
+use cervo_core::Inferer;
 use cervo_asset::AssetData;
 
 #[path = "./helpers.rs"]

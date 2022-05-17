@@ -6,7 +6,7 @@
 
 use std::{collections::HashMap, fs::File, path};
 
-use cervo::State;
+use cervo_core::State;
 
 pub fn get_file(name: &'static str) -> std::io::Result<File> {
     let crate_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
