@@ -7,8 +7,7 @@
 <div align="center">
 
 <!--- FIXME: Pick an emoji and name your project! --->
-# `🚜 cervo`
-
+# `🧠 cervo`
 
 **Wrapper around [tract](https://github.com/sonos/tract) used for ML workloads in our games.**
 
