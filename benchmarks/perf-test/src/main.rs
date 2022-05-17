@@ -7,17 +7,19 @@
 
 use clap::Parser;
 mod compare_batchers;
+mod compare_batchsize;
 mod compare_loading;
 mod compare_noise;
 mod helpers;
 
 use compare_batchers::BatcherComparison;
+use compare_batchsize::BatchScaling;
 use compare_loading::LoadComparison;
 use compare_noise::NoiseComparison;
 
 #[derive(Debug, Parser)]
 enum MeasureMode {
-    // BatchScaling,
+    BatchScaling(BatchScaling),
     Batchers(BatcherComparison),
     Noise(NoiseComparison),
     Loading(LoadComparison),
@@ -58,9 +60,9 @@ fn main() {
     let args = RustyPerf::parse();
 
     match args.mode {
-        // MeasureMode::BatchScaling => {
-        //     //measure_time_per_element_batched(&args.file, count, &observations)
-        // }
+        MeasureMode::BatchScaling(config) => {
+            compare_batchsize::compare_batch_scaling(config).unwrap()
+        }
         MeasureMode::Batchers(config) => compare_batchers::execute_comparison(config).unwrap(),
         MeasureMode::Noise(config) => compare_noise::execute_comparison(config).unwrap(),
         MeasureMode::Loading(config) => {

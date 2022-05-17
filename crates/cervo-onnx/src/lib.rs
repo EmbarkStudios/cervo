@@ -24,7 +24,9 @@ let nnef_data = cervo_onnx::to_nnef(&mut onnx_data, None);
  */
 
 use anyhow::Result;
+
 use cervo_core::prelude::{
+    inferer::direct::DirectBatchingInferer,
     BasicInferer, FixedBatchInferer, MemoizingDynamicInferer, {InfererBuilder, InfererProvider},
 };
 use std::io::Read;

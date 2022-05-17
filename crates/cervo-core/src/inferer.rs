@@ -36,6 +36,8 @@ use anyhow::{Error, Result};
 use std::collections::HashMap;
 
 mod basic;
+pub mod direct;
+mod dynamic;
 mod fixed;
 mod helpers;
 mod memoizing;

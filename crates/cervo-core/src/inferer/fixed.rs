@@ -94,6 +94,9 @@ impl FixedBatchInferer {
                 count -= plan.size;
                 offset += plan.size;
             }
+            if count == 0 {
+                break;
+            }
         }
 
         Ok(())
