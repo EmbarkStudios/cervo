@@ -1,0 +1,15 @@
+[package]
+name = "cervo-asset"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Tom Solberg <tom.solberg@embark-studios.com",
+]
+license = "LicenseRef-Embark-Proprietary"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.57"
+tractor-onnx = { version = "0.1.0", path = "../tractor-onnx" }
+tractor-nnef = { version = "0.1.0", path = "../tractor-nnef" }
+tractor = { version = "0.0.0", path = "../tractor" }
