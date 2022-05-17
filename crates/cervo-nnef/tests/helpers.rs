@@ -10,7 +10,6 @@ use cervo_core::State;
 
 pub fn get_file(name: &'static str) -> std::io::Result<File> {
     let crate_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-
     let mut path = path::PathBuf::from(&crate_dir);
     path.push("..");
     path.push("..");

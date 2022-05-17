@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
+use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 use std::io::{Cursor, Read, Write};
-use tractor::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
 
 /// Magic used to ensure assets are valid.
 pub const MAGIC: [u8; 4] = [b'C', b'R', b'V', b'O'];
@@ -129,8 +129,8 @@ impl AssetData {
     pub fn load_simple(&self) -> Result<BasicInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => tractor_onnx::simple_inferer_from_stream(&mut cursor),
-            AssetKind::Nnef => tractor_nnef::simple_inferer_from_stream(&mut cursor),
+            AssetKind::Onnx => cervo_onnx::simple_inferer_from_stream(&mut cursor),
+            AssetKind::Nnef => cervo_nnef::simple_inferer_from_stream(&mut cursor),
         }
     }
 
@@ -140,8 +140,8 @@ impl AssetData {
     pub fn load_fixed_batcher(&self, sizes: &[usize]) -> Result<FixedBatchingInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => tractor_onnx::fixed_batch_inferer_from_stream(&mut cursor, sizes),
-            AssetKind::Nnef => tractor_nnef::fixed_batch_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Onnx => cervo_onnx::fixed_batch_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Nnef => cervo_nnef::fixed_batch_inferer_from_stream(&mut cursor, sizes),
         }
     }
 
@@ -151,8 +151,8 @@ impl AssetData {
     pub fn load_dynamic_batcher(&self, sizes: &[usize]) -> Result<DynamicBatchingInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => tractor_onnx::batched_inferer_from_stream(&mut cursor, sizes),
-            AssetKind::Nnef => tractor_nnef::batched_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Onnx => cervo_onnx::batched_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Nnef => cervo_nnef::batched_inferer_from_stream(&mut cursor, sizes),
         }
     }
 
@@ -165,7 +165,7 @@ impl AssetData {
         }
 
         let mut cursor = Cursor::new(&self.data);
-        let data = tractor_onnx::to_nnef(&mut cursor, batch_size)?;
+        let data = cervo_onnx::to_nnef(&mut cursor, batch_size)?;
 
         Ok(Self {
             data,

@@ -7,8 +7,7 @@
 <div align="center">
 
 <!--- FIXME: Pick an emoji and name your project! --->
-# `🚜 tractor`
-
+# `🧠 cervo`
 
 **Wrapper around [tract](https://github.com/sonos/tract) used for ML workloads in our games.**
 
@@ -17,7 +16,7 @@
 <!-- [![Crates.io](https://img.shields.io/crates/v/rust-gpu.svg)](https://crates.io/crates/rust-gpu) -->
 <!-- [![Docs](https://docs.rs/rust-gpu/badge.svg)](https://docs.rs/rust-gpu) -->
 <!-- [![dependency status](https://deps.rs/repo/github/EmbarkStudios/rust-gpu/status.svg)](https://deps.rs/repo/github/EmbarkStudios/rust-gpu) -->
-[![Build status](https://github.com/EmbarkStudios/tractor/workflows/CI/badge.svg)](https://github.com/EmbarkStudios/tractor/actions)
+[![Build status](https://github.com/EmbarkStudios/cervo/workflows/CI/badge.svg)](https://github.com/EmbarkStudios/cervo/actions)
 </div>
 
 

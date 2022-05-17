@@ -126,9 +126,58 @@ name = "cervo-asset"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "tractor",
- "tractor-nnef",
- "tractor-onnx",
+ "cervo-core",
+ "cervo-nnef",
+ "cervo-onnx",
+]
+
+[[package]]
+name = "cervo-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo-asset",
+ "cervo-core",
+ "cervo-nnef",
+ "cervo-onnx",
+ "clap 3.1.18",
+ "log",
+ "tempfile",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "cervo-core"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "perchance",
+ "rand",
+ "rand_distr",
+ "tract-core",
+ "tract-hir",
+]
+
+[[package]]
+name = "cervo-nnef"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo-core",
+ "once_cell",
+ "tract-hir",
+ "tract-nnef",
+ "tract-onnx",
+]
+
+[[package]]
+name = "cervo-onnx"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo-core",
+ "tract-nnef",
+ "tract-onnx",
 ]
 
 [[package]]
@@ -694,12 +743,12 @@ name = "perf-test"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "cervo-core",
+ "cervo-nnef",
+ "cervo-onnx",
  "clap 2.34.0",
  "perchance",
  "structopt",
- "tractor",
- "tractor-nnef",
- "tractor-onnx",
 ]
 
 [[package]]
@@ -1334,55 +1383,6 @@ source = "git+https://github.com/sonos/tract?branch=issue-713#3434a9b88f7c7b1983
 dependencies = [
  "educe",
  "tract-nnef",
-]
-
-[[package]]
-name = "tractor"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "perchance",
- "rand",
- "rand_distr",
- "tract-core",
- "tract-hir",
-]
-
-[[package]]
-name = "tractor-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cervo-asset",
- "clap 3.1.18",
- "log",
- "tempfile",
- "tracing-subscriber",
- "tractor",
- "tractor-nnef",
- "tractor-onnx",
-]
-
-[[package]]
-name = "tractor-nnef"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "once_cell",
- "tract-hir",
- "tract-nnef",
- "tract-onnx",
- "tractor",
-]
-
-[[package]]
-name = "tractor-onnx"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "tract-nnef",
- "tract-onnx",
- "tractor",
 ]
 
 [[package]]

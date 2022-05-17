@@ -1,0 +1,19 @@
+[package]
+name = "cervo-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["Tom Solberg <tom.solberg@emark-studios.com"]
+license = "LicenseRef-Embark-Proprietary"
+# this ensures cargo run in the workspace root uses cervo-cli
+default-run = "cervo-cli"
+
+[dependencies]
+anyhow = "1.0.57"
+clap = { version = "3.1.18", features = ["derive"] }
+log = "0.4"
+tempfile = "3.3"
+tracing-subscriber = { version = "0.3", features = ["fmt"] }
+cervo-onnx = { path = "../cervo-onnx" }
+cervo-nnef = { path = "../cervo-nnef" }
+cervo-asset = { path = "../cervo-asset" }
+cervo-core = { path = "../cervo-core" }

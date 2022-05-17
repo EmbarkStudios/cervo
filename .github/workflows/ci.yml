@@ -50,7 +50,7 @@ jobs:
         # might be faster to take off release and just compile in debug
         run: cargo build --tests
       - name: cargo test
-        run: cargo test --release
+        run: cargo test
 
   deny-check:
     name: cargo-deny
