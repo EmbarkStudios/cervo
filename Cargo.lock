@@ -122,17 +122,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
 
 [[package]]
-name = "cervo-asset"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cervo-core",
- "cervo-nnef",
- "cervo-onnx",
-]
-
-[[package]]
-name = "cervo-cli"
+name = "cervo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -144,6 +134,16 @@ dependencies = [
  "log",
  "tempfile",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "cervo-asset"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cervo-core",
+ "cervo-nnef",
+ "cervo-onnx",
 ]
 
 [[package]]
