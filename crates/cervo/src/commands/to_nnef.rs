@@ -64,7 +64,6 @@ pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
     out.write_all(&bytes)?;
 
     std::fs::copy(&out, out_file)?;
-    std::fs::remove_file(&out)?;
 
     Ok(())
 }
