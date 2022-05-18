@@ -5,6 +5,7 @@
 #![warn(clippy::all)]
 #![warn(rust_2018_idioms)]
 
+use clap::Parser;
 mod compare_batchers;
 mod compare_loading;
 mod compare_noise;
@@ -14,9 +15,7 @@ use compare_batchers::BatcherComparison;
 use compare_loading::LoadComparison;
 use compare_noise::NoiseComparison;
 
-use structopt::StructOpt;
-
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 enum MeasureMode {
     // BatchScaling,
     Batchers(BatcherComparison),
@@ -24,10 +23,10 @@ enum MeasureMode {
     Loading(LoadComparison),
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "foo")]
+#[derive(Debug, Parser)]
+#[clap(name = "cervo perf-tests")]
 struct RustyPerf {
-    #[structopt(subcommand)] // Note that we mark a field as a subcommand
+    #[clap(subcommand)] // Note that we mark a field as a subcommand
     mode: MeasureMode,
 }
 
@@ -56,7 +55,7 @@ struct RustyPerf {
 // }
 
 fn main() {
-    let args = RustyPerf::from_args();
+    let args = RustyPerf::parse();
 
     match args.mode {
         // MeasureMode::BatchScaling => {

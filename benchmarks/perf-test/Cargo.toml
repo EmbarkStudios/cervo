@@ -3,14 +3,15 @@ name = "perf-test"
 version = "0.0.0"
 edition = "2018"
 license = "LicenseRef-Embark-Proprietary"
+publish = false
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 
 [dependencies]
-clap = "2.33.0"
+clap = { version = "3.1.18", features = ["derive"] }
+
 anyhow = { version = "1.0"}
 cervo-onnx = { path = "../../crates/cervo-onnx" }
 cervo-nnef = { path = "../../crates/cervo-nnef" }
 cervo-core = { path = "../../crates/cervo-core" }
-structopt = "0.3.11"
-perchance = "*"
+perchance = "0.3"

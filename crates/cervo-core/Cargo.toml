@@ -10,8 +10,8 @@ license = "LicenseRef-Embark-Proprietary"
 
 [dependencies]
 anyhow = { version = "1.0"}
-tract-core =  { version = "0.16.7-pre" }
-tract-hir =  { version = "0.16.7-pre" }
+tract-core =  { version = "0.16.7" }
+tract-hir =  { version = "0.16.7" }
 rand = { version = "0.8.2" }
 rand_distr = { version = "0.4" }
 perchance = { version = "^0.3"}
