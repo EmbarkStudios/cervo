@@ -14,13 +14,13 @@ use std::{
 };
 
 use cervo_onnx::simple_inferer_from_stream;
-use structopt::StructOpt;
+use clap::Parser;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub(crate) struct LoadComparison {
-    #[structopt(long = "onnx", short = "o")]
+    #[clap(long = "onnx", short = 'o')]
     onnx: Option<PathBuf>,
-    #[structopt(long = "nnef", short = "n")]
+    #[clap(long = "nnef", short = 'n')]
     nnef: Option<PathBuf>,
 
     iterations: usize,

@@ -7,9 +7,3 @@ members = [
     "crates/cervo-asset",
     "benchmarks/perf-test"
 ]
-
-[patch.crates-io]
-tract-onnx = { version = "0.16.7-pre", git = "https://github.com/sonos/tract", branch = "issue-713"}
-tract-nnef = { version = "0.16.7-pre", git = "https://github.com/sonos/tract", branch = "issue-713"}
-tract-hir = { version = "0.16.7-pre", git = "https://github.com/sonos/tract", branch = "issue-713"}
-tract-core = { version = "0.16.7-pre", git = "https://github.com/sonos/tract", branch = "issue-713"}

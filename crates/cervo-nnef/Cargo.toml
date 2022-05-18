@@ -9,8 +9,8 @@ license = "LicenseRef-Embark-Proprietary"
 
 [dependencies]
 anyhow = "1.0.57"
-tract-onnx =  { version = "0.16.7-pre" }
-tract-nnef = { version = "0.16.7-pre" }
-tract-hir = { version = "0.16.7-pre" }
+tract-onnx =  { version = "0.16.7" }
+tract-nnef = { version = "0.16.7" }
+tract-hir = { version = "0.16.7" }
 cervo-core = { path = "../cervo-core" }
 once_cell = "1.10"

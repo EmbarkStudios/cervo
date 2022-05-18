@@ -14,22 +14,22 @@ use std::{
 
 use anyhow::Result;
 use cervo_core::{EpsilonInjector, Inferer};
-use structopt::StructOpt;
+use clap::Parser;
 
 fn black_box<T>(dummy: T) -> T {
     unsafe { std::ptr::read_volatile(&dummy) }
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub(crate) struct BatcherComparison {
-    #[structopt(long = "onnx", short = "o")]
+    #[clap(long = "onnx", short = 'o')]
     onnx: Option<PathBuf>,
-    #[structopt(long = "nnef", short = "n")]
+    #[clap(long = "nnef", short = 'n')]
     nnef: Option<PathBuf>,
 
-    #[structopt(short = "-f", long = "--fixed", use_delimiter = true)]
+    #[clap(short = 'f', long = "--fixed", use_value_delimiter = true)]
     fixed_sizes: Vec<usize>,
-    #[structopt(short = "-d", long = "--dynamic", use_delimiter = true)]
+    #[clap(short = 'd', long = "--dynamic", use_value_delimiter = true)]
     dynamic_sizes: Vec<usize>,
     steps: usize,
     batch_size: usize,

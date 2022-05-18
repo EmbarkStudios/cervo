@@ -15,13 +15,13 @@ use std::{
 use anyhow::Result;
 use cervo_core::{EpsilonInjector, Inferer, LowQualityNoiseGenerator};
 use cervo_onnx::fixed_batch_inferer_from_stream;
-use structopt::StructOpt;
+use clap::Parser;
 
 fn black_box<T>(dummy: T) -> T {
     unsafe { std::ptr::read_volatile(&dummy) }
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub(crate) struct NoiseComparison {
     input_file: PathBuf,
     steps: usize,
