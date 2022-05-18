@@ -63,7 +63,8 @@ pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
     let mut out = tempfile::NamedTempFile::new()?;
     out.write_all(&bytes)?;
 
-    std::fs::rename(&out, out_file)?;
+    std::fs::copy(&out, out_file)?;
+    std::fs::remove_file(&out)?;
 
     Ok(())
 }
