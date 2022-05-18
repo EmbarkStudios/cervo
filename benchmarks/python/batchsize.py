@@ -15,8 +15,7 @@ def main(statsfile, iterations, outfile=None):
 
     df["ms"] = df["ms"] * df["batchsize"]
 
-    seaborn.lineplot(x="batchsize", y="ms", hue="kind", data=df).set(
-        title=f"Mean execution time by batch size (concretized), its={iterations}",
+    seaborn.factorplot(x="batchsize", y="ms", col="kind", data=df, kind="bar").set(
         ylabel="milliseconds",
     )
 
