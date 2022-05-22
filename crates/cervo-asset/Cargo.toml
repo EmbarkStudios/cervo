@@ -6,6 +6,11 @@ authors = [
     "Tom Solberg <tom.solberg@embark-studios.com",
 ]
 license = "MIT OR Apache-2.0"
+description = "A unified asset type for Cervo using ONNX or NNEF models."
+repository = "https://github.com/EmbarkStudios/cervo"
+keywords = [ "machinelearning", "inference" ]
+categories = [ "science" ]
+edition = "2021"
 
 [dependencies]
 anyhow = "1.0.57"

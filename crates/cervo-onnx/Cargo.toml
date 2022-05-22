@@ -6,6 +6,11 @@ authors = [
     "Tom Solberg <tom.solberg@embark-studios.com"
 ]
 license = "MIT OR Apache-2.0"
+description = "Extends cervo with ONNX support from tract-onnx."
+repository = "https://github.com/EmbarkStudios/cervo"
+keywords = [ "machinelearning", "inference", "onnx" ]
+categories = [ "science" ]
+edition = "2021"
 
 [dependencies]
 anyhow = "1.0.57"

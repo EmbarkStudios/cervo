@@ -6,6 +6,11 @@ authors = [
     "Tom Solberg <tom.solberg@embark-studios.com"
 ]
 license = "MIT OR Apache-2.0"
+description = "Extends cervo with nnef support from tract-nnef."
+repository = "https://github.com/EmbarkStudios/cervo"
+keywords = [ "machinelearning", "inference", "nnef" ]
+categories = [ "science" ]
+edition = "2018"
 
 
 [dependencies]
