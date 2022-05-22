@@ -12,6 +12,7 @@ repository = "https://github.com/EmbarkStudios/cervo"
 keywords = [ "machinelearning", "inference" ]
 categories = [ "science" ]
 edition = "2021"
+readme = "../../README.md"
 
 [dependencies]
 anyhow = { version = "1.0"}
