@@ -1,12 +1,12 @@
 [package]
 name = "cervo-core"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2018"
 authors = [
     "Tom Solberg <tom.solberg@embark-studios.com",
     "Henrik Rydgård <hrydgard@embark-studios.com>"
 ]
-license = "LicenseRef-Embark-Proprietary"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 anyhow = { version = "1.0"}

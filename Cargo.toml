@@ -5,5 +5,5 @@ members = [
     "crates/cervo-nnef",
     "crates/cervo-onnx",
     "crates/cervo-asset",
-    "benchmarks/perf-test"
+#    "benchmarks/perf-test"
 ]
