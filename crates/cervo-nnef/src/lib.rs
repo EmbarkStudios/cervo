@@ -1,4 +1,9 @@
-//! Contains utilities for using cervo with NNEF.
+/*! Contains utilities for using cervo with NNEF.
+
+If you're going to load NNEF files on a thread; consider using
+`init_thread` when creating it - otherwise the first NNEF asset will
+cause a noticeable spike.
+*/
 
 use anyhow::Result;
 

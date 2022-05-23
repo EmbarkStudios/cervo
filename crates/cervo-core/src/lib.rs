@@ -1,5 +1,11 @@
-// Hive modules.
+/*!
 
+# Cervo Core
+
+This crate contains some wrappers and extensions for Tract we use to
+simplify our workflows.
+
+*/
 pub use tract_core;
 pub use tract_hir;
 
