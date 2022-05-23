@@ -1,4 +1,27 @@
-//! Contains utilities for using cervo with ONNX.
+/*! Contains utilities for using cervo with ONNX.
+
+## Loading an inference model
+```no_run
+# fn load_bytes(s: &str) -> std::io::Cursor<Vec<u8>> { std::io::Cursor::new(vec![]) }
+use cervo_core::prelude::InfererExt;
+
+let model_data = load_bytes("model.onnx");
+let model = cervo_onnx::builder(model_data)
+    .build_memoizing(&[])?
+    .with_default_epsilon("epsilon");
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+## Converting to NNEF
+```no_run
+# fn load_bytes(s: &str) -> std::io::Cursor<Vec<u8>> { std::io::Cursor::new(vec![]) }
+use cervo_core::prelude::InfererExt;
+
+let mut onnx_data = load_bytes("model.onnx");
+let nnef_data = cervo_onnx::to_nnef(&mut onnx_data, None);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+ */
 
 use anyhow::Result;
 use cervo_core::prelude::{

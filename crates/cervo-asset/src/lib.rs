@@ -1,3 +1,24 @@
+/*!
+To support isomg NNEF and ONNX interchangeably we have a small
+wrapping binary format which can contain either type of data, helping
+keep track of which data is what.
+
+```no_run
+# fn load_bytes(s: &str) -> Vec<u8> { vec![] }
+use cervo_asset::{AssetData, AssetKind};
+
+let model_data = load_bytes("model.onnx");
+let asset = AssetData::new(AssetKind::Onnx, model_data);
+
+let nnef_asset = asset.to_nnef(None)?;    // convert to a symbolic NNEF asset
+
+let inferer = asset.load_basic();
+let nnef_inferer = nnef_asset.load_fixed(&[42]);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+*/
+
 use anyhow::{bail, Result};
 use cervo_core::prelude::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer};
 use std::io::{Cursor, Read, Write};

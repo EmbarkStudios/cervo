@@ -3,6 +3,20 @@
 If you're going to load NNEF files on a thread; consider using
 `init_thread` when creating it - otherwise the first NNEF asset will
 cause a noticeable spike.
+
+
+## Loading an inference model
+```no_run
+# fn load_bytes(s: &str) -> std::io::Cursor<Vec<u8>> { std::io::Cursor::new(vec![]) }
+use cervo_core::prelude::InfererExt;
+
+let model_data = load_bytes("model.nnef");
+let model = cervo_nnef::builder(model_data)
+    .build_fixed(&[2])?
+    .with_default_epsilon("epsilon");
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
 */
 
 use anyhow::Result;
