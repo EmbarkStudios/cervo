@@ -17,22 +17,29 @@ use std::collections::HashMap;
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
 
-/// The dynamic batch inferer generates (cached) execution plans to fit each batch perfectly, achieving near-perfect performance no matter how much data you have - with a hefty up-front cost for each new batch size.
+/// The dynamic inferer hits a spot between the raw simplicity of a
+/// [`BasicInferer`] and the spikiness of a
+/// [`DynamicMemoizingInferer`]. Instead of explicitly concretizing
+/// models and caching them, it relies on tracts internal
+/// concretization which leads to worse performance overall; but
+/// beating out the [`BasicInferer`].
 ///
 /// # Pros
 ///
-/// * Optimal amortized performance without tuning
-/// * Requires no tuning for good results
+/// * Requires no tuning for OK results
+/// * Fixed memory and fairly linear performance scaling
 ///
 /// # Cons
 ///
-/// * For small amounts of data and large models the spikes can offset amortized gains signifcantly
-pub struct DirectBatchingInferer {
+/// * Small extra overhead for small extra performance
+/// * Worst option for small batch sizes
+
+pub struct DynamicInferer {
     model: TypedSimplePlan<TypedModel>,
     model_api: ModelAPI,
 }
 
-impl DirectBatchingInferer {
+impl DynamicInferer {
     /// Create an inferer for the provided `inference` model.
     ///
     /// # Errors
@@ -120,7 +127,7 @@ impl DirectBatchingInferer {
     }
 }
 
-impl Inferer for DirectBatchingInferer {
+impl Inferer for DynamicInferer {
     fn infer(
         &mut self,
         observations: HashMap<u64, State>,
