@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
+use cervo_core::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer};
 use std::io::{Cursor, Read, Write};
 
 /// Magic used to ensure assets are valid.
@@ -126,33 +126,33 @@ impl AssetData {
     /// Load a simple unbatching inferer from this asset.
     ///
     /// See ['BasicInferer'] for more details.
-    pub fn load_simple(&self) -> Result<BasicInferer> {
+    pub fn load_basic(&self) -> Result<BasicInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => cervo_onnx::simple_inferer_from_stream(&mut cursor),
-            AssetKind::Nnef => cervo_nnef::simple_inferer_from_stream(&mut cursor),
+            AssetKind::Onnx => cervo_onnx::builder(&mut cursor).build_basic(),
+            AssetKind::Nnef => cervo_nnef::builder(&mut cursor).build_basic(),
         }
     }
 
     /// Load a batching inferer from this asset with fixed batch sizes.
     ///
-    /// See [`FixedBatchingInferer`] for more details.
-    pub fn load_fixed_batcher(&self, sizes: &[usize]) -> Result<FixedBatchingInferer> {
+    /// See [`FixedBatchInferer`] for more details.
+    pub fn load_fixed(&self, sizes: &[usize]) -> Result<FixedBatchInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => cervo_onnx::fixed_batch_inferer_from_stream(&mut cursor, sizes),
-            AssetKind::Nnef => cervo_nnef::fixed_batch_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Onnx => cervo_onnx::builder(&mut cursor).build_fixed(sizes),
+            AssetKind::Nnef => cervo_nnef::builder(&mut cursor).build_fixed(sizes),
         }
     }
 
     /// Load a batching inferer from this asset with dynamic batch sizes.
     ///
-    /// See [`DynamicBatchingInferer`] for more details.
-    pub fn load_dynamic_batcher(&self, sizes: &[usize]) -> Result<DynamicBatchingInferer> {
+    /// See [`DynamicMemoizingInferer`] for more details.
+    pub fn load_memoizing(&self, sizes: &[usize]) -> Result<DynamicMemoizingInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => cervo_onnx::batched_inferer_from_stream(&mut cursor, sizes),
-            AssetKind::Nnef => cervo_nnef::batched_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Onnx => cervo_onnx::builder(&mut cursor).build_memoizing(sizes),
+            AssetKind::Nnef => cervo_nnef::builder(&mut cursor).build_memoizing(sizes),
         }
     }
 

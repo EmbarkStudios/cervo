@@ -7,20 +7,20 @@
 */
 
 use cervo_asset::AssetData;
-use cervo_core::{EpsilonInjector, Inferer};
+use cervo_core::{inferer::InfererExt, EpsilonInjector, Inferer};
 
 #[path = "./helpers.rs"]
 mod helpers;
 
 #[test]
-fn test_infer_once_simple() {
+fn test_infer_once_basic() {
     let mut reader = helpers::get_file("test.crvo").unwrap();
-    let instance = AssetData::deserialize(&mut reader)
+    let mut instance = AssetData::deserialize(&mut reader)
         .expect("a valid asset")
-        .load_simple()
-        .expect("success");
-
-    let mut instance = EpsilonInjector::wrap(instance, "epsilon").unwrap();
+        .load_basic()
+        .expect("success")
+        .with_default_epsilon("epsilon")
+        .unwrap();
 
     let observations = helpers::build_inputs_from_desc(1, instance.input_shapes());
 
@@ -33,15 +33,16 @@ fn test_infer_once_simple() {
 }
 
 #[test]
-fn test_infer_once_simple_nnef() {
+fn test_infer_once_basic_nnef() {
     let mut reader = helpers::get_file("test-nnef.crvo").unwrap();
     let instance = AssetData::deserialize(&mut reader)
         .expect("a valid asset")
-        .load_simple()
-        .expect("success");
+        .load_basic()
+        .expect("an inferer")
+        .with_default_epsilon("epsilon")
+        .expect("a noise wrapper");
 
     let mut instance = EpsilonInjector::wrap(instance, "epsilon").unwrap();
-
     let observations = helpers::build_inputs_from_desc(1, instance.input_shapes());
 
     let result = instance.infer(observations);

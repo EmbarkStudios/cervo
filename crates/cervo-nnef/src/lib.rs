@@ -1,5 +1,6 @@
 /// Contains utilities for using cervo with NNEF.
 use anyhow::Result;
+use cervo_core::inferer::{InfererBuilder, InfererProvider};
 use std::ffi::OsStr;
 use std::io::Read;
 use std::path::PathBuf;
@@ -7,7 +8,7 @@ use std::rc::Rc;
 use std::{cell::UnsafeCell, path::Path};
 use tract_nnef::{framework::Nnef, prelude::*};
 
-use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
+use cervo_core::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer};
 
 thread_local!(
     /// We create and cache the NNEF on a per-thread basis. This is noticeably expensive to create, so we ensure it only has to happen once.
@@ -26,7 +27,7 @@ pub fn init_thread() {
     NNEF.with(|_| {})
 }
 
-/// Utility function to check if a file is a valid NNEF file.
+/// Utility function to check if a file name is `.nnef.tar`.
 pub fn is_nnef_tar(path: &Path) -> bool {
     if let Some(ext) = path.extension().and_then(OsStr::to_str) {
         if ext != "tar" {
@@ -46,36 +47,45 @@ pub fn is_nnef_tar(path: &Path) -> bool {
     false
 }
 
-pub fn model_for_reader(reader: &mut dyn Read) -> Result<TypedModel> {
+fn model_for_reader(reader: &mut dyn Read) -> Result<TypedModel> {
     NNEF.with(|n| unsafe { (&*n.as_ref().get()).model_for_read(reader) })
 }
 
-/// Create a basic inferer from the provided bytes reader.
-///
-/// See [`BasicInferer`] for more details.
-pub fn simple_inferer_from_stream(reader: &mut dyn Read) -> Result<BasicInferer> {
-    let model = model_for_reader(reader)?;
-    BasicInferer::from_typed(model)
+/// A reader for providing NNEF data.
+pub struct NnefData<T: Read>(pub T);
+
+impl<T> NnefData<T>
+where
+    T: Read,
+{
+    fn load(&mut self) -> Result<TypedModel> {
+        model_for_reader(&mut self.0)
+    }
 }
 
-/// Create an dynamic batching inferer from the provided bytes reader
-///
-/// See [`DynamicBatchingInferer`] for more details.
-pub fn batched_inferer_from_stream(
-    reader: &mut dyn Read,
-    batch_size: &[usize],
-) -> Result<DynamicBatchingInferer> {
-    let model = model_for_reader(reader)?;
-    DynamicBatchingInferer::from_typed(model, batch_size)
+impl<T> InfererProvider for NnefData<T>
+where
+    T: Read,
+{
+    /// Build a [`BasicInferer`].
+    fn build_basic(mut self) -> Result<BasicInferer> {
+        let model = self.load()?;
+        BasicInferer::from_typed(model)
+    }
+
+    /// Build a [`BasicInferer`].
+    fn build_fixed(mut self, sizes: &[usize]) -> Result<FixedBatchInferer> {
+        let model = self.load()?;
+        FixedBatchInferer::from_typed(model, sizes)
+    }
+
+    /// Build a [`DynamicMemoizingInferer`].
+    fn build_memoizing(mut self, preload_sizes: &[usize]) -> Result<DynamicMemoizingInferer> {
+        let model = self.load()?;
+        DynamicMemoizingInferer::from_typed(model, preload_sizes)
+    }
 }
 
-/// Create an fixed batching inferer from the provided bytes reader
-///
-/// See [`FixedBatchingInferer`] for more details.
-pub fn fixed_batch_inferer_from_stream(
-    reader: &mut dyn Read,
-    batch_size: &[usize],
-) -> Result<FixedBatchingInferer> {
-    let model = model_for_reader(reader)?;
-    FixedBatchingInferer::from_typed(model, batch_size)
+pub fn builder<T: Read>(read: T) -> InfererBuilder<NnefData<T>> {
+    InfererBuilder::new(NnefData(read))
 }

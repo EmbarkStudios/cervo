@@ -13,7 +13,6 @@ use std::{
     time::Instant,
 };
 
-use cervo_onnx::simple_inferer_from_stream;
 use clap::Parser;
 
 #[derive(Debug, Parser)]
@@ -96,7 +95,7 @@ fn execute_load_metrics<T: Fn(&mut dyn Read) -> Result<()>>(
 #[inline(never)]
 fn check_onnx_simple(o: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("onnx", "simple", o, iterations, |read| {
-        simple_inferer_from_stream(read)?;
+        cervo_onnx::builder(read).build_basic()?;
         Ok(())
     })
 }
@@ -104,7 +103,7 @@ fn check_onnx_simple(o: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_nnef_simple(n: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("nnef", "simple", n, iterations, |read| {
-        cervo_nnef::simple_inferer_from_stream(read)?;
+        cervo_nnef::builder(read).build_basic()?;
         Ok(())
     })
 }
@@ -112,7 +111,7 @@ fn check_nnef_simple(n: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_onnx_dynamic(o: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("onnx", "dynamic", o, iterations, |read| {
-        cervo_onnx::batched_inferer_from_stream(read, &[])?;
+        cervo_onnx::builder(read).build_memoizing(&[])?;
         Ok(())
     })
 }
@@ -120,7 +119,7 @@ fn check_onnx_dynamic(o: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_nnef_dynamic(n: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("nnef", "dynamic", n, iterations, |read| {
-        cervo_nnef::batched_inferer_from_stream(read, &[])?;
+        cervo_nnef::builder(read).build_memoizing(&[])?;
         Ok(())
     })
 }
@@ -128,7 +127,7 @@ fn check_nnef_dynamic(n: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_onnx_fixed(o: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("onnx", "fixed", o, iterations, |read| {
-        cervo_onnx::fixed_batch_inferer_from_stream(read, &[1, 2, 4])?;
+        cervo_onnx::builder(read).build_fixed(&[1, 2, 4])?;
         Ok(())
     })
 }
@@ -136,7 +135,7 @@ fn check_onnx_fixed(o: &Path, iterations: usize) -> Result<Record> {
 #[inline(never)]
 fn check_nnef_fixed(n: &Path, iterations: usize) -> Result<Record> {
     execute_load_metrics("nnef", "fixed", n, iterations, |read| {
-        cervo_nnef::fixed_batch_inferer_from_stream(read, &[1, 2, 4])?;
+        cervo_nnef::builder(read).build_fixed(&[1, 2, 4])?;
         Ok(())
     })
 }

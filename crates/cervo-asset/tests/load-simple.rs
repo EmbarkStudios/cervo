@@ -13,7 +13,7 @@ fn test_load_input_shape_simple_onnx() {
     let mut reader = helpers::get_file("test.crvo").unwrap();
     let instance = AssetData::deserialize(&mut reader)
         .expect("failed reading instance")
-        .load_simple()
+        .load_basic()
         .expect("an inferer");
 
     assert_eq!(
@@ -24,11 +24,11 @@ fn test_load_input_shape_simple_onnx() {
 }
 
 #[test]
-fn test_load_input_shape_simple_nnef() {
+fn test_load_input_shape_basic_nnef() {
     let mut reader = helpers::get_file("test-nnef.crvo").unwrap();
     let instance = AssetData::deserialize(&mut reader)
         .expect("failed reading instance")
-        .load_simple()
+        .load_basic()
         .expect("an inferer");
 
     assert_eq!(

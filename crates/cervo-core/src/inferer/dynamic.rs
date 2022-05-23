@@ -1,15 +1,3 @@
-/**
-The dynamic batcher has the highest potential throughput when the amount of data isn't known. It does so by dynamically
-generating execution plans to fit the exact amount of elements in each batch. The downside of this is that setting up a
-new plan is fairly costly, so doing this for a batch size that is only seen once will be a waste of energy.
-
-While plans are cached; this still means that if your expected batch size is between 1 and 100 elements, you'll end up
-with noticeable spikes each time a new plan is generated. If you know you'll have one or a few batch sizes - but not the
-exact value - this batcher will end up providing good value and inform tuning for a fixed batcher later.
-
-If you know some batch sizes but not all, you can preload the dynamic batcher with those plans to avoid having to build
-them at runtime.
-*/
 use super::{helpers, Inferer, Response, State};
 use crate::model_api::ModelAPI;
 use anyhow::{Error, Result};
@@ -17,7 +5,28 @@ use std::collections::{hash_map::Entry, HashMap};
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
 
-/// The dynamic batch inferer generates (cached) execution plans to fit each batch perfectly, achieving near-perfect performance no matter how much data you have - with a hefty up-front cost for each new batch size.
+/// The dynamic memoizing batch inferer generates execution plans to
+/// fit each batch perfectly, achieving near-perfect performance no
+/// matter how much data you have - with a hefty up-front cost for
+/// each new batch size.
+///
+/// The dynamic batcher has the highest potential throughput when the
+/// amount of data isn't known. By dynamically generating execution
+/// plans to fit the exact amount of elements in each batch, it will
+/// give tract optimal knowledge for execution each time. The downside
+/// of this is that setting up a new plan is fairly costly, so doing
+/// this for a batch size that is only seen once will waste memory and
+/// compute resources.
+///
+/// While plans are cached; this still means that if your expected
+/// batch size is can vary greatly, you'll end up with noticeable
+/// spikes each time a new plan is generated. If you know you'll have
+/// one or a few batch sizes - but not the exact size - this batcher
+/// will end up providing good value and inform tuning for a fixed
+/// batcher later.
+///
+/// If you know some batch sizes but not all, you can preload the
+/// batcher with those plans to avoid having to build them at runtime.
 ///
 /// # Pros
 ///
@@ -26,15 +35,17 @@ use tract_hir::prelude::*;
 ///
 /// # Cons
 ///
-/// * For small amounts of data and large models the spikes can offset amortized gains signifcantly
-pub struct DynamicBatchingInferer {
+/// * For small amounts of data and large models the spikes can offset
+/// amortized gains signifcantly
+
+pub struct DynamicMemoizingInferer {
     symbol: Symbol,
     model: TypedModel,
     model_api: ModelAPI,
     model_cache: HashMap<usize, TypedSimplePlan<TypedModel>>,
 }
 
-impl DynamicBatchingInferer {
+impl DynamicMemoizingInferer {
     /// Create an inferer for the provided `inference` model.
     ///
     /// # Errors
@@ -149,7 +160,7 @@ impl DynamicBatchingInferer {
     }
 }
 
-impl Inferer for DynamicBatchingInferer {
+impl Inferer for DynamicMemoizingInferer {
     fn infer(
         &mut self,
         observations: HashMap<u64, State>,

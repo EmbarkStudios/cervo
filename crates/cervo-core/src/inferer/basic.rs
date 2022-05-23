@@ -11,7 +11,8 @@ use tract_hir::prelude::*;
 use super::helpers;
 
 /// The most basic inferer provided will deal with a single element at
-/// a time, at the cost of performance.
+/// a time, at the cost of reduced (but predictable) performance per
+/// element.
 ///
 /// # Pros
 ///

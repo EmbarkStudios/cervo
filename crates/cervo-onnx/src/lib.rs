@@ -1,6 +1,9 @@
 /// Contains utilities for using cervo with ONNX.
 use anyhow::Result;
-use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
+use cervo_core::{
+    inferer::{InfererBuilder, InfererProvider},
+    BasicInferer, DynamicMemoizingInferer, FixedBatchInferer,
+};
 use std::io::Read;
 use tract_onnx::{prelude::*, tract_hir::infer::Factoid};
 
@@ -9,34 +12,44 @@ fn model_for_reader(reader: &mut dyn Read) -> Result<InferenceModel> {
     onnx.model_for_read(reader)
 }
 
-/// Create a basic inferer from the provided bytes reader.
-///
-/// See [`BasicInferer`] for more details.
-pub fn simple_inferer_from_stream(reader: &mut dyn Read) -> Result<BasicInferer> {
-    let model = model_for_reader(reader)?;
-    BasicInferer::from_model(model)
+/// Wrapper for a reader providing ONNX data.
+pub struct OnnxData<T: Read>(pub T);
+
+impl<T> OnnxData<T>
+where
+    T: Read,
+{
+    fn load(&mut self) -> Result<InferenceModel> {
+        model_for_reader(&mut self.0)
+    }
 }
 
-/// Create an dynamic batching inferer from the provided bytes reader
-///
-/// See [`DynamicBatchingInferer`] for more details.
-pub fn batched_inferer_from_stream(
-    reader: &mut dyn Read,
-    batch_size: &[usize],
-) -> Result<DynamicBatchingInferer> {
-    let model = model_for_reader(reader)?;
-    DynamicBatchingInferer::from_model(model, batch_size)
+impl<T> InfererProvider for OnnxData<T>
+where
+    T: Read,
+{
+    /// Build a [`BasicInferer`].
+    fn build_basic(mut self) -> Result<BasicInferer> {
+        let model = self.load()?;
+        BasicInferer::from_model(model)
+    }
+
+    /// Build a [`BasicInferer`].
+    fn build_fixed(mut self, sizes: &[usize]) -> Result<FixedBatchInferer> {
+        let model = self.load()?;
+        FixedBatchInferer::from_model(model, sizes)
+    }
+
+    /// Build a [`DynamicMemoizingInferer`].
+    fn build_memoizing(mut self, preload_sizes: &[usize]) -> Result<DynamicMemoizingInferer> {
+        let model = self.load()?;
+        DynamicMemoizingInferer::from_model(model, preload_sizes)
+    }
 }
 
-/// Create an fixed batching inferer from the provided bytes reader
-///
-/// See [`FixedBatchingInferer`] for more details.
-pub fn fixed_batch_inferer_from_stream(
-    reader: &mut dyn Read,
-    batch_size: &[usize],
-) -> Result<FixedBatchingInferer> {
-    let model = model_for_reader(reader)?;
-    FixedBatchingInferer::from_model(model, batch_size)
+/// Utility function for creating an [`InfererBuilder`] for [`OnnxData`].
+pub fn builder<T: Read>(read: T) -> InfererBuilder<OnnxData<T>> {
+    InfererBuilder::new(OnnxData(read))
 }
 
 /// Convert an ONNX model to a NNEF model.

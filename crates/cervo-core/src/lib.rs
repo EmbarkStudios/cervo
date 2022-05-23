@@ -12,4 +12,4 @@ pub use model_api::ModelAPI;
 pub use epsilon::{
     EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
 };
-pub use inferer::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer, Inferer, State};
+pub use inferer::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer, Inferer, State};
