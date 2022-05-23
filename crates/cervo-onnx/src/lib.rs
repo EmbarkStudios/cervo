@@ -7,6 +7,9 @@ use cervo_core::prelude::{
 use std::io::Read;
 use tract_onnx::{prelude::*, tract_hir::infer::Factoid};
 
+#[doc(hidden)]
+pub use tract_onnx;
+
 fn model_for_reader(reader: &mut dyn Read) -> Result<InferenceModel> {
     let onnx = tract_onnx::onnx();
     onnx.model_for_read(reader)

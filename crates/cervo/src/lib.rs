@@ -11,14 +11,18 @@ The core crate focuses on wrappers for tract models. It adds a few
 different modes for running inferers, as well as data injectors for
 stochastic policies (e.g. SAC).
 
-```skip
+```no_run
+# fn load_bytes(s: &str) -> std::io::Cursor<Vec<u8>> { std::io::Cursor::new(vec![]) }
+# use cervo_onnx::tract_onnx;
+# use cervo_onnx::tract_onnx::prelude::*;
 use cervo_core::prelude::{BasicInferer, InfererExt};
 
-let model_data = load_bytes("model.onnx")?;
-let inference_model = tract_onnx::model_for_reader(model_data)?;
+let mut model_data = load_bytes("model.onnx");
+let inference_model = tract_onnx::onnx().model_for_read(&mut model_data)?;
 
 let inferer = BasicInferer::from_model(inference_model)?
     .with_default_epsilon("noise");
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 ## Cervo Asset
@@ -27,29 +31,33 @@ To support isomg NNEF and ONNX interchangeably we have a small
 wrapping binary format which can contain either type of data, helping
 keep track of which data is what.
 
-```skip
+```no_run
+# fn load_bytes(s: &str) -> Vec<u8> { vec![] }
 use cervo_asset::{AssetData, AssetKind};
 
-let model_data = load_bytes("model.onnx")?;
-let asset = AssetData(AssetKind::Onnx, model_data)?;
+let model_data = load_bytes("model.onnx");
+let asset = AssetData::new(AssetKind::Onnx, model_data);
 
 let nnef_asset = asset.to_nnef(None);    // convert to a symbolic NNEF asset
 
 let inferer = asset.load_basic();
 let nnef_inferer = asset.load_fixed(&[42]);
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 ## Cervo ONNX and Cervo NNEF
 
 These are simple intermediates helping Cervo Asset, but can also be used directly.
 
-```skip
+```no_run
+# fn load_bytes(s: &str) -> std::io::Cursor<Vec<u8>> { std::io::Cursor::new(vec![]) }
 use cervo_core::prelude::InfererExt;
 
-let model_data = load_bytes("model.onnx")?;
+let model_data = load_bytes("model.onnx");
 let model = cervo_onnx::builder(model_data)
-    .build_memoizing()?
+    .build_memoizing(&[])?
     .with_default_epsilon("epsilon");
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
 
