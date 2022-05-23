@@ -11,8 +11,8 @@ The core crate focuses on wrappers for tract models. It adds a few
 different modes for running inferers, as well as data injectors for
 stochastic policies (e.g. SAC).
 
-```
-use cervo_core::BasicInferer;
+```skip
+use cervo_core::prelude::{BasicInferer, InfererExt};
 
 let model_data = load_bytes("model.onnx")?;
 let inference_model = tract_onnx::model_for_reader(model_data)?;
@@ -27,11 +27,11 @@ To support isomg NNEF and ONNX interchangeably we have a small
 wrapping binary format which can contain either type of data, helping
 keep track of which data is what.
 
-```
+```skip
 use cervo_asset::{AssetData, AssetKind};
 
 let model_data = load_bytes("model.onnx")?;
-let asset = cervo_asset::AssetData(AssetKind::Onnx, model_data)?;
+let asset = AssetData(AssetKind::Onnx, model_data)?;
 
 let nnef_asset = asset.to_nnef(None);    // convert to a symbolic NNEF asset
 
@@ -43,9 +43,11 @@ let nnef_inferer = asset.load_fixed(&[42]);
 
 These are simple intermediates helping Cervo Asset, but can also be used directly.
 
-```
+```skip
+use cervo_core::prelude::InfererExt;
+
 let model_data = load_bytes("model.onnx")?;
-let model = tract_onnx::builder(model_data)
+let model = cervo_onnx::builder(model_data)
     .build_memoizing()?
     .with_default_epsilon("epsilon");
 ```
