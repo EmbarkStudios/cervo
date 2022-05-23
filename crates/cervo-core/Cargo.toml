@@ -1,7 +1,7 @@
 [package]
 name = "cervo-core"
 version = "0.0.1"
-edition = "2018"
+edition = "2021"
 authors = [
     "Tom Solberg <tom.solberg@embark-studios.com",
     "Henrik Rydgård <hrydgard@embark-studios.com>"
@@ -11,7 +11,7 @@ description = "High level APIs for RL in games."
 repository = "https://github.com/EmbarkStudios/cervo"
 keywords = [ "machinelearning", "inference" ]
 categories = [ "science" ]
-edition = "2021"
+
 readme = "../../README.md"
 
 [dependencies]

@@ -10,7 +10,6 @@ description = "Extends cervo with ONNX support from tract-onnx."
 repository = "https://github.com/EmbarkStudios/cervo"
 keywords = [ "machinelearning", "inference", "onnx" ]
 categories = [ "science" ]
-edition = "2021"
 readme = "../../README.md"
 
 [dependencies]
