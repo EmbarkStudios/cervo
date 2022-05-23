@@ -13,7 +13,7 @@ use std::{
 };
 
 use anyhow::Result;
-use cervo_core::{inferer::InfererExt, Inferer};
+use cervo_core::prelude::{Inferer, InfererExt};
 use clap::Parser;
 
 fn black_box<T>(dummy: T) -> T {

@@ -8,7 +8,7 @@
 
 use anyhow::{bail, Result};
 use cervo_asset::AssetData;
-use cervo_core::Inferer;
+use cervo_core::prelude::Inferer;
 use clap::Parser;
 use std::{fs::File, path::PathBuf};
 

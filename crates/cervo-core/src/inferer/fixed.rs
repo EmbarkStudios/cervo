@@ -1,5 +1,5 @@
 use super::{helpers, Inferer, Response, State};
-use crate::model_api::ModelAPI;
+use crate::model_api::ModelApi;
 use anyhow::{Error, Result};
 use std::collections::HashMap;
 use tract_core::prelude::*;
@@ -25,7 +25,7 @@ use tract_hir::prelude::*;
 /// * Mini-batches add overhead
 /// * Diminishing returns on each supported batch size.
 pub struct FixedBatchInferer {
-    model_api: ModelAPI,
+    model_api: ModelApi,
     models: Vec<BatchedModel>,
 }
 
@@ -47,7 +47,7 @@ impl FixedBatchInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel, sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelAPI::for_model(&model)?;
+        let model_api = ModelApi::for_model(&model)?;
 
         let sizes = fixup_sizes(sizes);
 
@@ -68,7 +68,7 @@ impl FixedBatchInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_typed(model: TypedModel, sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelAPI::for_typed_model(&model.clone())?;
+        let model_api = ModelApi::for_typed_model(&model.clone())?;
 
         let sizes = fixup_sizes(sizes);
 
@@ -133,7 +133,7 @@ impl BatchedModel {
     fn build_inputs<It: std::iter::Iterator<Item = State>>(
         &mut self,
         obs: &mut It,
-        model_api: &ModelAPI,
+        model_api: &ModelApi,
     ) -> TVec<Tensor> {
         let size = self.size;
         let mut inputs = TVec::default();
@@ -167,7 +167,7 @@ impl BatchedModel {
     fn execute<It: std::iter::Iterator<Item = State>>(
         &mut self,
         observations: &mut It,
-        model_api: &ModelAPI,
+        model_api: &ModelApi,
         vec_out: &mut [Response],
     ) -> Result<()> {
         let inputs = self.build_inputs(observations, model_api);

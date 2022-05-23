@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use cervo_core::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer};
+use cervo_core::prelude::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer};
 use std::io::{Cursor, Read, Write};
 
 /// Magic used to ensure assets are valid.
@@ -159,7 +159,7 @@ impl AssetData {
     /// Convert this to an NNEF asset.
     ///
     /// Will return an error if this is already an NNEF asset.
-    pub fn as_nnef(&self, batch_size: Option<usize>) -> Result<Self> {
+    pub fn to_nnef(&self, batch_size: Option<usize>) -> Result<Self> {
         if self.kind == AssetKind::Nnef {
             bail!("trying to convert from nnef to nnef");
         }

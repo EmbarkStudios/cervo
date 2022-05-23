@@ -13,7 +13,7 @@ use std::{
 };
 
 use anyhow::Result;
-use cervo_core::{inferer::InfererExt, Inferer, LowQualityNoiseGenerator};
+use cervo_core::prelude::{Inferer, InfererExt, LowQualityNoiseGenerator};
 use clap::Parser;
 
 fn black_box<T>(dummy: T) -> T {

@@ -1,8 +1,7 @@
 /// Contains utilities for using cervo with ONNX.
 use anyhow::Result;
-use cervo_core::{
-    inferer::{InfererBuilder, InfererProvider},
-    BasicInferer, DynamicMemoizingInferer, FixedBatchInferer,
+use cervo_core::prelude::{
+    BasicInferer, DynamicMemoizingInferer, FixedBatchInferer, {InfererBuilder, InfererProvider},
 };
 use std::io::Read;
 use tract_onnx::{prelude::*, tract_hir::infer::Factoid};

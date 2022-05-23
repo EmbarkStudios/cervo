@@ -5,7 +5,7 @@
 /*!
 
 */
-use cervo_core::{EpsilonInjector, Inferer};
+use cervo_core::prelude::{EpsilonInjector, Inferer};
 
 #[path = "./helpers.rs"]
 mod helpers;

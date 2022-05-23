@@ -46,7 +46,7 @@ pub(super) fn package(config: PackageArgs) -> Result<()> {
     let asset = match asset.kind() {
         AssetKind::Onnx => {
             if config.optimize {
-                asset.as_nnef(config.batch_size)?
+                asset.to_nnef(config.batch_size)?
             } else {
                 asset
             }

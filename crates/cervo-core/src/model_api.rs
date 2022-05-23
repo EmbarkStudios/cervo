@@ -9,8 +9,8 @@
 use tract_core::{model::TypedModel, tract_data::TractResult};
 use tract_hir::{infer::Factoid, prelude::InferenceModel};
 
-/// The ModelAPI describes the inputs and outputs for a model.
-pub struct ModelAPI {
+/// The ModelApi describes the inputs and outputs for a model.
+pub struct ModelApi {
     /// The named model inputs.
     pub inputs: Vec<(String, Vec<usize>)>,
 
@@ -18,7 +18,7 @@ pub struct ModelAPI {
     pub outputs: Vec<(String, Vec<usize>)>,
 }
 
-impl ModelAPI {
+impl ModelApi {
     /// Extract the model API from the provided inference model.
     pub fn for_model(model: &InferenceModel) -> TractResult<Self> {
         let mut inputs: Vec<(String, Vec<usize>)> = Default::default();

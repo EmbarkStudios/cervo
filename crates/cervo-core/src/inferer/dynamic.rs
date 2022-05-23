@@ -1,5 +1,5 @@
 use super::{helpers, Inferer, Response, State};
-use crate::model_api::ModelAPI;
+use crate::model_api::ModelApi;
 use anyhow::{Error, Result};
 use std::collections::{hash_map::Entry, HashMap};
 use tract_core::prelude::*;
@@ -41,7 +41,7 @@ use tract_hir::prelude::*;
 pub struct DynamicMemoizingInferer {
     symbol: Symbol,
     model: TypedModel,
-    model_api: ModelAPI,
+    model_api: ModelApi,
     model_cache: HashMap<usize, TypedSimplePlan<TypedModel>>,
 }
 
@@ -52,7 +52,7 @@ impl DynamicMemoizingInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelAPI::for_model(&model)?;
+        let model_api = ModelApi::for_model(&model)?;
 
         let (symbol, model) = helpers::build_symbolic_model(model, &model_api.inputs)?;
         let mut this = Self {
@@ -75,7 +75,7 @@ impl DynamicMemoizingInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_typed(mut model: TypedModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelAPI::for_typed_model(&model)?;
+        let model_api = ModelApi::for_typed_model(&model)?;
 
         let symbol = helpers::build_symbolic_typed(&mut model)?;
         let mut this = Self {

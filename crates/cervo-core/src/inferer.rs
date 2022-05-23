@@ -19,11 +19,11 @@ or the fragility of delegating input-building a layer up.
 
 Cervo currently provides three different inferers, two of which we've used historially (basic and fixed) and one recent addition that isn't as tested (dynamic). You'll find more detail on each page, but here comes a quick rundown of the various use cases:
 
-| Inferer | Batch size   | Memory use                         | Performance |
-| ------- | ------------ | ---------------------------------- | ----------- |
-| Basic   | 1            | Fixed                              | Linear with number of elements |
-| Fixed   | Known, exact | Fixed, linear with number of batch sizes | Optimal if exact match |
-| Dynamic | Unknown      | Linear with number of batch sizes  | Optimal, high cost for new batch size |
+| Inferer   | Batch size   | Memory use                         | Performance |
+| --------- | ------------ | ---------------------------------- | ----------- |
+| Basic     | 1            | Fixed                              | Linear with number of elements |
+| Fixed     | Known, exact | Fixed, linear with number of batch sizes | Optimal if exact match |
+| Memoizing | Unknown      | Linear with number of batch sizes  | Optimal, high cost for new batch size |
 
 As a rule of thumb, use a basic inferer if you'll almost always pass a
 single item. If you need more items and know how many, use a fixed
@@ -44,7 +44,7 @@ pub use basic::BasicInferer;
 pub use dynamic::DynamicMemoizingInferer;
 pub use fixed::FixedBatchInferer;
 
-use crate::{EpsilonInjector, NoiseGenerator};
+use crate::epsilon::{EpsilonInjector, NoiseGenerator};
 
 /// The data of one element in a batch.
 #[derive(Clone, Debug)]
@@ -73,13 +73,13 @@ pub trait Inferer {
 
 /// Helper trait to provide helper functions for loadable models.
 pub trait InfererProvider {
-    /// Build a [`BasicInferer`] without an epsilon.
+    /// Build a [`BasicInferer`].
     fn build_basic(self) -> Result<BasicInferer>;
 
-    /// Build a [`BasicInferer`] without an epsilon.
+    /// Build a [`FixedBatchInferer`].
     fn build_fixed(self, sizes: &[usize]) -> Result<FixedBatchInferer>;
 
-    /// Build a [`DynamicMemoizingInferer`] without an epsilon.
+    /// Build a [`DynamicMemoizingInferer`].
     fn build_memoizing(self, preload_sizes: &[usize]) -> Result<DynamicMemoizingInferer>;
 }
 
@@ -97,22 +97,24 @@ where
         Self { provider }
     }
 
-    /// Build a [`BasicInferer`] without an epsilon.
+    /// Build a [`BasicInferer`].
     pub fn build_basic(self) -> Result<BasicInferer> {
         self.provider.build_basic()
     }
 
-    /// Build a [`BasicInferer`] without an epsilon.
+    /// Build a [`FixedBatchInferer`].
     pub fn build_fixed(self, sizes: &[usize]) -> Result<FixedBatchInferer> {
         self.provider.build_fixed(sizes)
     }
 
-    /// Build a [`DynamicMemoizingInferer`] without an epsilon.
+    /// Build a [`DynamicMemoizingInferer`].
     pub fn build_memoizing(self, preload_sizes: &[usize]) -> Result<DynamicMemoizingInferer> {
         self.provider.build_memoizing(preload_sizes)
     }
 }
 
+/// Extension trait for [`Inferer`].
+// TODO[TSolberg]: This was intended to be part of the builder but it becomes an awful state-machine and is hard to extend.
 pub trait InfererExt: Inferer + Sized {
     /// Add an epsilon injector using the default noise kind.
     fn with_default_epsilon(self, key: &str) -> Result<EpsilonInjector<Self>> {

@@ -1,14 +1,17 @@
 /// Contains utilities for using cervo with NNEF.
 use anyhow::Result;
-use cervo_core::inferer::{InfererBuilder, InfererProvider};
-use std::ffi::OsStr;
-use std::io::Read;
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::{cell::UnsafeCell, path::Path};
-use tract_nnef::{framework::Nnef, prelude::*};
 
-use cervo_core::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer};
+use cervo_core::prelude::{
+    BasicInferer, DynamicMemoizingInferer, FixedBatchInferer, InfererBuilder, InfererProvider,
+};
+use std::{
+    cell::UnsafeCell,
+    ffi::OsStr,
+    io::Read,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
+use tract_nnef::{framework::Nnef, prelude::*};
 
 thread_local!(
     /// We create and cache the NNEF on a per-thread basis. This is noticeably expensive to create, so we ensure it only has to happen once.

@@ -7,9 +7,13 @@ pub mod epsilon;
 pub mod inferer;
 mod model_api;
 
-pub use model_api::ModelAPI;
-
-pub use epsilon::{
-    EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
-};
-pub use inferer::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer, Inferer, State};
+pub mod prelude {
+    pub use super::epsilon::{
+        EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
+    };
+    pub use super::inferer::{
+        BasicInferer, DynamicMemoizingInferer, FixedBatchInferer, Inferer, InfererBuilder,
+        InfererExt, InfererProvider, State,
+    };
+    pub use super::model_api::ModelApi;
+}

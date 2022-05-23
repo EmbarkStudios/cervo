@@ -6,7 +6,7 @@
 
 */
 
-use cervo_core::Inferer;
+use cervo_core::prelude::Inferer;
 
 #[path = "./helpers.rs"]
 mod helpers;
