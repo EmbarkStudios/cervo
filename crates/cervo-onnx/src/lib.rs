@@ -1,4 +1,5 @@
-/// Contains utilities for using cervo with ONNX.
+//! Contains utilities for using cervo with ONNX.
+
 use anyhow::Result;
 use cervo_core::prelude::{
     BasicInferer, DynamicMemoizingInferer, FixedBatchInferer, {InfererBuilder, InfererProvider},

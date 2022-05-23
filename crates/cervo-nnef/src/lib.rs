@@ -1,4 +1,5 @@
-/// Contains utilities for using cervo with NNEF.
+//! Contains utilities for using cervo with NNEF.
+
 use anyhow::Result;
 
 use cervo_core::prelude::{
@@ -89,6 +90,7 @@ where
     }
 }
 
+/// Utility function for creating an [`InfererBuilder`] for [`NnefData`].
 pub fn builder<T: Read>(read: T) -> InfererBuilder<NnefData<T>> {
     InfererBuilder::new(NnefData(read))
 }

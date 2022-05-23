@@ -7,6 +7,7 @@ pub mod epsilon;
 pub mod inferer;
 mod model_api;
 
+/// Most core utilities are re-exported here.
 pub mod prelude {
     pub use super::epsilon::{
         EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
