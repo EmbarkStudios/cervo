@@ -41,7 +41,7 @@ let asset = AssetData::new(AssetKind::Onnx, model_data);
 let nnef_asset = asset.to_nnef(None);    // convert to a symbolic NNEF asset
 
 let inferer = asset.load_basic();
-let nnef_inferer = asset.load_fixed(&[42]);
+let nnef_inferer = nnef_asset.load_fixed(&[42]);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
