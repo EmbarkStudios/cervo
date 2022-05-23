@@ -19,8 +19,8 @@ pub mod prelude {
         EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
     };
     pub use super::inferer::{
-        BasicInferer, DynamicMemoizingInferer, FixedBatchInferer, Inferer, InfererBuilder,
-        InfererExt, InfererProvider, State,
+        BasicInferer, FixedBatchInferer, Inferer, InfererBuilder, InfererExt, InfererProvider,
+        MemoizingDynamicInferer, State,
     };
     pub use super::model_api::ModelApi;
 }

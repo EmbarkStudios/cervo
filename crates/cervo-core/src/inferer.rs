@@ -36,13 +36,13 @@ use anyhow::{Error, Result};
 use std::collections::HashMap;
 
 mod basic;
-mod dynamic;
 mod fixed;
 mod helpers;
+mod memoizing;
 
 pub use basic::BasicInferer;
-pub use dynamic::DynamicMemoizingInferer;
 pub use fixed::FixedBatchInferer;
+pub use memoizing::MemoizingDynamicInferer;
 
 use crate::epsilon::{EpsilonInjector, NoiseGenerator};
 
@@ -79,8 +79,8 @@ pub trait InfererProvider {
     /// Build a [`FixedBatchInferer`].
     fn build_fixed(self, sizes: &[usize]) -> Result<FixedBatchInferer>;
 
-    /// Build a [`DynamicMemoizingInferer`].
-    fn build_memoizing(self, preload_sizes: &[usize]) -> Result<DynamicMemoizingInferer>;
+    /// Build a [`MemoizingDynamicInferer`].
+    fn build_memoizing(self, preload_sizes: &[usize]) -> Result<MemoizingDynamicInferer>;
 }
 
 /// Builder for inferers.
@@ -107,8 +107,8 @@ where
         self.provider.build_fixed(sizes)
     }
 
-    /// Build a [`DynamicMemoizingInferer`].
-    pub fn build_memoizing(self, preload_sizes: &[usize]) -> Result<DynamicMemoizingInferer> {
+    /// Build a [`MemoizingDynamicInferer`].
+    pub fn build_memoizing(self, preload_sizes: &[usize]) -> Result<MemoizingDynamicInferer> {
         self.provider.build_memoizing(preload_sizes)
     }
 }

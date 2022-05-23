@@ -38,14 +38,14 @@ use tract_hir::prelude::*;
 /// * For small amounts of data and large models the spikes can offset
 /// amortized gains signifcantly
 
-pub struct DynamicMemoizingInferer {
+pub struct MemoizingDynamicInferer {
     symbol: Symbol,
     model: TypedModel,
     model_api: ModelApi,
     model_cache: HashMap<usize, TypedSimplePlan<TypedModel>>,
 }
 
-impl DynamicMemoizingInferer {
+impl MemoizingDynamicInferer {
     /// Create an inferer for the provided `inference` model.
     ///
     /// # Errors
@@ -160,7 +160,7 @@ impl DynamicMemoizingInferer {
     }
 }
 
-impl Inferer for DynamicMemoizingInferer {
+impl Inferer for MemoizingDynamicInferer {
     fn infer(
         &mut self,
         observations: HashMap<u64, State>,

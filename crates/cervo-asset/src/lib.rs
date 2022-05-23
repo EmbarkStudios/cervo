@@ -20,7 +20,7 @@ let nnef_inferer = nnef_asset.load_fixed(&[42]);
 */
 
 use anyhow::{bail, Result};
-use cervo_core::prelude::{BasicInferer, DynamicMemoizingInferer, FixedBatchInferer};
+use cervo_core::prelude::{BasicInferer, FixedBatchInferer, MemoizingDynamicInferer};
 use std::io::{Cursor, Read, Write};
 
 /// Magic used to ensure assets are valid.
@@ -168,8 +168,8 @@ impl AssetData {
 
     /// Load a batching inferer from this asset with dynamic batch sizes.
     ///
-    /// See [`DynamicMemoizingInferer`] for more details.
-    pub fn load_memoizing(&self, sizes: &[usize]) -> Result<DynamicMemoizingInferer> {
+    /// See [`MemoizingDynamicInferer`] for more details.
+    pub fn load_memoizing(&self, sizes: &[usize]) -> Result<MemoizingDynamicInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
             AssetKind::Onnx => cervo_onnx::builder(&mut cursor).build_memoizing(sizes),

@@ -25,7 +25,7 @@ let nnef_data = cervo_onnx::to_nnef(&mut onnx_data, None);
 
 use anyhow::Result;
 use cervo_core::prelude::{
-    BasicInferer, DynamicMemoizingInferer, FixedBatchInferer, {InfererBuilder, InfererProvider},
+    BasicInferer, FixedBatchInferer, MemoizingDynamicInferer, {InfererBuilder, InfererProvider},
 };
 use std::io::Read;
 use tract_onnx::{prelude::*, tract_hir::infer::Factoid};
@@ -66,10 +66,10 @@ where
         FixedBatchInferer::from_model(model, sizes)
     }
 
-    /// Build a [`DynamicMemoizingInferer`].
-    fn build_memoizing(mut self, preload_sizes: &[usize]) -> Result<DynamicMemoizingInferer> {
+    /// Build a [`MemoizingDynamicInferer`].
+    fn build_memoizing(mut self, preload_sizes: &[usize]) -> Result<MemoizingDynamicInferer> {
         let model = self.load()?;
-        DynamicMemoizingInferer::from_model(model, preload_sizes)
+        MemoizingDynamicInferer::from_model(model, preload_sizes)
     }
 }
 
