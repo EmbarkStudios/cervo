@@ -11,12 +11,21 @@ def parse_stats_file(statsfile) -> pandas.DataFrame:
 
 def main(statsfile, iterations, outfile=None):
     df = parse_stats_file(statsfile)
-    plt.figure(figsize=(16, 10))
+    fig, ax = plt.subplots(nrows=2, figsize=(16, 16))
+
+    seaborn.lineplot(x="batchsize", y="ms", hue="kind", data=df, ax=ax[0]).set(
+        title=f"Mean execution time by batch size (concretized), its={iterations}",
+        ylabel="milliseconds",
+        ylim=(0, 0.5),
+    )
 
     df["ms"] = df["ms"] * df["batchsize"]
 
-    seaborn.factorplot(x="batchsize", y="ms", col="kind", data=df, kind="bar").set(
+    #    seaborn.factorplot(x="batchsize", y="ms", col="kind", data=df, kind="bar").set(
+    seaborn.lineplot(x="batchsize", y="ms", hue="kind", data=df, ax=ax[1]).set(
+        title=f"Total execution time by batch size (concretized), its={iterations}",
         ylabel="milliseconds",
+        ylim=(0, 3),
     )
 
     if outfile:

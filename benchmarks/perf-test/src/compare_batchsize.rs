@@ -18,16 +18,16 @@ use std::{
 use cervo_onnx::{
     batched_inferer_from_stream, direct_inferer_from_stream, fixed_batch_inferer_from_stream,
 };
-use structopt::StructOpt;
+use clap::Parser;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub(crate) struct BatchScaling {
-    #[structopt(long = "onnx", short = "o")]
+    #[clap(long = "onnx", short = 'o')]
     onnx: PathBuf,
 
     iterations: usize,
 
-    #[structopt(short = "b", use_delimiter = true)]
+    #[structopt(short = 'b', use_value_delimiter = true)]
     batch_sizes: Vec<usize>,
 
     output_file: PathBuf,
