@@ -17,30 +17,33 @@ or the fragility of delegating input-building a layer up.
  <p style="background:rgba(255,181,77,0.16);padding:0.75em;">
 <strong>Note:</strong> Our inferer setup hs been iterated on since 2019, and we've gone through a few variants and tested a bunch of different infering setups. While important distinctions remain, it's important to know that on x86_64 platforms tract will use a kernel optimized for a batch size of 1 or 6 elements, picking whichever works best. Similar patterns exist on arm64. This is being worked on, but limits the performance gain from various batching strategies.</p>
 
-Cervo currently provides three different inferers, two of which we've used historially (basic and fixed) and one recent addition that isn't as tested (dynamic). You'll find more detail on each page, but here comes a quick rundown of the various use cases:
+Cervo currently provides four different inferers, two of which we've used historially (basic and fixed) and two based on
+newer tract functionalities that we've not tested as much yet. You'll find more detail on each page, but here comes a
+quick rundown of the various use cases:
 
-| Inferer   | Batch size   | Memory use                         | Performance |
-| --------- | ------------ | ---------------------------------- | ----------- |
-| Basic     | 1            | Fixed                              | Linear with number of elements |
-| Fixed     | Known, exact | Fixed, linear with number of batch sizes | Optimal if exact match |
-| Memoizing | Unknown      | Linear with number of batch sizes  | Optimal, high cost for new batch size |
+| Inferer   | Batch size   | Memory use                                          | Performance |
+| --------- | ------------ | --------------------------------------------------- | ----------- |
+| Basic     | 1            | Fixed                                               | Linear with number of elements |
+| Fixed     | Known, exact | Fixed, linear with number of configured batch sizes | Optimal if exact match                |
+| Memoizing | Unknown      | Linear with number of batch sizes                   | Optimal, high cost for new batch size |
+| Dynamic   | Unknown      | Fixed                                               | Good scaling but high overhead         |
 
-As a rule of thumb, use a basic inferer if you'll almost always pass a
-single item. If you need more items and know how many, use a fixed
-inferer. Otherwise, use a dynamic batcher if you can afford the spikes
-and potential memory use. As a final option a fixed batcher with `[1,
-3, 6]` is a reasonable choice.
+As a rule of thumb, use a basic inferer if you'll almost always pass a single item. If you need more items and know how
+many, use a fixed inferer. Otherwise, use a memoizing inferer if you can afford the spikes and potential memory use. As
+a final resort you can use the true dynamic inferer trading off the memory use for worse performance.
+ */
 
-*/
 use anyhow::{Error, Result};
 use std::collections::HashMap;
 
 mod basic;
+mod dynamic;
 mod fixed;
 mod helpers;
 mod memoizing;
 
 pub use basic::BasicInferer;
+pub use dynamic::DynamicInferer;
 pub use fixed::FixedBatchInferer;
 pub use memoizing::MemoizingDynamicInferer;
 
@@ -81,6 +84,9 @@ pub trait InfererProvider {
 
     /// Build a [`MemoizingDynamicInferer`].
     fn build_memoizing(self, preload_sizes: &[usize]) -> Result<MemoizingDynamicInferer>;
+
+    /// Build a [`DynamicInferer`].
+    fn build_dynamic(self) -> Result<DynamicInferer>;
 }
 
 /// Builder for inferers.
@@ -105,6 +111,11 @@ where
     /// Build a [`FixedBatchInferer`].
     pub fn build_fixed(self, sizes: &[usize]) -> Result<FixedBatchInferer> {
         self.provider.build_fixed(sizes)
+    }
+
+    /// Build a [`DynamicInferer`].
+    pub fn build_dynamic(self) -> Result<DynamicInferer> {
+        self.provider.build_dynamic()
     }
 
     /// Build a [`MemoizingDynamicInferer`].
