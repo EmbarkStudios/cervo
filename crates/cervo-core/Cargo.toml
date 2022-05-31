@@ -1,12 +1,18 @@
 [package]
 name = "cervo-core"
-version = "0.0.0"
-edition = "2018"
+version = "0.0.1"
+edition = "2021"
 authors = [
     "Tom Solberg <tom.solberg@embark-studios.com",
     "Henrik Rydgård <hrydgard@embark-studios.com>"
 ]
-license = "LicenseRef-Embark-Proprietary"
+license = "MIT OR Apache-2.0"
+description = "High level APIs for RL in games."
+repository = "https://github.com/EmbarkStudios/cervo"
+keywords = [ "machinelearning", "inference" ]
+categories = [ "science" ]
+
+readme = "../../README.md"
 
 [dependencies]
 anyhow = { version = "1.0"}

@@ -19,6 +19,14 @@
 [![Build status](https://github.com/EmbarkStudios/cervo/workflows/CI/badge.svg)](https://github.com/EmbarkStudios/cervo/actions)
 </div>
 
+Cervo is intended to be a thin wrapper around tract, at a slightly
+higher abstraction level and with common utilities we need. While not
+a goal, our current use-cases has led to a design centered around
+dynamic batching and dictionary inputs for reinforcement-learning
+based agents.
+
+As of currently, Cervo offers a set of inferers, noise generators (for
+continuous-action/parametrized policies), and a unified asset format.
 
 ## Contribution
 
