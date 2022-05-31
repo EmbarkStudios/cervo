@@ -13,8 +13,7 @@ use std::{
 };
 
 use anyhow::Result;
-use cervo_core::{EpsilonInjector, Inferer, LowQualityNoiseGenerator};
-use cervo_onnx::fixed_batch_inferer_from_stream;
+use cervo_core::prelude::{Inferer, InfererExt, LowQualityNoiseGenerator};
 use clap::Parser;
 
 fn black_box<T>(dummy: T) -> T {
@@ -65,8 +64,9 @@ fn execute_steps(
 fn test_hq(onnx: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(onnx).unwrap();
 
-    let raw = fixed_batch_inferer_from_stream(&mut reader, &[batch_size])?;
-    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+    let instance = cervo_onnx::builder(&mut reader)
+        .build_fixed(&[batch_size])?
+        .with_default_epsilon("epsilon")?;
 
     execute_steps(instance, "low", steps, batch_size)
 }
@@ -74,9 +74,9 @@ fn test_hq(onnx: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measureme
 fn test_lq(onnx: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(onnx).unwrap();
 
-    let raw = fixed_batch_inferer_from_stream(&mut reader, &[batch_size])?;
-    let instance =
-        EpsilonInjector::with_generator(raw, LowQualityNoiseGenerator::default(), "epsilon")?;
+    let instance = cervo_onnx::builder(&mut reader)
+        .build_fixed(&[batch_size])?
+        .with_epsilon(LowQualityNoiseGenerator::default(), "epsilon")?;
 
     execute_steps(instance, "high", steps, batch_size)
 }

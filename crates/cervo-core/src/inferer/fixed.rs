@@ -1,22 +1,19 @@
-/*!
-A reliable batched inferer that is a good fit if you know how much data you'll have and want stable performance.
-
-As an added bonus, it'll subdivide your data into minibatches if the batching doesn't fit perfectly. To make this ork,
-it'll add a single-element mode as well to ensure all data is consumed - such as if you feed it 9 elements with a
-configured batch size of 8.
-
-You can configure a wide number of different batch sizes, and the largest one will be used. Note that the overhead for
-execution still is fairly large, but this helps amortize some of that cost away. For example; if you use a setup of [1,
-2, 4, 8] as your supported batch sizes a batch of 15 elements would run each plan once.
- */
 use super::{helpers, Inferer, Response, State};
-use crate::model_api::ModelAPI;
+use crate::model_api::ModelApi;
 use anyhow::{Error, Result};
 use std::collections::HashMap;
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
 
-/// The fixed batch inferer provided will subdivide your data into minibatches to efficiently use a set of preconfigured minibatch-sizes.
+/// A reliable batched inferer that is a good fit if you know how much data you'll have and want stable performance.
+///
+/// As an added bonus, it'll subdivide your data into minibatches if the batching doesn't fit perfectly. To make this
+/// work, it'll add a single-element mode as well to ensure all data is consumed - such as if you feed it 9 elements
+/// with a configured batch size of 8.
+///
+/// You can configure a wide number of different batch sizes, and the largest one will be used. Note that the overhead for
+/// execution still is fairly large, but this helps amortize some of that cost away. For example; if you use a setup of [1,
+/// 2, 4, 8] as your supported batch sizes a batch of 15 elements would run each plan once.
 ///
 /// # Pros
 ///
@@ -25,9 +22,10 @@ use tract_hir::prelude::*;
 ///
 /// # Cons
 ///
-/// * Mini-batches lead to noticeable performance degradation
-pub struct FixedBatchingInferer {
-    model_api: ModelAPI,
+/// * Mini-batches add overhead
+/// * Diminishing returns on each supported batch size.
+pub struct FixedBatchInferer {
+    model_api: ModelApi,
     models: Vec<BatchedModel>,
 }
 
@@ -42,14 +40,14 @@ fn fixup_sizes(sizes: &[usize]) -> Vec<usize> {
     sizes
 }
 
-impl FixedBatchingInferer {
+impl FixedBatchInferer {
     /// Create an inferer for the provided `inference` model.
     ///
     /// # Errors
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel, sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelAPI::for_model(&model)?;
+        let model_api = ModelApi::for_model(&model)?;
 
         let sizes = fixup_sizes(sizes);
 
@@ -70,7 +68,7 @@ impl FixedBatchingInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_typed(model: TypedModel, sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelAPI::for_typed_model(&model.clone())?;
+        let model_api = ModelApi::for_typed_model(&model.clone())?;
 
         let sizes = fixup_sizes(sizes);
 
@@ -102,7 +100,7 @@ impl FixedBatchingInferer {
     }
 }
 
-impl Inferer for FixedBatchingInferer {
+impl Inferer for FixedBatchInferer {
     fn infer(
         &mut self,
         observations: HashMap<u64, State>,
@@ -135,7 +133,7 @@ impl BatchedModel {
     fn build_inputs<It: std::iter::Iterator<Item = State>>(
         &mut self,
         obs: &mut It,
-        model_api: &ModelAPI,
+        model_api: &ModelApi,
     ) -> TVec<Tensor> {
         let size = self.size;
         let mut inputs = TVec::default();
@@ -169,7 +167,7 @@ impl BatchedModel {
     fn execute<It: std::iter::Iterator<Item = State>>(
         &mut self,
         observations: &mut It,
-        model_api: &ModelAPI,
+        model_api: &ModelApi,
         vec_out: &mut [Response],
     ) -> Result<()> {
         let inputs = self.build_inputs(observations, model_api);
