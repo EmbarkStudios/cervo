@@ -13,7 +13,7 @@ use std::{
 };
 
 use anyhow::Result;
-use cervo_core::{EpsilonInjector, Inferer};
+use cervo_core::prelude::{Inferer, InfererExt};
 use clap::Parser;
 
 fn black_box<T>(dummy: T) -> T {
@@ -84,8 +84,9 @@ fn test_fixed_batcher_onnx(
 ) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(onnx).unwrap();
 
-    let raw = cervo_onnx::fixed_batch_inferer_from_stream(&mut reader, sizes)?;
-    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+    let instance = cervo_onnx::builder(&mut reader)
+        .build_fixed(sizes)?
+        .with_default_epsilon("epsilon")?;
 
     execute_steps(instance, "fixed+onnx", steps, batch_size)
 }
@@ -98,8 +99,9 @@ fn test_dynamic_batcher_onnx(
 ) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(onnx).unwrap();
 
-    let raw = cervo_onnx::batched_inferer_from_stream(&mut reader, sizes)?;
-    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+    let instance = cervo_onnx::builder(&mut reader)
+        .build_memoizing(sizes)?
+        .with_default_epsilon("epsilon")?;
 
     execute_steps(instance, "dynamic+onnx", steps, batch_size)
 }
@@ -107,8 +109,9 @@ fn test_dynamic_batcher_onnx(
 fn test_no_batcher_onnx(onnx: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(onnx).unwrap();
 
-    let raw = cervo_onnx::simple_inferer_from_stream(&mut reader)?;
-    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+    let instance = cervo_onnx::builder(&mut reader)
+        .build_basic()?
+        .with_default_epsilon("epsilon")?;
 
     execute_steps(instance, "none+onnx", steps, batch_size)
 }
@@ -120,9 +123,9 @@ fn test_fixed_batcher_nnef(
     batch_size: usize,
 ) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(nnef).unwrap();
-
-    let raw = cervo_nnef::fixed_batch_inferer_from_stream(&mut reader, sizes)?;
-    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+    let instance = cervo_nnef::builder(&mut reader)
+        .build_fixed(sizes)?
+        .with_default_epsilon("epsilon")?;
 
     execute_steps(instance, "fixed+nnef", steps, batch_size)
 }
@@ -135,8 +138,9 @@ fn test_dynamic_batcher_nnef(
 ) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(nnef).unwrap();
 
-    let raw = cervo_nnef::batched_inferer_from_stream(&mut reader, sizes)?;
-    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+    let instance = cervo_nnef::builder(&mut reader)
+        .build_memoizing(sizes)?
+        .with_default_epsilon("epsilon")?;
 
     execute_steps(instance, "dynamic+nnef", steps, batch_size)
 }
@@ -144,8 +148,9 @@ fn test_dynamic_batcher_nnef(
 fn test_no_batcher_nnef(nnef: &Path, steps: usize, batch_size: usize) -> Result<Vec<Measurement>> {
     let mut reader = crate::helpers::get_file(nnef).unwrap();
 
-    let raw = cervo_nnef::simple_inferer_from_stream(&mut reader)?;
-    let instance = EpsilonInjector::wrap(raw, "epsilon")?;
+    let instance = cervo_nnef::builder(&mut reader)
+        .build_basic()?
+        .with_default_epsilon("epsilon")?;
 
     execute_steps(instance, "none+nnef", steps, batch_size)
 }

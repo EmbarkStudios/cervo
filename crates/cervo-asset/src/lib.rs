@@ -1,5 +1,26 @@
+/*!
+To support isomg NNEF and ONNX interchangeably we have a small
+wrapping binary format which can contain either type of data, helping
+keep track of which data is what.
+
+```no_run
+# fn load_bytes(s: &str) -> Vec<u8> { vec![] }
+use cervo_asset::{AssetData, AssetKind};
+
+let model_data = load_bytes("model.onnx");
+let asset = AssetData::new(AssetKind::Onnx, model_data);
+
+let nnef_asset = asset.to_nnef(None)?;    // convert to a symbolic NNEF asset
+
+let inferer = asset.load_basic();
+let nnef_inferer = nnef_asset.load_fixed(&[42]);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+*/
+
 use anyhow::{bail, Result};
-use cervo_core::{BasicInferer, DynamicBatchingInferer, FixedBatchingInferer};
+use cervo_core::prelude::{BasicInferer, FixedBatchInferer, MemoizingDynamicInferer};
 use std::io::{Cursor, Read, Write};
 
 /// Magic used to ensure assets are valid.
@@ -126,40 +147,40 @@ impl AssetData {
     /// Load a simple unbatching inferer from this asset.
     ///
     /// See ['BasicInferer'] for more details.
-    pub fn load_simple(&self) -> Result<BasicInferer> {
+    pub fn load_basic(&self) -> Result<BasicInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => cervo_onnx::simple_inferer_from_stream(&mut cursor),
-            AssetKind::Nnef => cervo_nnef::simple_inferer_from_stream(&mut cursor),
+            AssetKind::Onnx => cervo_onnx::builder(&mut cursor).build_basic(),
+            AssetKind::Nnef => cervo_nnef::builder(&mut cursor).build_basic(),
         }
     }
 
     /// Load a batching inferer from this asset with fixed batch sizes.
     ///
-    /// See [`FixedBatchingInferer`] for more details.
-    pub fn load_fixed_batcher(&self, sizes: &[usize]) -> Result<FixedBatchingInferer> {
+    /// See [`FixedBatchInferer`] for more details.
+    pub fn load_fixed(&self, sizes: &[usize]) -> Result<FixedBatchInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => cervo_onnx::fixed_batch_inferer_from_stream(&mut cursor, sizes),
-            AssetKind::Nnef => cervo_nnef::fixed_batch_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Onnx => cervo_onnx::builder(&mut cursor).build_fixed(sizes),
+            AssetKind::Nnef => cervo_nnef::builder(&mut cursor).build_fixed(sizes),
         }
     }
 
     /// Load a batching inferer from this asset with dynamic batch sizes.
     ///
-    /// See [`DynamicBatchingInferer`] for more details.
-    pub fn load_dynamic_batcher(&self, sizes: &[usize]) -> Result<DynamicBatchingInferer> {
+    /// See [`MemoizingDynamicInferer`] for more details.
+    pub fn load_memoizing(&self, sizes: &[usize]) -> Result<MemoizingDynamicInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {
-            AssetKind::Onnx => cervo_onnx::batched_inferer_from_stream(&mut cursor, sizes),
-            AssetKind::Nnef => cervo_nnef::batched_inferer_from_stream(&mut cursor, sizes),
+            AssetKind::Onnx => cervo_onnx::builder(&mut cursor).build_memoizing(sizes),
+            AssetKind::Nnef => cervo_nnef::builder(&mut cursor).build_memoizing(sizes),
         }
     }
 
     /// Convert this to an NNEF asset.
     ///
     /// Will return an error if this is already an NNEF asset.
-    pub fn as_nnef(&self, batch_size: Option<usize>) -> Result<Self> {
+    pub fn to_nnef(&self, batch_size: Option<usize>) -> Result<Self> {
         if self.kind == AssetKind::Nnef {
             bail!("trying to convert from nnef to nnef");
         }

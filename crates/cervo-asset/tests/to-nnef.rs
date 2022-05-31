@@ -17,7 +17,7 @@ fn test_to_nnef_raw() {
     let instance =
         AssetData::from_reader(cervo_asset::AssetKind::Onnx, reader).expect("a valid asset");
 
-    instance.as_nnef(None).unwrap();
+    instance.to_nnef(None).unwrap();
 }
 
 #[test]
@@ -26,7 +26,7 @@ fn test_to_nnef_raw_nbs() {
     let instance =
         AssetData::from_reader(cervo_asset::AssetKind::Onnx, reader).expect("a valid asset");
 
-    instance.as_nnef(Some(10)).unwrap();
+    instance.to_nnef(Some(10)).unwrap();
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn test_to_nnef() {
     let reader = helpers::get_file("test.crvo").unwrap();
     let instance = AssetData::deserialize(reader).expect("a valid asset");
 
-    instance.as_nnef(None).unwrap();
+    instance.to_nnef(None).unwrap();
 }
 
 #[test]
@@ -42,5 +42,5 @@ fn test_to_nnef_fails() {
     let reader = helpers::get_file("test-nnef.crvo").unwrap();
     let instance = AssetData::deserialize(reader).expect("a valid asset");
 
-    instance.as_nnef(None).unwrap_err();
+    instance.to_nnef(None).unwrap_err();
 }

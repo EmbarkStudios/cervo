@@ -2,7 +2,7 @@
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
 use super::{Inferer, Response, State};
-use crate::model_api::ModelAPI;
+use crate::model_api::ModelApi;
 use anyhow::{Error, Result};
 use std::collections::HashMap;
 use tract_core::{ndarray::IntoDimension, prelude::*};
@@ -11,7 +11,8 @@ use tract_hir::prelude::*;
 use super::helpers;
 
 /// The most basic inferer provided will deal with a single element at
-/// a time, at the cost of performance.
+/// a time, at the cost of reduced (but predictable) performance per
+/// element.
 ///
 /// # Pros
 ///
@@ -23,7 +24,7 @@ use super::helpers;
 /// * Scales linearly unless it's the only code executing
 pub struct BasicInferer {
     model: TypedSimplePlan<TypedModel>,
-    model_api: ModelAPI,
+    model_api: ModelApi,
 }
 
 impl BasicInferer {
@@ -33,14 +34,14 @@ impl BasicInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel) -> TractResult<Self> {
-        let model_api = ModelAPI::for_model(&model)?;
+        let model_api = ModelApi::for_model(&model)?;
         let model = helpers::build_model(model, &model_api.inputs, 1i32)?;
 
         Ok(Self { model, model_api })
     }
 
     pub fn from_typed(model: TypedModel) -> TractResult<Self> {
-        let model_api = ModelAPI::for_typed_model(&model)?;
+        let model_api = ModelApi::for_typed_model(&model)?;
         let model = helpers::build_typed(model, 1i32)?;
 
         Ok(Self { model, model_api })

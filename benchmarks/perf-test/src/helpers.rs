@@ -8,7 +8,7 @@
 
 use std::{collections::HashMap, fs::File, path::Path};
 
-use cervo_core::State;
+use cervo_core::prelude::State;
 
 pub fn get_file<T: AsRef<Path>>(name: T) -> std::io::Result<File> {
     std::fs::File::open(name)
