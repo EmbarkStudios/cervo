@@ -7,7 +7,7 @@
 */
 
 use anyhow::Result;
-use cervo_core::{Inferer, State};
+use cervo_core::prelude::{Inferer, State};
 use std::{
     collections::HashMap,
     io::{Cursor, Write},
@@ -15,9 +15,7 @@ use std::{
     time::Instant,
 };
 
-use cervo_onnx::{
-    batched_inferer_from_stream, direct_inferer_from_stream, fixed_batch_inferer_from_stream,
-};
+use cervo_onnx::builder;
 use clap::Parser;
 
 #[derive(Debug, Parser)]
@@ -117,8 +115,7 @@ fn run_batch_size(o: &Path, batch_sizes: Vec<usize>, iterations: usize) -> Resul
             .map(|batch_size| {
                 println!("Checking batch size: {:?}", batch_size);
 
-                let mut inferer =
-                    fixed_batch_inferer_from_stream(&mut Cursor::new(&data), &[batch_size])?;
+                let mut inferer = builder(&mut Cursor::new(&data)).build_fixed(&[batch_size])?;
                 let batch = crate::helpers::build_inputs_from_desc(
                     batch_size as u64,
                     inferer.input_shapes(),
@@ -136,7 +133,7 @@ fn run_batch_size(o: &Path, batch_sizes: Vec<usize>, iterations: usize) -> Resul
             .map(|batch_size| {
                 println!("Checking batch size: {:?}", batch_size);
 
-                let mut inferer = cervo_onnx::simple_inferer_from_stream(&mut Cursor::new(&data))?;
+                let mut inferer = builder(&mut Cursor::new(&data)).build_basic()?;
                 let batch = crate::helpers::build_inputs_from_desc(
                     batch_size as u64,
                     inferer.input_shapes(),
@@ -155,7 +152,7 @@ fn run_batch_size(o: &Path, batch_sizes: Vec<usize>, iterations: usize) -> Resul
                 println!("Checking batch size: {:?}", batch_size);
 
                 let mut inferer =
-                    batched_inferer_from_stream(&mut Cursor::new(&data), &[batch_size])?;
+                    builder(&mut Cursor::new(&data)).build_memoizing(&[batch_size])?;
                 let batch = crate::helpers::build_inputs_from_desc(
                     batch_size as u64,
                     inferer.input_shapes(),
@@ -172,7 +169,7 @@ fn run_batch_size(o: &Path, batch_sizes: Vec<usize>, iterations: usize) -> Resul
             .map(|batch_size| {
                 println!("Checking batch size: {:?}", batch_size);
 
-                let mut inferer = direct_inferer_from_stream(&mut Cursor::new(&data))?;
+                let mut inferer = builder(&mut Cursor::new(&data)).build_dynamic()?;
                 let batch = crate::helpers::build_inputs_from_desc(
                     batch_size as u64,
                     inferer.input_shapes(),

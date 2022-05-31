@@ -1,28 +1,14 @@
-/**
-The dynamic batcher has the highest potential throughput when the amount of data isn't known. It does so by dynamically
-generating execution plans to fit the exact amount of elements in each batch. The downside of this is that setting up a
-new plan is fairly costly, so doing this for a batch size that is only seen once will be a waste of energy.
-
-While plans are cached; this still means that if your expected batch size is between 1 and 100 elements, you'll end up
-with noticeable spikes each time a new plan is generated. If you know you'll have one or a few batch sizes - but not the
-exact value - this batcher will end up providing good value and inform tuning for a fixed batcher later.
-
-If you know some batch sizes but not all, you can preload the dynamic batcher with those plans to avoid having to build
-them at runtime.
-*/
 use super::{helpers, Inferer, Response, State};
-use crate::model_api::ModelAPI;
+use crate::model_api::ModelApi;
 use anyhow::{Error, Result};
 use std::collections::HashMap;
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
 
-/// The dynamic inferer hits a spot between the raw simplicity of a
-/// [`BasicInferer`] and the spikiness of a
-/// [`DynamicMemoizingInferer`]. Instead of explicitly concretizing
-/// models and caching them, it relies on tracts internal
-/// concretization which leads to worse performance overall; but
-/// beating out the [`BasicInferer`].
+/// The dynamic inferer hits a spot between the raw simplicity of a [`crate::prelude::BasicInferer`] and the spikiness
+/// of a [`crate::prelude::MemoizingDynamicInferer`]. Instead of explicitly concretizing models and caching them, it
+/// relies on tracts internal concretization which leads to worse performance overall; but beating out the
+/// [`crate::prelude::BasicInferer`].
 ///
 /// # Pros
 ///
@@ -33,10 +19,9 @@ use tract_hir::prelude::*;
 ///
 /// * Small extra overhead for small extra performance
 /// * Worst option for small batch sizes
-
 pub struct DynamicInferer {
     model: TypedSimplePlan<TypedModel>,
-    model_api: ModelAPI,
+    model_api: ModelApi,
 }
 
 impl DynamicInferer {
@@ -46,7 +31,7 @@ impl DynamicInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel) -> TractResult<Self> {
-        let model_api = ModelAPI::for_model(&model)?;
+        let model_api = ModelApi::for_model(&model)?;
 
         let (_, model) = helpers::build_symbolic_model(model, &model_api.inputs)?;
         let this = Self {
@@ -63,7 +48,7 @@ impl DynamicInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_typed(mut model: TypedModel) -> TractResult<Self> {
-        let model_api = ModelAPI::for_typed_model(&model)?;
+        let model_api = ModelApi::for_typed_model(&model)?;
 
         let _ = helpers::build_symbolic_typed(&mut model)?;
         let this = Self {

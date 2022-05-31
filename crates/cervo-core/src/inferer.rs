@@ -36,13 +36,13 @@ use anyhow::{Error, Result};
 use std::collections::HashMap;
 
 mod basic;
-pub mod dynamic;
 mod dynamic;
 mod fixed;
 mod helpers;
 mod memoizing;
 
 pub use basic::BasicInferer;
+pub use dynamic::DynamicInferer;
 pub use fixed::FixedBatchInferer;
 pub use memoizing::MemoizingDynamicInferer;
 
@@ -83,6 +83,9 @@ pub trait InfererProvider {
 
     /// Build a [`MemoizingDynamicInferer`].
     fn build_memoizing(self, preload_sizes: &[usize]) -> Result<MemoizingDynamicInferer>;
+
+    /// Build a [`DynamicInferer`].
+    fn build_dynamic(self) -> Result<DynamicInferer>;
 }
 
 /// Builder for inferers.
@@ -107,6 +110,11 @@ where
     /// Build a [`FixedBatchInferer`].
     pub fn build_fixed(self, sizes: &[usize]) -> Result<FixedBatchInferer> {
         self.provider.build_fixed(sizes)
+    }
+
+    /// Build a [`DynamicInferer`].
+    pub fn build_dynamic(self) -> Result<DynamicInferer> {
+        self.provider.build_dynamic()
     }
 
     /// Build a [`MemoizingDynamicInferer`].

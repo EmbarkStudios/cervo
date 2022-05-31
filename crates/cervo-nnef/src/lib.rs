@@ -22,7 +22,8 @@ let model = cervo_nnef::builder(model_data)
 use anyhow::Result;
 
 use cervo_core::prelude::{
-    BasicInferer, FixedBatchInferer, InfererBuilder, InfererProvider, MemoizingDynamicInferer,
+    BasicInferer, DynamicInferer, FixedBatchInferer, InfererBuilder, InfererProvider,
+    MemoizingDynamicInferer,
 };
 use std::{
     cell::UnsafeCell,
@@ -106,6 +107,12 @@ where
     fn build_memoizing(mut self, preload_sizes: &[usize]) -> Result<MemoizingDynamicInferer> {
         let model = self.load()?;
         MemoizingDynamicInferer::from_typed(model, preload_sizes)
+    }
+
+    /// Build a [`DynamicInferer`].
+    fn build_dynamic(mut self) -> Result<DynamicInferer> {
+        let model = self.load()?;
+        DynamicInferer::from_typed(model)
     }
 }
 
