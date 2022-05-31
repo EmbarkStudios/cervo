@@ -7,9 +7,9 @@ use tract_hir::prelude::*;
 
 /// A reliable batched inferer that is a good fit if you know how much data you'll have and want stable performance.
 ///
-/// As an added bonus, it'll subdivide your data into minibatches if the batching doesn't fit perfectly. To make this ork,
-/// it'll add a single-element mode as well to ensure all data is consumed - such as if you feed it 9 elements with a
-/// configured batch size of 8.
+/// As an added bonus, it'll subdivide your data into minibatches if the batching doesn't fit perfectly. To make this
+/// work, it'll add a single-element mode as well to ensure all data is consumed - such as if you feed it 9 elements
+/// with a configured batch size of 8.
 ///
 /// You can configure a wide number of different batch sizes, and the largest one will be used. Note that the overhead for
 /// execution still is fairly large, but this helps amortize some of that cost away. For example; if you use a setup of [1,
