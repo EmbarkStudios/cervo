@@ -1,5 +1,5 @@
 pre-release-commit-message = "Release {{version}}"
-dev-version = false
+dev-version = true
 tag-message = "Release {{version}}"
 tag-name = "{{version}}"
 pre-release-replacements = [
