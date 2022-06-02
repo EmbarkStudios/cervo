@@ -2,10 +2,8 @@
 name = "perf-test"
 version = "0.0.0"
 edition = "2018"
-license = "LicenseRef-Embark-Proprietary"
+license = "MIT OR Apache-2.0"
 publish = false
-
-
 
 [dependencies]
 clap = { version = "3.1.18", features = ["derive"] }
