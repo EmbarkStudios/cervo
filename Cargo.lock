@@ -148,7 +148,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-core"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "perchance",
@@ -160,7 +160,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-nnef"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "cervo-core",
@@ -172,7 +172,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-onnx"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "cervo-core",
@@ -721,18 +721,6 @@ dependencies = [
  "macaw",
  "once_cell",
  "ordered-float",
-]
-
-[[package]]
-name = "perf-test"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "cervo-core",
- "cervo-nnef",
- "cervo-onnx",
- "clap",
- "perchance",
 ]
 
 [[package]]
