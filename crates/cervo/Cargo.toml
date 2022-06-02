@@ -3,9 +3,16 @@ name = "cervo"
 version = "0.1.0"
 edition = "2021"
 authors = ["Tom Solberg <tom.solberg@emark-studios.com"]
-license = "LicenseRef-Embark-Proprietary"
+license = "MIT OR Apache-2.0"
+description = "High level APIs for RL in games."
+repository = "https://github.com/EmbarkStudios/cervo"
+keywords = [ "machinelearning", "inference" ]
+categories = [ "science" ]
+readme = "../../README.md"
+
 # this ensures cargo run in the workspace root uses cervo-cli
 default-run = "cervo"
+
 
 [dependencies]
 anyhow = "1.0.57"
