@@ -14,6 +14,6 @@ readme = "../../README.md"
 
 [dependencies]
 anyhow = "1.0.57"
-cervo-onnx = { version = "0.0.1", path = "../cervo-onnx" }
-cervo-nnef = { version = "0.0.1", path = "../cervo-nnef" }
-cervo-core = { version = "0.0.1", path = "../cervo-core" }
+cervo-onnx = { version = "0.1.0", path = "../cervo-onnx" }
+cervo-nnef = { version = "0.1.0", path = "../cervo-nnef" }
+cervo-core = { version = "0.1.0", path = "../cervo-core" }
