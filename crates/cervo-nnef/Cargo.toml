@@ -1,6 +1,6 @@
 [package]
 name = "cervo-nnef"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 edition = "2021"
 authors = [
     "Tom Solberg <tom.solberg@embark-studios.com"
@@ -17,5 +17,5 @@ anyhow = "1.0.57"
 tract-onnx =  { version = "0.16.7" }
 tract-nnef = { version = "0.16.7" }
 tract-hir = { version = "0.16.7" }
-cervo-core = { version="0.1.0", path = "../cervo-core" }
+cervo-core = { version= "0.1.1-alpha.0", path = "../cervo-core" }
 once_cell = "1.10"
