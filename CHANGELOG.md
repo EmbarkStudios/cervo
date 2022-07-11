@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2022-07-11
 ## [0.2.0] - 2022-07-11
 ## [0.2.0] - 2022-07-11
+## [0.2.0] - 2022-07-11
 
 * Upgrade all dependencies to tract 0.17.1
   * Fixes a memory leak when repeatedly creating inferers
@@ -27,6 +28,7 @@ Initial release.
 
 <!-- next-url -->
 [Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/EmbarkStudios/cervo/compare/0.2.0...0.2.0
 [0.2.0]: https://github.com/EmbarkStudios/cervo/compare/0.2.0...0.2.0
 [0.2.0]: https://github.com/EmbarkStudios/cervo/compare/0.2.0...0.2.0
 [0.2.0]: https://github.com/EmbarkStudios/cervo/compare/0.2.0...0.2.0
