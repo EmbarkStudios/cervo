@@ -22,7 +22,7 @@ tempfile = "3.3"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 cervo-onnx = { version = "0.2.0", path = "../cervo-onnx" }
 cervo-nnef = { version = "0.2.0", path = "../cervo-nnef" }
-cervo-asset = { version = "0.1.1-alpha.0", path = "../cervo-asset" }
+cervo-asset = { version = "0.2.0", path = "../cervo-asset" }
 cervo-core = { version = "0.2.0", path = "../cervo-core" }
 
 [lib]
