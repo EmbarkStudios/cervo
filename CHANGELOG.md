@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+* Upgrade all dependencies to tract 0.17.1
+  * Fixes a memory leak when repeatedly creating inferers
+
+### NNEF
+
+* The initialization routine is now global and called `init`, instead of per-thread.
 
 ## [0.1.0] - 2022-06-02
 

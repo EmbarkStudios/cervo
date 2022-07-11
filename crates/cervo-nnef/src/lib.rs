@@ -1,8 +1,8 @@
 /*! Contains utilities for using cervo with NNEF.
 
-If you're going to load NNEF files on a thread; consider using
-`init_thread` when creating it - otherwise the first NNEF asset will
-cause a noticeable spike.
+If you're going to defer loading NNEF files to runtime, considering
+running [`init`] ahead of time to remove some overhead from the first
+load call.
 
 
 ## Loading an inference model
@@ -20,35 +20,32 @@ let model = cervo_nnef::builder(model_data)
 */
 
 use anyhow::Result;
-
 use cervo_core::prelude::{
     BasicInferer, DynamicInferer, FixedBatchInferer, InfererBuilder, InfererProvider,
     MemoizingDynamicInferer,
 };
 use std::{
-    cell::UnsafeCell,
     ffi::OsStr,
     io::Read,
     path::{Path, PathBuf},
-    rc::Rc,
 };
 use tract_nnef::{framework::Nnef, prelude::*};
 
-thread_local!(
-    /// We create and cache the NNEF on a per-thread basis. This is noticeably expensive to create, so we ensure it only has to happen once.
-    static NNEF: Rc<UnsafeCell<Nnef>>  = {
-        Rc::new(UnsafeCell::new(tract_nnef::nnef().with_tract_core()))
-    }
-);
+lazy_static::lazy_static! {
+    static ref NNEF: Nnef  = {
+        tract_nnef::nnef().with_tract_core()
+    };
+}
 
-/// Initialize the thread-local NNEF instance.
+/// Initialize the global NNEF instance.
 ///
-/// To ensure fast loading cervo uses a thread-local instance of the
-/// cervo-NNEF package. If you don't want to pay for initialization
+/// To ensure fast loading cervo uses a shared instance of the
+/// tract NNEF framework. If you don't want to pay for initialization
 /// on first-time load you can call this earlier to ensure it's set up
 /// ahead of time.
-pub fn init_thread() {
-    NNEF.with(|_| {})
+pub fn init() {
+    use lazy_static::LazyStatic;
+    NNEF::initialize(&NNEF)
 }
 
 /// Utility function to check if a file name is `.nnef.tar`.
@@ -72,7 +69,7 @@ pub fn is_nnef_tar(path: &Path) -> bool {
 }
 
 fn model_for_reader(reader: &mut dyn Read) -> Result<TypedModel> {
-    NNEF.with(|n| unsafe { (&*n.as_ref().get()).model_for_read(reader) })
+    NNEF.model_for_read(reader)
 }
 
 /// A reader for providing NNEF data.
