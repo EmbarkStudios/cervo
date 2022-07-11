@@ -1,6 +1,6 @@
 /*! Contains utilities for using cervo with NNEF.
 
-If you're going to defer loading NNEF files to runtime, considering
+If you're going to defer loading NNEF files to runtime, consider
 running [`init`] ahead of time to remove some overhead from the first
 load call.
 
