@@ -85,8 +85,8 @@ fn execute_load_metrics<I: Inferer>(
     }
 
     for _ in 0..(count / batch_size) {
-        let batch = data.clone();
         let start = Instant::now();
+        let batch = data.clone();
         black_box(&(inferer.infer(batch)?));
         times.push(start.elapsed().as_secs_f64() * 1000.0 / batch_size as f64);
     }
