@@ -48,7 +48,7 @@ pub use fixed::FixedBatchInferer;
 pub use memoizing::MemoizingDynamicInferer;
 
 use crate::{
-    batcher::Batcher,
+    batcher::{Batcher, ScratchPadView},
     epsilon::{EpsilonInjector, NoiseGenerator},
 };
 
@@ -144,10 +144,10 @@ pub trait Inferer {
     fn select_batch_size(&mut self, max_count: usize) -> usize;
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_batched<'a>(
-        &'a mut self,
-        batch: crate::inferer::Batch<'a>,
-    ) -> Result<BatchResponse<'a>, anyhow::Error>;
+    fn infer_batched<'pad, 'result>(
+        &'result mut self,
+        batch: ScratchPadView<'pad>,
+    ) -> Result<BatchResponse<'result>, anyhow::Error>;
 
     /// Retrieve the name and shapes of the model inputs.
     fn input_shapes(&self) -> &[(String, Vec<usize>)];

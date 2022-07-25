@@ -138,7 +138,10 @@ impl Inferer for MemoizingDynamicInferer {
         max_count
     }
 
-    fn infer_batched<'a>(&'a mut self, batch: Batch) -> Result<BatchResponse<'a>> {
+    fn infer_batched<'input: 'output, 'output>(
+        &'input mut self,
+        batch: crate::inferer::Batch<'input>,
+    ) -> Result<BatchResponse<'output>, anyhow::Error> {
         let count = batch.count;
         let inputs = self.build_inputs(batch)?;
 

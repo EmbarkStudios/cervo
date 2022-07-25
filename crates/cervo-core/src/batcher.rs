@@ -6,17 +6,123 @@
 
 */
 
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Range};
+
+use tract_core::tract_data::TVec;
 
 use crate::inferer::{Batch, BatchResponse, Inferer, Response, State};
 
-pub struct Batcher {
-    states: Vec<Option<Vec<f32>>>,
+struct ScratchPadData {
+    name: String,
+    data: Vec<f32>,
+    count: usize,
+}
+
+impl ScratchPadData {
+    fn new(name: String, count: usize, capacity: usize) -> Self {
+        let mut this = Self {
+            name,
+            data: vec![],
+            count,
+        };
+
+        this.reserve(capacity);
+        this
+    }
+
+    fn reserve(&mut self, batch_size: usize) {
+        self.data.resize(batch_size, 0.0);
+    }
+
+    fn view(&self, range: Range<usize>) -> &[f32] {
+        &self.data[range.start * self.count..range.end * self.count]
+    }
+
+    fn view_mut(&mut self, range: Range<usize>) -> &mut [f32] {
+        &mut self.data[range.start * self.count..range.end * self.count]
+    }
+}
+
+struct ScratchPad {
+    slots: TVec<ScratchPadData>,
     ids: Vec<u64>,
+    batch_size: usize,
+    capacity: usize,
+}
+
+const DEFAULT_CAPACITY: usize = 6;
+
+impl ScratchPad {
+    fn new_for_shapes(shapes: &[(String, Vec<usize>)]) -> Self {
+        let slots = shapes
+            .iter()
+            .map(|(name, shape)| {
+                let count = shape.iter().product();
+                ScratchPadData::new(name.to_owned(), count, DEFAULT_CAPACITY)
+            })
+            .collect();
+
+        Self {
+            slots,
+            ids: vec![],
+            batch_size: 0,
+            capacity: DEFAULT_CAPACITY,
+        }
+    }
+
+    fn next(&mut self, id: u64) {
+        self.batch_size += 1;
+        self.ids.push(id);
+
+        if self.batch_size > self.capacity {
+            self.capacity *= 2;
+
+            for slot in &mut self.slots {
+                slot.reserve(self.capacity);
+            }
+        }
+    }
+
+    fn push(&mut self, slot: usize, data: Vec<f32>) {
+        self.slots[slot]
+            .view_mut(self.batch_size - 1..self.batch_size)
+            .copy_from_slice(&data);
+    }
+
+    fn chunk(&mut self, offset: usize, size: usize) -> ScratchPadView {
+        ScratchPadView {
+            pad: self,
+            batch_range: offset..offset + size,
+        }
+    }
+}
+
+pub(crate) struct ScratchPadView<'a> {
+    pad: &'a mut ScratchPad,
+    batch_range: Range<usize>,
+}
+
+impl<'a> ScratchPadView<'a> {
+    pub(crate) fn slot(&self, slot: usize) -> &[f32] {
+        self.pad.slots[slot].view(self.batch_range)
+    }
+
+    pub(crate) fn slot_mut(&self, slot: usize) -> &mut [f32] {
+        self.pad.slots[slot].view_mut(self.batch_range)
+    }
+
+    pub(crate) fn slot_name(&self, slot: usize) -> &str {
+        &self.pad.slots[slot].name
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.batch_range.len()
+    }
+}
+pub(crate) struct Batcher {
+    scratch: ScratchPad,
     input_key_to_slot: Vec<String>,
     output_key_to_slot: Vec<String>,
-
-    batch_sizes: usize,
 }
 
 impl Batcher {
@@ -33,13 +139,10 @@ impl Batcher {
             .map(|(k, _)| k.clone())
             .collect();
 
-        let states = vec![None; input_key_to_slot.len()];
         Self {
-            states,
-            ids: vec![],
+            scratch: ScratchPad::new_for_shapes(inferer.input_shapes()),
             input_key_to_slot,
             output_key_to_slot,
-            batch_sizes: 0,
         }
     }
 
@@ -50,20 +153,15 @@ impl Batcher {
 
     /// Insert a single element into the batch to include in the next execution.
     pub fn push(&mut self, id: u64, state: State<'_>) -> anyhow::Result<()> {
+        self.scratch.next(id);
         for (k, v) in state.data {
             let slot = self
                 .slot(k)
                 .ok_or_else(|| anyhow::anyhow!("key doesn't match an input: {:?}", k))?;
 
-            if self.states[slot].is_none() {
-                self.states[slot] = Some(vec![])
-            }
-
-            self.states[slot].as_mut().unwrap().extend_from_slice(&v);
+            self.scratch.push(slot, v);
         }
 
-        self.ids.push(id);
-        self.batch_sizes += 1;
         Ok(())
     }
 
@@ -91,36 +189,15 @@ impl Batcher {
         }
 
         let empty = [];
+
         // pick up as many items as possible (by slicing the stores) and feed into the model.
         // this builds up a set of output stores that'll feed in sequence.
-        while self.batch_sizes > 0 {
-            let preferred_batch_size = inferer.select_batch_size(self.batch_sizes);
-            self.batch_sizes -= preferred_batch_size;
+        while self.scratch.batch_size > 0 {
+            let preferred_batch_size = inferer.select_batch_size(self.scratch.batch_size);
 
-            let mut batch = Batch::empty();
-            batch.count = preferred_batch_size;
+            let view = self.scratch.chunk(total_offset, preferred_batch_size);
 
-            for ((slot, (k, shape)), name) in inferer
-                .input_shapes()
-                .iter()
-                .enumerate()
-                .zip(self.input_key_to_slot.iter())
-            {
-                assert_eq!(k, name);
-                let batch_elements: usize = shape.iter().product();
-
-                // This is to deal with epsilon or other generative inferer wrappers.
-                if let Some(store) = &self.states[slot] {
-                    let batch_data = &store[(total_offset * batch_elements)
-                        ..(total_offset + preferred_batch_size) * batch_elements];
-
-                    batch.insert(name, batch_data);
-                } else {
-                    batch.insert(name, &empty);
-                }
-            }
-
-            let batch_response = inferer.infer_batched(batch)?;
+            let batch_response = inferer.infer_batched(view)?;
             response.append(batch_response);
             total_offset += preferred_batch_size;
         }

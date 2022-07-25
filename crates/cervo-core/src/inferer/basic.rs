@@ -65,9 +65,18 @@ impl BasicInferer {
 
         Ok(inputs)
     }
+}
 
-    fn infer_once(&mut self, obs: Batch) -> TractResult<BatchResponse> {
-        let inputs = self.build_inputs(obs)?;
+impl Inferer for BasicInferer {
+    fn select_batch_size(&mut self, _: usize) -> usize {
+        1
+    }
+
+    fn infer_batched<'input: 'output, 'output>(
+        &'input mut self,
+        batch: crate::inferer::Batch<'input>,
+    ) -> Result<crate::inferer::BatchResponse<'output>, anyhow::Error> {
+        let inputs = self.build_inputs(batch)?;
 
         // Run the optimized plan to get actions back!
         let result = self.model.run(inputs)?;
@@ -85,16 +94,6 @@ impl BasicInferer {
         }
 
         Ok(response)
-    }
-}
-
-impl Inferer for BasicInferer {
-    fn select_batch_size(&mut self, _: usize) -> usize {
-        1
-    }
-
-    fn infer_batched<'a>(&'a mut self, batch: Batch<'_>) -> Result<BatchResponse<'a>> {
-        self.infer_once(batch)
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

@@ -6,8 +6,11 @@
 Utilities for filling noise inputs for an inference model.
 */
 
-use crate::inferer::Inferer;
-use anyhow::{bail, Result};
+use crate::{
+    batcher::ScratchPadView,
+    inferer::{Batch, BatchResponse, Inferer},
+};
+use anyhow::{bail, Error, Result};
 use perchance::PerchanceContext;
 use rand::thread_rng;
 use rand_distr::{Distribution, StandardNormal};
@@ -15,7 +18,7 @@ use rand_distr::{Distribution, StandardNormal};
 /// NoiseGenerators are consumed by the [`EpsilonInjector`] by generating noise sampled for a standard normal
 /// distribution. Custom noise-generators can be implemented and passed via [`EpsilonInjector::with_generator`].
 pub trait NoiseGenerator {
-    fn generate(&mut self, count: usize) -> Vec<f32>;
+    fn generate(&mut self, count: usize, out: &mut [f32]);
 }
 
 /// A non-noisy noise generator, primarily intended for debugging or testing purposes.
@@ -41,8 +44,10 @@ impl ConstantGenerator {
 }
 
 impl NoiseGenerator for ConstantGenerator {
-    fn generate(&mut self, count: usize) -> Vec<f32> {
-        vec![self.value; count]
+    fn generate(&mut self, count: usize, out: &mut [f32]) {
+        for idx in 0..count {
+            out[idx] = self.value;
+        }
     }
 }
 
@@ -73,8 +78,10 @@ impl Default for LowQualityNoiseGenerator {
 
 impl NoiseGenerator for LowQualityNoiseGenerator {
     /// Generate `count` random values.
-    fn generate(&mut self, count: usize) -> Vec<f32> {
-        (0..count).map(|_| self.ctx.normal_f32()).collect()
+    fn generate(&mut self, count: usize, out: &mut [f32]) {
+        for idx in 0..count {
+            out[idx] = self.ctx.normal_f32();
+        }
     }
 }
 
@@ -97,11 +104,11 @@ impl Default for HighQualityNoiseGenerator {
 
 impl NoiseGenerator for HighQualityNoiseGenerator {
     /// Generate `count` random values.
-    fn generate(&mut self, count: usize) -> Vec<f32> {
+    fn generate(&mut self, count: usize, out: &mut [f32]) {
         let mut rng = thread_rng();
-        (0..count)
-            .map(|_| self.normal_distribution.sample(&mut rng))
-            .collect()
+        for idx in 0..count {
+            out[idx] = self.normal_distribution.sample(&mut rng);
+        }
     }
 }
 
@@ -172,13 +179,13 @@ where
         self.inner.select_batch_size(max_count)
     }
 
-    fn infer_batched<'a, 'b>(
-        &'a mut self,
-        mut batch: crate::inferer::Batch<'a>,
-    ) -> Result<crate::inferer::BatchResponse<'a>, anyhow::Error> {
-        let total_count = self.count * batch.count;
-        let epsilons = self.generator.generate(total_count);
-        batch.data[self.index].1 = &epsilons;
+    fn infer_batched<'pad, 'result>(
+        &'result mut self,
+        batch: ScratchPadView<'pad>,
+    ) -> Result<BatchResponse<'result>, anyhow::Error> {
+        let total_count = self.count * batch.len();
+        let output = batch.slot_mut(self.index);
+        let epsilons = self.generator.generate(total_count, output);
 
         self.inner.infer_batched(batch)
     }

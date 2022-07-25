@@ -85,7 +85,10 @@ impl FixedBatchInferer {
 }
 
 impl Inferer for FixedBatchInferer {
-    fn infer_batched<'a>(&'a mut self, batch: Batch<'_>) -> Result<BatchResponse<'a>> {
+    fn infer_batched<'input: 'output, 'output>(
+        &'input mut self,
+        batch: crate::inferer::Batch<'input>,
+    ) -> Result<BatchResponse<'output>, anyhow::Error> {
         let plan = self
             .models
             .iter_mut()
