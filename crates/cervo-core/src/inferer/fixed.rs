@@ -1,7 +1,7 @@
-use super::{helpers, Inferer, Response, State};
+use super::{helpers, Batch, BatchResponse, Inferer};
 use crate::model_api::ModelApi;
-use anyhow::{Error, Result};
-use std::collections::HashMap;
+use anyhow::{Context, Result};
+
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
 
@@ -82,40 +82,26 @@ impl FixedBatchInferer {
 
         Ok(Self { models, model_api })
     }
-
-    fn infer_batched(&mut self, obs: Vec<State>, vec_out: &mut [Response]) -> TractResult<()> {
-        let mut offset = 0;
-        let mut count = obs.len();
-        let mut obs = obs.into_iter();
-
-        for plan in &mut self.models {
-            while (count / plan.size) > 0 {
-                plan.execute(&mut obs, &self.model_api, &mut vec_out[offset..])?;
-                count -= plan.size;
-                offset += plan.size;
-            }
-            if count == 0 {
-                break;
-            }
-        }
-
-        Ok(())
-    }
 }
 
 impl Inferer for FixedBatchInferer {
-    fn infer(
-        &mut self,
-        observations: HashMap<u64, State>,
-    ) -> Result<HashMap<u64, Response>, Error> {
-        let mut responses: Vec<Response> = vec![Response::default(); observations.len()];
-        let (ids, obs): (Vec<_>, Vec<_>) = observations.into_iter().unzip();
+    fn infer_batched<'a>(&'a mut self, batch: Batch<'_>) -> Result<BatchResponse<'a>> {
+        let plan = self
+            .models
+            .iter_mut()
+            .find(|plan| plan.size == batch.count)
+            .with_context(|| anyhow::anyhow!("looking for a plan with size {:?}", batch.count))?;
 
-        self.infer_batched(obs, &mut responses)?;
+        plan.execute(batch, &self.model_api)
+    }
 
-        let results: HashMap<u64, Response> = ids.into_iter().zip(responses.drain(..)).collect();
-
-        Ok(results)
+    fn select_batch_size(&mut self, max_count: usize) -> usize {
+        // Find the smallest batch size below or equal to max_count
+        self.models
+            .iter()
+            .map(|plan| plan.size)
+            .find(|size| *size <= max_count)
+            .unwrap()
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {
@@ -133,63 +119,58 @@ struct BatchedModel {
 }
 
 impl BatchedModel {
-    fn build_inputs<It: std::iter::Iterator<Item = State>>(
-        &mut self,
-        obs: &mut It,
-        model_api: &ModelApi,
-    ) -> TVec<Tensor> {
+    fn build_inputs(&mut self, batch: Batch, model_api: &ModelApi) -> Result<TVec<Tensor>> {
+        assert_eq!(batch.count, self.size);
         let size = self.size;
-        let mut inputs = TVec::default();
-        let mut named_inputs = TVec::default();
 
-        for (name, shape) in &model_api.inputs {
+        let mut inputs = TVec::default();
+
+        for ((name, shape), (key, data)) in model_api.inputs.iter().zip(batch.data.into_iter()) {
+            assert_eq!(name, key);
+
             let mut full_shape = tvec![size];
             full_shape.extend_from_slice(shape);
 
-            let total_count = full_shape.iter().product();
-            named_inputs.push((name, (full_shape, Vec::with_capacity(total_count))));
-        }
+            let total_count: usize = full_shape.iter().product();
+            assert_eq!(
+                total_count,
+                data.len(),
+                "mismatched number of features: expected {:?}, got {:?} for shape {:?}",
+                total_count,
+                data.len(),
+                full_shape
+            );
 
-        for observation in obs.take(size) {
-            for (name, (_, store)) in named_inputs.iter_mut() {
-                store.extend_from_slice(&observation.data[*name]);
-            }
-        }
+            let shape = full_shape;
 
-        for (_, (shape, store)) in named_inputs {
-            let tensor = unsafe {
-                tract_ndarray::Array::from_shape_vec_unchecked(shape.into_vec(), store).into()
-            };
+            let tensor = Tensor::from_shape(&shape, data)?;
 
             inputs.push(tensor);
         }
 
-        inputs
+        Ok(inputs)
     }
 
-    fn execute<It: std::iter::Iterator<Item = State>>(
+    fn execute<'a>(
         &mut self,
-        observations: &mut It,
-        model_api: &ModelApi,
-        vec_out: &mut [Response],
-    ) -> Result<()> {
-        let inputs = self.build_inputs(observations, model_api);
+        observations: Batch,
+        model_api: &'a ModelApi,
+    ) -> Result<BatchResponse<'a>> {
+        let inputs = self.build_inputs(observations, model_api)?;
 
         let result = self.plan.run(inputs)?;
 
-        for (idx, (name, shape)) in model_api.outputs.iter().enumerate() {
-            for (response_idx, value) in result[idx]
+        let mut output = BatchResponse::empty();
+        for (idx, (name, _)) in model_api.outputs.iter().enumerate() {
+            let value = result[idx]
                 .to_array_view::<f32>()?
                 .as_slice()
                 .unwrap()
-                .chunks(shape.iter().product())
-                .map(|value| value.to_vec())
-                .enumerate()
-            {
-                vec_out[response_idx].data.insert(name.to_owned(), value);
-            }
+                .to_owned();
+
+            output.insert(name, value);
         }
 
-        Ok(())
+        Ok(output)
     }
 }

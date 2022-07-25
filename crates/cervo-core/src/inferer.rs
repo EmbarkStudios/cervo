@@ -47,25 +47,107 @@ pub use dynamic::DynamicInferer;
 pub use fixed::FixedBatchInferer;
 pub use memoizing::MemoizingDynamicInferer;
 
-use crate::epsilon::{EpsilonInjector, NoiseGenerator};
+use crate::{
+    batcher::Batcher,
+    epsilon::{EpsilonInjector, NoiseGenerator},
+};
 
 /// The data of one element in a batch.
 #[derive(Clone, Debug)]
-pub struct State {
-    pub data: HashMap<String, Vec<f32>>,
+pub struct State<'a> {
+    pub data: HashMap<&'a str, Vec<f32>>,
+}
+
+impl<'a> State<'a> {
+    /// Create a new empty state to fill with data
+    pub fn empty() -> Self {
+        Self {
+            data: Default::default(),
+        }
+    }
 }
 
 /// The output for one batch element.
 #[derive(Clone, Debug, Default)]
-pub struct Response {
-    pub data: HashMap<String, Vec<f32>>,
+pub struct Response<'a> {
+    pub data: HashMap<&'a str, Vec<f32>>,
 }
 
-/// The main workhorse shared by all components in Tractor.
+impl<'a> Response<'a> {
+    /// Create a new empty state to fill with data
+    pub fn empty() -> Self {
+        Self {
+            data: Default::default(),
+        }
+    }
+
+    pub fn append(&mut self, other: Response<'_>) {
+        for (k, v) in other.data {
+            self.data.get_mut(k).unwrap().extend_from_slice(&v);
+        }
+    }
+}
+
+/// A batch of data ordered by input slot
+pub struct Batch<'a> {
+    pub data: Vec<(&'a str, &'a [f32])>,
+    pub count: usize,
+}
+
+impl<'a> Batch<'a> {
+    /// Create a new empty batch to fill with data
+    pub fn empty() -> Self {
+        Self {
+            data: Default::default(),
+            count: 0,
+        }
+    }
+
+    pub fn insert(&mut self, name: &'a str, data: &'a [f32]) {
+        for (k, v) in &mut self.data {
+            if *k != name {
+                continue;
+            }
+
+            panic!("double key??");
+        }
+
+        self.data.push((name, data));
+    }
+}
+
+/// A batch of data ordered by input slot
+pub struct BatchResponse<'a> {
+    pub data: Vec<(&'a str, Vec<f32>)>,
+}
+
+impl<'a> BatchResponse<'a> {
+    pub fn empty() -> Self {
+        Self { data: vec![] }
+    }
+
+    pub fn insert(&mut self, k: &'a str, data: Vec<f32>) {
+        self.data.push((k, data));
+    }
+
+    pub fn append(&mut self, other: BatchResponse<'_>) {
+        for (idx, (k, v)) in other.data.into_iter().enumerate() {
+            assert_eq!(self.data[idx].0, k);
+            self.data[idx].1.extend_from_slice(&v);
+        }
+    }
+}
+
+/// The main workhorse shared by all components in Cervo.
 pub trait Inferer {
-    /// Execute the model on the provided batch of elements.
-    fn infer(&mut self, observations: HashMap<u64, State>)
-        -> Result<HashMap<u64, Response>, Error>;
+    /// Query the inferer for how many elements it can deal with in a single batch.
+    fn select_batch_size(&mut self, max_count: usize) -> usize;
+
+    /// Execute the model on the provided pre-batched data.
+    fn infer_batched<'a>(
+        &'a mut self,
+        batch: crate::inferer::Batch<'a>,
+    ) -> Result<BatchResponse<'a>, anyhow::Error>;
 
     /// Retrieve the name and shapes of the model inputs.
     fn input_shapes(&self) -> &[(String, Vec<usize>)];
@@ -140,6 +222,23 @@ pub trait InfererExt: Inferer + Sized {
     ) -> Result<EpsilonInjector<Self, G>> {
         EpsilonInjector::with_generator(self, generator, key)
     }
+
+    /// Execute the model on the provided batch of elements.
+    fn infer(&mut self, observations: HashMap<u64, State>)
+        -> Result<HashMap<u64, Response>, Error>;
 }
 
-impl<T> InfererExt for T where T: Inferer + Sized {}
+impl<T> InfererExt for T
+where
+    T: Inferer + Sized,
+{
+    /// Execute the model on the provided batch of elements.
+    fn infer(
+        &mut self,
+        observations: HashMap<u64, State>,
+    ) -> Result<HashMap<u64, Response>, Error> {
+        let mut batcher = Batcher::new_for_inferer(self);
+        batcher.extend(observations);
+        batcher.execute(self)
+    }
+}

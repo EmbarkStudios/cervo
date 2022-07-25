@@ -40,8 +40,8 @@ fn execute_steps(
     steps: usize,
     batch_size: usize,
 ) -> Result<Vec<Measurement>> {
-    let observations =
-        crate::helpers::build_inputs_from_desc(batch_size as u64, inferer.input_shapes());
+    let inputs = inferer.input_shapes().to_vec();
+    let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
 
     let mut measurements = vec![];
     for step in 0..steps {

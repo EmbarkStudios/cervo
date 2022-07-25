@@ -1,10 +1,9 @@
 /*!
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
-use super::{Inferer, Response, State};
+use super::{Batch, BatchResponse, Inferer};
 use crate::model_api::ModelApi;
-use anyhow::{Error, Result};
-use std::collections::HashMap;
+use anyhow::Result;
 use tract_core::{ndarray::IntoDimension, prelude::*};
 use tract_hir::prelude::*;
 
@@ -47,44 +46,36 @@ impl BasicInferer {
         Ok(Self { model, model_api })
     }
 
-    fn build_inputs(&mut self, mut obs: State) -> TVec<Tensor> {
+    fn build_inputs(&mut self, obs: Batch) -> Result<TVec<Tensor>> {
         let mut inputs = TVec::default();
 
-        for (name, shape) in self.model_api.inputs.iter() {
+        for ((name, shape), (key, data)) in self.model_api.inputs.iter().zip(obs.data) {
+            assert_eq!(name, key);
+
             let mut full_shape = tvec![1];
             full_shape.extend_from_slice(shape);
 
-            debug_assert!(obs.data.contains_key(name));
+            let total_count: usize = full_shape.iter().product();
+            assert_eq!(total_count, data.len());
 
-            let tensor = unsafe {
-                tract_ndarray::Array::from_shape_vec_unchecked(
-                    full_shape.into_dimension(),
-                    obs.data.remove(name).unwrap(),
-                )
-                .into()
-            };
+            let tensor = Tensor::from_shape(&full_shape, data)?.into();
 
             inputs.push(tensor);
         }
 
-        inputs
+        Ok(inputs)
     }
 
-    /// Run a single pass through the model.
-    ///
-    /// # Errors
-    ///
-    /// Will only forward errors from the [`tract_core::plan::SimplePlan::run`] call.
-    pub fn infer_once(&mut self, obs: State) -> TractResult<Response> {
-        let inputs = self.build_inputs(obs);
+    fn infer_once(&mut self, obs: Batch) -> TractResult<BatchResponse> {
+        let inputs = self.build_inputs(obs)?;
 
         // Run the optimized plan to get actions back!
         let result = self.model.run(inputs)?;
 
-        let mut response = Response::default();
+        let mut response = BatchResponse::empty();
         for (idx, (name, _)) in self.model_api.outputs.iter().enumerate() {
-            response.data.insert(
-                name.clone(),
+            response.insert(
+                &name,
                 result[idx]
                     .to_array_view::<f32>()?
                     .to_slice()
@@ -98,17 +89,12 @@ impl BasicInferer {
 }
 
 impl Inferer for BasicInferer {
-    fn infer(
-        &mut self,
-        observations: HashMap<u64, State>,
-    ) -> Result<HashMap<u64, Response>, Error> {
-        let mut responses = HashMap::default();
-        for (id, obs) in observations.into_iter() {
-            let response = self.infer_once(obs)?;
-            responses.insert(id, response);
-        }
+    fn select_batch_size(&mut self, _: usize) -> usize {
+        1
+    }
 
-        Ok(responses)
+    fn infer_batched<'a>(&'a mut self, batch: Batch<'_>) -> Result<BatchResponse<'a>> {
+        self.infer_once(batch)
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

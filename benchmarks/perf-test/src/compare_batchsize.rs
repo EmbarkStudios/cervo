@@ -7,7 +7,7 @@
 */
 
 use anyhow::Result;
-use cervo_core::prelude::{Inferer, State};
+use cervo_core::prelude::{Batcher, Inferer, InfererExt, State};
 use std::{
     collections::HashMap,
     io::{Cursor, Write},
@@ -84,10 +84,12 @@ fn execute_load_metrics<I: Inferer>(
         black_box(&(inferer.infer(batch)?));
     }
 
+    let mut batcher = Batcher::new_for_inferer(inferer);
     for _ in 0..(count / batch_size) {
         let start = Instant::now();
         let batch = data.clone();
-        black_box(&(inferer.infer(batch)?));
+        batcher.extend(batch);
+        black_box(&(batcher.execute(inferer)?));
         times.push(start.elapsed().as_secs_f64() * 1000.0 / batch_size as f64);
     }
 
@@ -115,11 +117,11 @@ fn run_batch_size(o: &Path, batch_sizes: Vec<usize>, iterations: usize) -> Resul
             .map(|batch_size| {
                 println!("Checking batch size: {:?}", batch_size);
 
-                let mut inferer = builder(&mut Cursor::new(&data)).build_fixed(&[batch_size])?;
-                let batch = crate::helpers::build_inputs_from_desc(
-                    batch_size as u64,
-                    inferer.input_shapes(),
-                );
+                let mut inferer = builder(&mut Cursor::new(&data))
+                    .build_fixed(&[batch_size])?
+                    .with_default_epsilon("epsilon")?;
+                let inputs = inferer.input_shapes().to_vec();
+                let batch = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
 
                 execute_load_metrics("fixed", batch_size, batch, iterations, &mut inferer)
             })
@@ -133,11 +135,11 @@ fn run_batch_size(o: &Path, batch_sizes: Vec<usize>, iterations: usize) -> Resul
             .map(|batch_size| {
                 println!("Checking batch size: {:?}", batch_size);
 
-                let mut inferer = builder(&mut Cursor::new(&data)).build_basic()?;
-                let batch = crate::helpers::build_inputs_from_desc(
-                    batch_size as u64,
-                    inferer.input_shapes(),
-                );
+                let mut inferer = builder(&mut Cursor::new(&data))
+                    .build_basic()?
+                    .with_default_epsilon("epsilon")?;
+                let inputs = inferer.input_shapes().to_vec();
+                let batch = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
 
                 execute_load_metrics("single", batch_size, batch, iterations, &mut inferer)
             })
@@ -151,12 +153,11 @@ fn run_batch_size(o: &Path, batch_sizes: Vec<usize>, iterations: usize) -> Resul
             .map(|batch_size| {
                 println!("Checking batch size: {:?}", batch_size);
 
-                let mut inferer =
-                    builder(&mut Cursor::new(&data)).build_memoizing(&[batch_size])?;
-                let batch = crate::helpers::build_inputs_from_desc(
-                    batch_size as u64,
-                    inferer.input_shapes(),
-                );
+                let mut inferer = builder(&mut Cursor::new(&data))
+                    .build_memoizing(&[batch_size])?
+                    .with_default_epsilon("epsilon")?;
+                let inputs = inferer.input_shapes().to_vec();
+                let batch = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
 
                 execute_load_metrics("dynamic", batch_size, batch, iterations, &mut inferer)
             })
@@ -169,11 +170,12 @@ fn run_batch_size(o: &Path, batch_sizes: Vec<usize>, iterations: usize) -> Resul
             .map(|batch_size| {
                 println!("Checking batch size: {:?}", batch_size);
 
-                let mut inferer = builder(&mut Cursor::new(&data)).build_dynamic()?;
-                let batch = crate::helpers::build_inputs_from_desc(
-                    batch_size as u64,
-                    inferer.input_shapes(),
-                );
+                let mut inferer = builder(&mut Cursor::new(&data))
+                    .build_dynamic()?
+                    .with_default_epsilon("epsilon")?;
+
+                let inputs = inferer.input_shapes().to_vec();
+                let batch = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
 
                 execute_load_metrics("direct", batch_size, batch, iterations, &mut inferer)
             })

@@ -6,12 +6,11 @@
 Utilities for filling noise inputs for an inference model.
 */
 
-use crate::inferer::{Inferer, Response, State};
+use crate::inferer::Inferer;
 use anyhow::{bail, Result};
 use perchance::PerchanceContext;
 use rand::thread_rng;
 use rand_distr::{Distribution, StandardNormal};
-use std::collections::HashMap;
 
 /// NoiseGenerators are consumed by the [`EpsilonInjector`] by generating noise sampled for a standard normal
 /// distribution. Custom noise-generators can be implemented and passed via [`EpsilonInjector::with_generator`].
@@ -116,7 +115,7 @@ pub struct EpsilonInjector<T: Inferer, NG: NoiseGenerator = HighQualityNoiseGene
     inner: T,
     key: String,
     count: usize,
-
+    index: usize,
     generator: NG,
 }
 
@@ -149,25 +148,18 @@ where
     pub fn with_generator(inferer: T, generator: NG, key: &str) -> Result<Self> {
         let inputs = inferer.input_shapes();
 
-        let count = match inputs.iter().find(|(k, _)| k == key) {
-            Some((_, shape)) => shape.iter().product(),
+        let (index, count) = match inputs.iter().enumerate().find(|(_, (k, _))| k == key) {
+            Some((index, (_, shape))) => (index, shape.iter().product()),
             None => bail!("model has no input key {:?}", key),
         };
 
         Ok(Self {
             inner: inferer,
             key: key.to_owned(),
+            index,
             count,
             generator,
         })
-    }
-
-    fn inject_epsilons(&mut self, observations: &mut HashMap<u64, State>) -> Result<()> {
-        for v in observations.values_mut() {
-            v.data
-                .insert(self.key.clone(), self.generator.generate(self.count));
-        }
-        Ok(())
     }
 }
 
@@ -176,9 +168,19 @@ where
     T: Inferer,
     NG: NoiseGenerator,
 {
-    fn infer(&mut self, mut observations: HashMap<u64, State>) -> Result<HashMap<u64, Response>> {
-        self.inject_epsilons(&mut observations)?;
-        self.inner.infer(observations)
+    fn select_batch_size(&mut self, max_count: usize) -> usize {
+        self.inner.select_batch_size(max_count)
+    }
+
+    fn infer_batched<'a, 'b>(
+        &'a mut self,
+        mut batch: crate::inferer::Batch<'a>,
+    ) -> Result<crate::inferer::BatchResponse<'a>, anyhow::Error> {
+        let total_count = self.count * batch.count;
+        let epsilons = self.generator.generate(total_count);
+        batch.data[self.index].1 = &epsilons;
+
+        self.inner.infer_batched(batch)
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

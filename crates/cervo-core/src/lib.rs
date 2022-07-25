@@ -9,12 +9,14 @@ simplify our workflows.
 pub use tract_core;
 pub use tract_hir;
 
+pub mod batcher;
 pub mod epsilon;
 pub mod inferer;
 mod model_api;
 
 /// Most core utilities are re-exported here.
 pub mod prelude {
+    pub use super::batcher::Batcher;
     pub use super::epsilon::{
         EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
     };

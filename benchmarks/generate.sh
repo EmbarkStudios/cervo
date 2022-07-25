@@ -31,4 +31,4 @@ mkdir -p ../out
 cargo run $FLAGS batch-scaling $count "../out/batchsize-$suffix.csv" -o ../../brains/test-large.onnx -b `seq -s, 1 24`
 python3 ../python/batchsize.py "../out/batchsize-$suffix.csv" $count "../out/batchsize-$suffix.png"
 
-python3 ../python/compare_batchsize.py "../out/batchsize-before.csv" "../out/batchsize-after.csv" $count "../out/batchsize-compare.png"
+python3 ../python/compare_batchsize.py "../out/batchsize-before.csv" "../out/batchsize-after.csv" 1000 "../out/batchsize-compare.png"

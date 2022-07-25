@@ -28,7 +28,7 @@ enum MeasureMode {
 #[derive(Debug, Parser)]
 #[clap(name = "cervo perf-tests")]
 struct RustyPerf {
-    #[clap(subcommand)] // Note that we mark a field as a subcommand
+    #[clap(subcommand)]
     mode: MeasureMode,
 }
 
