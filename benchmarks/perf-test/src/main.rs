@@ -43,7 +43,7 @@ struct RustyPerf {
 //         let start = Instant::now();
 
 //         for _ in 0..10 {
-//             instance.infer(observations.clone()).unwrap();
+//             instance.infer_batch(observations.clone()).unwrap();
 //         }
 //         let elapsed = start.elapsed();
 
