@@ -89,34 +89,6 @@ impl<'a> Response<'a> {
 }
 
 /// A batch of data ordered by input slot
-pub struct Batch<'a> {
-    pub data: Vec<(&'a str, &'a [f32])>,
-    pub count: usize,
-}
-
-impl<'a> Batch<'a> {
-    /// Create a new empty batch to fill with data
-    pub fn empty() -> Self {
-        Self {
-            data: Default::default(),
-            count: 0,
-        }
-    }
-
-    pub fn insert(&mut self, name: &'a str, data: &'a [f32]) {
-        for (k, _v) in &mut self.data {
-            if *k != name {
-                continue;
-            }
-
-            panic!("double key??");
-        }
-
-        self.data.push((name, data));
-    }
-}
-
-/// A batch of data ordered by input slot
 pub struct BatchResponse<'a> {
     pub data: Vec<(&'a str, Vec<f32>)>,
 }
