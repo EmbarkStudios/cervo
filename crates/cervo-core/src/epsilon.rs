@@ -6,10 +6,7 @@
 Utilities for filling noise inputs for an inference model.
 */
 
-use crate::{
-    batcher::ScratchPadView,
-    inferer::{BatchResponse, Inferer},
-};
+use crate::{batcher::ScratchPadView, inferer::Inferer};
 use anyhow::{bail, Result};
 use perchance::PerchanceContext;
 use rand::thread_rng;
@@ -180,9 +177,9 @@ where
     fn infer_raw<'pad, 'result>(
         &'result mut self,
         mut batch: ScratchPadView<'pad>,
-    ) -> Result<BatchResponse<'result>, anyhow::Error> {
+    ) -> Result<(), anyhow::Error> {
         let total_count = self.count * batch.len();
-        let output = batch.slot_mut(self.index);
+        let output = batch.input_slot_mut(self.index);
         self.generator.generate(total_count, output);
 
         self.inner.infer_raw(batch)

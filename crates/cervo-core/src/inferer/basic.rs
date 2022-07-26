@@ -1,7 +1,7 @@
 /*!
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
-use super::{BatchResponse, Inferer};
+use super::Inferer;
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
 use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
@@ -46,19 +46,19 @@ impl BasicInferer {
         Ok(Self { model, model_api })
     }
 
-    fn build_inputs(&mut self, obs: ScratchPadView) -> Result<TVec<Tensor>> {
+    fn build_inputs(&mut self, obs: &ScratchPadView) -> Result<TVec<Tensor>> {
         let mut inputs = TVec::default();
 
         for (idx, (name, shape)) in self.model_api.inputs.iter().enumerate() {
-            assert_eq!(name, obs.slot_name(idx));
+            assert_eq!(name, obs.input_name(idx));
 
             let mut full_shape = tvec![1];
             full_shape.extend_from_slice(shape);
 
             let total_count: usize = full_shape.iter().product();
-            assert_eq!(total_count, obs.slot(idx).len());
+            assert_eq!(total_count, obs.input_slot(idx).len());
 
-            let tensor = Tensor::from_shape(&full_shape, obs.slot(idx))?.into();
+            let tensor = Tensor::from_shape(&full_shape, obs.input_slot(idx))?.into();
 
             inputs.push(tensor);
         }
@@ -74,26 +74,19 @@ impl Inferer for BasicInferer {
 
     fn infer_raw<'pad, 'result>(
         &'result mut self,
-        batch: ScratchPadView<'pad>,
-    ) -> Result<BatchResponse<'result>, anyhow::Error> {
-        let inputs = self.build_inputs(batch)?;
+        mut pad: ScratchPadView<'pad>,
+    ) -> Result<(), anyhow::Error> {
+        let inputs = self.build_inputs(&pad)?;
 
         // Run the optimized plan to get actions back!
         let result = self.model.run(inputs)?;
 
-        let mut response = BatchResponse::empty();
-        for (idx, (name, _)) in self.model_api.outputs.iter().enumerate() {
-            response.insert(
-                &name,
-                result[idx]
-                    .to_array_view::<f32>()?
-                    .to_slice()
-                    .unwrap()
-                    .to_vec(),
-            );
+        for idx in 0..self.model_api.outputs.iter().len() {
+            let value = result[idx].as_slice::<f32>()?;
+            pad.output_slot_mut(idx).copy_from_slice(value);
         }
 
-        Ok(response)
+        Ok(())
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

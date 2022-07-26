@@ -1,4 +1,4 @@
-use super::{helpers, BatchResponse, Inferer};
+use super::{helpers, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
 use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
@@ -58,23 +58,23 @@ impl DynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&mut self, batch: ScratchPadView) -> Result<TVec<Tensor>> {
+    fn build_inputs(&mut self, batch: &ScratchPadView) -> Result<TVec<Tensor>> {
         let size = batch.len();
 
         let mut inputs = TVec::default();
 
         for (idx, (name, shape)) in self.model_api.inputs.iter().enumerate() {
-            assert_eq!(name, batch.slot_name(idx));
+            assert_eq!(name, batch.input_name(idx));
 
             let mut full_shape = tvec![size];
             full_shape.extend_from_slice(shape);
 
             let total_count: usize = full_shape.iter().product();
-            assert_eq!(total_count, batch.slot(idx).len());
+            assert_eq!(total_count, batch.input_slot(idx).len());
 
             let shape = full_shape;
 
-            let tensor = Tensor::from_shape(&shape, batch.slot(idx))?;
+            let tensor = Tensor::from_shape(&shape, batch.input_slot(idx))?;
 
             inputs.push(tensor);
         }
@@ -90,25 +90,19 @@ impl Inferer for DynamicInferer {
 
     fn infer_raw<'pad, 'result>(
         &'result mut self,
-        batch: ScratchPadView<'pad>,
-    ) -> Result<BatchResponse<'result>, anyhow::Error> {
-        let inputs = self.build_inputs(batch)?;
+        mut pad: ScratchPadView<'pad>,
+    ) -> Result<(), anyhow::Error> {
+        let inputs = self.build_inputs(&pad)?;
 
         // Run the optimized plan to get actions back!
         let result = self.model.run(inputs)?;
 
-        let mut response = BatchResponse::empty();
-        for (idx, (name, _)) in self.model_api.outputs.iter().enumerate() {
-            let value = result[idx]
-                .to_array_view::<f32>()?
-                .as_slice()
-                .unwrap()
-                .to_owned();
-
-            response.insert(name, value);
+        for idx in 0..self.model_api.outputs.len() {
+            let value = result[idx].as_slice::<f32>()?;
+            pad.output_slot_mut(idx).copy_from_slice(value);
         }
 
-        Ok(response)
+        Ok(())
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

@@ -1,4 +1,4 @@
-use super::{helpers, BatchResponse, Inferer};
+use super::{helpers, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::{Context, Result};
 use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
@@ -87,7 +87,7 @@ impl Inferer for FixedBatchInferer {
     fn infer_raw<'pad, 'result>(
         &'result mut self,
         batch: ScratchPadView<'pad>,
-    ) -> Result<BatchResponse<'result>, anyhow::Error> {
+    ) -> Result<(), anyhow::Error> {
         let plan = self
             .models
             .iter_mut()
@@ -123,7 +123,7 @@ struct BatchedModel {
 impl BatchedModel {
     fn build_inputs(
         &mut self,
-        batch: ScratchPadView,
+        batch: &ScratchPadView,
         model_api: &ModelApi,
     ) -> Result<TVec<Tensor>> {
         assert_eq!(batch.len(), self.size);
@@ -132,7 +132,7 @@ impl BatchedModel {
         let mut inputs = TVec::default();
 
         for (idx, (name, shape)) in model_api.inputs.iter().enumerate() {
-            assert_eq!(name, batch.slot_name(idx));
+            assert_eq!(name, batch.input_name(idx));
 
             let mut full_shape = tvec![size];
             full_shape.extend_from_slice(shape);
@@ -140,16 +140,16 @@ impl BatchedModel {
             let total_count: usize = full_shape.iter().product();
             assert_eq!(
                 total_count,
-                batch.slot(idx).len(),
+                batch.input_slot(idx).len(),
                 "mismatched number of features: expected {:?}, got {:?} for shape {:?}",
                 total_count,
-                batch.slot(idx).len(),
+                batch.input_slot(idx).len(),
                 full_shape
             );
 
             let shape = full_shape;
 
-            let tensor = Tensor::from_shape(&shape, batch.slot(idx))?;
+            let tensor = Tensor::from_shape(&shape, batch.input_slot(idx))?;
 
             inputs.push(tensor);
         }
@@ -157,26 +157,15 @@ impl BatchedModel {
         Ok(inputs)
     }
 
-    fn execute<'a>(
-        &mut self,
-        observations: ScratchPadView,
-        model_api: &'a ModelApi,
-    ) -> Result<BatchResponse<'a>> {
-        let inputs = self.build_inputs(observations, model_api)?;
-
+    fn execute<'a>(&mut self, mut pad: ScratchPadView, model_api: &'a ModelApi) -> Result<()> {
+        let inputs = self.build_inputs(&pad, model_api)?;
         let result = self.plan.run(inputs)?;
 
-        let mut output = BatchResponse::empty();
-        for (idx, (name, _)) in model_api.outputs.iter().enumerate() {
-            let value = result[idx]
-                .to_array_view::<f32>()?
-                .as_slice()
-                .unwrap()
-                .to_owned();
-
-            output.insert(name, value);
+        for idx in 0..model_api.outputs.len() {
+            let value = result[idx].as_slice::<f32>()?;
+            pad.output_slot_mut(idx).copy_from_slice(value);
         }
 
-        Ok(output)
+        Ok(())
     }
 }

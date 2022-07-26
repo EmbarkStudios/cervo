@@ -47,7 +47,7 @@ fn execute_steps(
     for step in 0..steps {
         let obs = observations.clone();
         let start = Instant::now();
-        let res = inferer.infer(obs)?;
+        let res = inferer.infer_batch(obs)?;
         black_box(&res);
         let elapsed = start.elapsed();
 

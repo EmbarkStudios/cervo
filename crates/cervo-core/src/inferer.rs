@@ -88,63 +88,16 @@ impl<'a> Response<'a> {
     }
 }
 
-/// A batch of data ordered by input slot
-pub struct BatchResponse<'a> {
-    pub data: Vec<(&'a str, Vec<f32>)>,
-}
-
-impl<'a> BatchResponse<'a> {
-    pub fn empty() -> Self {
-        Self { data: vec![] }
-    }
-
-    pub fn insert(&mut self, k: &'a str, data: Vec<f32>) {
-        self.data.push((k, data));
-    }
-
-    pub fn append(&mut self, other: BatchResponse<'_>) {
-        for (idx, (k, v)) in other.data.into_iter().enumerate() {
-            assert_eq!(self.data[idx].0, k);
-            self.data[idx].1.extend_from_slice(&v);
-        }
-    }
-}
-
 /// The main workhorse shared by all components in Cervo.
 pub trait Inferer {
     /// Query the inferer for how many elements it can deal with in a single batch.
     fn select_batch_size(&mut self, max_count: usize) -> usize;
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_batch<'this>(
-        &'this mut self,
-        batch: HashMap<u64, State>,
-    ) -> Result<HashMap<u64, Response<'this>>, anyhow::Error>
-    where
-        Self: Sized,
-    {
-        let mut batcher = Batcher::new_sized(self, batch.len());
-        batcher.extend(batch)?;
-
-        batcher.execute(self)
-    }
-
-    /// Execute the model on the provided pre-batched data.
-    fn infer_single<'this>(&'this mut self, input: State) -> Result<Response<'this>, anyhow::Error>
-    where
-        Self: Sized,
-    {
-        let mut batcher = Batcher::new_sized(self, 1);
-        batcher.push(0, input)?;
-
-        Ok(batcher.execute(self)?.remove(&0).unwrap())
-    }
-
-    /// Execute the model on the provided pre-batched data.
     fn infer_raw<'pad, 'result>(
         &'result mut self,
         batch: ScratchPadView<'pad>,
-    ) -> Result<BatchResponse<'result>, anyhow::Error>;
+    ) -> Result<(), anyhow::Error>;
 
     /// Retrieve the name and shapes of the model inputs.
     fn input_shapes(&self) -> &[(String, Vec<usize>)];
@@ -221,21 +174,38 @@ pub trait InfererExt: Inferer + Sized {
     }
 
     /// Execute the model on the provided batch of elements.
-    fn infer(&mut self, observations: HashMap<u64, State>)
-        -> Result<HashMap<u64, Response>, Error>;
-}
-
-impl<T> InfererExt for T
-where
-    T: Inferer + Sized,
-{
-    /// Execute the model on the provided batch of elements.
+    #[deprecated(
+        note = "Please use the more explicit 'infer_batch' instead.",
+        since = "0.3.0"
+    )]
     fn infer(
         &mut self,
         observations: HashMap<u64, State>,
     ) -> Result<HashMap<u64, Response>, Error> {
-        let mut batcher = Batcher::new(self);
-        batcher.extend(observations)?;
+        self.infer_batch(observations)
+    }
+
+    /// Execute the model on the provided pre-batched data.
+    fn infer_batch<'this>(
+        &'this mut self,
+        batch: HashMap<u64, State>,
+    ) -> Result<HashMap<u64, Response<'this>>, anyhow::Error> {
+        let mut batcher = Batcher::new_sized(self, batch.len());
+        batcher.extend(batch)?;
+
         batcher.execute(self)
     }
+
+    /// Execute the model on the provided pre-batched data.
+    fn infer_single<'this>(&'this mut self, input: State) -> Result<Response<'this>, anyhow::Error>
+    where
+        Self: Sized,
+    {
+        let mut batcher = Batcher::new_sized(self, 1);
+        batcher.push(0, input)?;
+
+        Ok(batcher.execute(self)?.remove(&0).unwrap())
+    }
 }
+
+impl<T> InfererExt for T where T: Inferer + Sized {}

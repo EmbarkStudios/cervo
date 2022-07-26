@@ -62,7 +62,7 @@ fn execute_steps(
         };
 
         let start = Instant::now();
-        let res = inferer.infer(obs)?;
+        let res = inferer.infer_batch(obs)?;
         black_box(&res);
         let elapsed = start.elapsed();
 
