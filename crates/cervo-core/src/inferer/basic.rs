@@ -2,7 +2,7 @@
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
 use super::{Batch, BatchResponse, Inferer};
-use crate::model_api::ModelApi;
+use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
 use tract_core::{ndarray::IntoDimension, prelude::*};
 use tract_hir::prelude::*;
@@ -46,19 +46,19 @@ impl BasicInferer {
         Ok(Self { model, model_api })
     }
 
-    fn build_inputs(&mut self, obs: Batch) -> Result<TVec<Tensor>> {
+    fn build_inputs(&mut self, obs: ScratchPadView) -> Result<TVec<Tensor>> {
         let mut inputs = TVec::default();
 
-        for ((name, shape), (key, data)) in self.model_api.inputs.iter().zip(obs.data) {
-            assert_eq!(name, key);
+        for (idx, (name, shape)) in self.model_api.inputs.iter().enumerate() {
+            assert_eq!(name, obs.slot_name(idx));
 
             let mut full_shape = tvec![1];
             full_shape.extend_from_slice(shape);
 
             let total_count: usize = full_shape.iter().product();
-            assert_eq!(total_count, data.len());
+            assert_eq!(total_count, obs.slot(idx).len());
 
-            let tensor = Tensor::from_shape(&full_shape, data)?.into();
+            let tensor = Tensor::from_shape(&full_shape, obs.slot(idx))?.into();
 
             inputs.push(tensor);
         }
@@ -72,10 +72,10 @@ impl Inferer for BasicInferer {
         1
     }
 
-    fn infer_batched<'input: 'output, 'output>(
-        &'input mut self,
-        batch: crate::inferer::Batch<'input>,
-    ) -> Result<crate::inferer::BatchResponse<'output>, anyhow::Error> {
+    fn infer_batched<'pad, 'result>(
+        &'result mut self,
+        batch: ScratchPadView<'pad>,
+    ) -> Result<BatchResponse<'result>, anyhow::Error> {
         let inputs = self.build_inputs(batch)?;
 
         // Run the optimized plan to get actions back!

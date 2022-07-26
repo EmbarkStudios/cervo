@@ -1,5 +1,5 @@
 use super::{helpers, Batch, BatchResponse, Inferer};
-use crate::model_api::ModelApi;
+use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
 use std::collections::{hash_map::Entry, HashMap};
 use tract_core::prelude::*;
@@ -92,24 +92,23 @@ impl MemoizingDynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&mut self, batch: Batch) -> Result<TVec<Tensor>> {
-        let size = batch.count;
+    fn build_inputs(&mut self, batch: ScratchPadView) -> Result<TVec<Tensor>> {
+        let size = batch.len();
 
         let mut inputs = TVec::default();
 
-        for ((name, shape), (key, data)) in self.model_api.inputs.iter().zip(batch.data.into_iter())
-        {
-            assert_eq!(name, key);
+        for (idx, (name, shape)) in self.model_api.inputs.iter().enumerate() {
+            assert_eq!(name, batch.slot_name(idx));
 
             let mut full_shape = tvec![size];
             full_shape.extend_from_slice(shape);
 
             let total_count: usize = full_shape.iter().product();
-            assert_eq!(total_count, data.len());
+            assert_eq!(total_count, batch.slot(idx).len());
 
             let shape = full_shape;
 
-            let tensor = Tensor::from_shape(&shape, data)?;
+            let tensor = Tensor::from_shape(&shape, batch.slot(idx))?;
 
             inputs.push(tensor);
         }
@@ -138,11 +137,11 @@ impl Inferer for MemoizingDynamicInferer {
         max_count
     }
 
-    fn infer_batched<'input: 'output, 'output>(
-        &'input mut self,
-        batch: crate::inferer::Batch<'input>,
-    ) -> Result<BatchResponse<'output>, anyhow::Error> {
-        let count = batch.count;
+    fn infer_batched<'pad, 'result>(
+        &'result mut self,
+        batch: ScratchPadView<'pad>,
+    ) -> Result<BatchResponse<'result>, anyhow::Error> {
+        let count = batch.len();
         let inputs = self.build_inputs(batch)?;
 
         let result = self.get_concrete_model(count)?.run(inputs)?;

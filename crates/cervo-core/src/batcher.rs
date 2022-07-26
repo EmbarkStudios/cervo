@@ -26,18 +26,20 @@ impl ScratchPadData {
             count,
         };
 
-        this.reserve(capacity);
+        this.reserve(capacity * count);
         this
     }
 
     fn reserve(&mut self, batch_size: usize) {
-        self.data.resize(batch_size, 0.0);
+        self.data.resize(batch_size * self.count, 0.0);
     }
 
+    #[inline]
     fn view(&self, range: Range<usize>) -> &[f32] {
         &self.data[range.start * self.count..range.end * self.count]
     }
 
+    #[inline]
     fn view_mut(&mut self, range: Range<usize>) -> &mut [f32] {
         &mut self.data[range.start * self.count..range.end * self.count]
     }
@@ -90,6 +92,9 @@ impl ScratchPad {
     }
 
     fn chunk(&mut self, offset: usize, size: usize) -> ScratchPadView {
+        let size = size.min(self.batch_size);
+        self.batch_size -= size;
+
         ScratchPadView {
             pad: self,
             batch_range: offset..offset + size,
@@ -97,18 +102,18 @@ impl ScratchPad {
     }
 }
 
-pub(crate) struct ScratchPadView<'a> {
+pub struct ScratchPadView<'a> {
     pad: &'a mut ScratchPad,
     batch_range: Range<usize>,
 }
 
 impl<'a> ScratchPadView<'a> {
     pub(crate) fn slot(&self, slot: usize) -> &[f32] {
-        self.pad.slots[slot].view(self.batch_range)
+        self.pad.slots[slot].view(self.batch_range.clone())
     }
 
-    pub(crate) fn slot_mut(&self, slot: usize) -> &mut [f32] {
-        self.pad.slots[slot].view_mut(self.batch_range)
+    pub(crate) fn slot_mut(&mut self, slot: usize) -> &mut [f32] {
+        self.pad.slots[slot].view_mut(self.batch_range.clone())
     }
 
     pub(crate) fn slot_name(&self, slot: usize) -> &str {
@@ -119,7 +124,8 @@ impl<'a> ScratchPadView<'a> {
         self.batch_range.len()
     }
 }
-pub(crate) struct Batcher {
+
+pub struct Batcher {
     scratch: ScratchPad,
     input_key_to_slot: Vec<String>,
     output_key_to_slot: Vec<String>,
@@ -188,8 +194,6 @@ impl Batcher {
             response.data.push((k, vec![]));
         }
 
-        let empty = [];
-
         // pick up as many items as possible (by slicing the stores) and feed into the model.
         // this builds up a set of output stores that'll feed in sequence.
         while self.scratch.batch_size > 0 {
@@ -202,15 +206,10 @@ impl Batcher {
             total_offset += preferred_batch_size;
         }
 
-        self.states
-            .iter_mut()
-            .filter_map(|e| e.as_mut())
-            .for_each(|e| e.clear());
-
         let mut output = HashMap::default();
 
         let mut total_offset = 0;
-        for id in self.ids.drain(..) {
+        for id in self.scratch.ids.drain(..) {
             let mut output_response = Response::empty();
             for ((idx, key), (name, shape)) in self
                 .output_key_to_slot

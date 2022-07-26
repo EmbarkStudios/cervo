@@ -1,5 +1,5 @@
 use super::{helpers, Batch, BatchResponse, Inferer};
-use crate::model_api::ModelApi;
+use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::{Context, Result};
 
 use tract_core::prelude::*;
@@ -85,15 +85,15 @@ impl FixedBatchInferer {
 }
 
 impl Inferer for FixedBatchInferer {
-    fn infer_batched<'input: 'output, 'output>(
-        &'input mut self,
-        batch: crate::inferer::Batch<'input>,
-    ) -> Result<BatchResponse<'output>, anyhow::Error> {
+    fn infer_batched<'pad, 'result>(
+        &'result mut self,
+        batch: ScratchPadView<'pad>,
+    ) -> Result<BatchResponse<'result>, anyhow::Error> {
         let plan = self
             .models
             .iter_mut()
-            .find(|plan| plan.size == batch.count)
-            .with_context(|| anyhow::anyhow!("looking for a plan with size {:?}", batch.count))?;
+            .find(|plan| plan.size == batch.len())
+            .with_context(|| anyhow::anyhow!("looking for a plan with size {:?}", batch.len()))?;
 
         plan.execute(batch, &self.model_api)
     }
@@ -122,14 +122,18 @@ struct BatchedModel {
 }
 
 impl BatchedModel {
-    fn build_inputs(&mut self, batch: Batch, model_api: &ModelApi) -> Result<TVec<Tensor>> {
-        assert_eq!(batch.count, self.size);
+    fn build_inputs(
+        &mut self,
+        batch: ScratchPadView,
+        model_api: &ModelApi,
+    ) -> Result<TVec<Tensor>> {
+        assert_eq!(batch.len(), self.size);
         let size = self.size;
 
         let mut inputs = TVec::default();
 
-        for ((name, shape), (key, data)) in model_api.inputs.iter().zip(batch.data.into_iter()) {
-            assert_eq!(name, key);
+        for (idx, (name, shape)) in model_api.inputs.iter().enumerate() {
+            assert_eq!(name, batch.slot_name(idx));
 
             let mut full_shape = tvec![size];
             full_shape.extend_from_slice(shape);
@@ -137,16 +141,16 @@ impl BatchedModel {
             let total_count: usize = full_shape.iter().product();
             assert_eq!(
                 total_count,
-                data.len(),
+                batch.slot(idx).len(),
                 "mismatched number of features: expected {:?}, got {:?} for shape {:?}",
                 total_count,
-                data.len(),
+                batch.slot(idx).len(),
                 full_shape
             );
 
             let shape = full_shape;
 
-            let tensor = Tensor::from_shape(&shape, data)?;
+            let tensor = Tensor::from_shape(&shape, batch.slot(idx))?;
 
             inputs.push(tensor);
         }
@@ -156,7 +160,7 @@ impl BatchedModel {
 
     fn execute<'a>(
         &mut self,
-        observations: Batch,
+        observations: ScratchPadView,
         model_api: &'a ModelApi,
     ) -> Result<BatchResponse<'a>> {
         let inputs = self.build_inputs(observations, model_api)?;

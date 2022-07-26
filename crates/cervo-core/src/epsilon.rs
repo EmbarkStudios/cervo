@@ -181,7 +181,7 @@ where
 
     fn infer_batched<'pad, 'result>(
         &'result mut self,
-        batch: ScratchPadView<'pad>,
+        mut batch: ScratchPadView<'pad>,
     ) -> Result<BatchResponse<'result>, anyhow::Error> {
         let total_count = self.count * batch.len();
         let output = batch.slot_mut(self.index);
