@@ -1,4 +1,4 @@
-use super::{helpers, Batch, BatchResponse, Inferer};
+use super::{helpers, BatchResponse, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
 use std::collections::{hash_map::Entry, HashMap};
@@ -137,7 +137,7 @@ impl Inferer for MemoizingDynamicInferer {
         max_count
     }
 
-    fn infer_batched<'pad, 'result>(
+    fn infer_raw<'pad, 'result>(
         &'result mut self,
         batch: ScratchPadView<'pad>,
     ) -> Result<BatchResponse<'result>, anyhow::Error> {

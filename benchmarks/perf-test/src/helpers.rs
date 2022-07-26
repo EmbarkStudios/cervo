@@ -14,10 +14,10 @@ pub fn get_file<T: AsRef<Path>>(name: T) -> std::io::Result<File> {
     std::fs::File::open(name)
 }
 
-pub fn build_inputs_from_desc<'a>(
+pub fn build_inputs_from_desc(
     count: u64,
-    inputs: &'a [(String, Vec<usize>)],
-) -> HashMap<u64, State<'a>> {
+    inputs: &[(String, Vec<usize>)],
+) -> HashMap<u64, State<'_>> {
     (0..count)
         .map(|idx| {
             (
@@ -25,7 +25,7 @@ pub fn build_inputs_from_desc<'a>(
                 State {
                     data: inputs
                         .iter()
-                        .filter(|(key, count)| key != "epsilon")
+                        .filter(|(key, _)| key != "epsilon")
                         .map(|(key, count)| (key.as_str(), vec![0.0; count.iter().product()]))
                         .collect(),
                 },

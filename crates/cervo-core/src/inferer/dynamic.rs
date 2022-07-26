@@ -1,8 +1,8 @@
-use super::{helpers, Batch, BatchResponse, Inferer};
+use super::{helpers, BatchResponse, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
-use tract_core::prelude::*;
-use tract_hir::prelude::*;
+use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_hir::prelude::InferenceModel;
 
 /// The dynamic inferer hits a spot between the raw simplicity of a [`crate::prelude::BasicInferer`] and the spikiness
 /// of a [`crate::prelude::MemoizingDynamicInferer`]. Instead of explicitly concretizing models and caching them, it
@@ -88,7 +88,7 @@ impl Inferer for DynamicInferer {
         max_count
     }
 
-    fn infer_batched<'pad, 'result>(
+    fn infer_raw<'pad, 'result>(
         &'result mut self,
         batch: ScratchPadView<'pad>,
     ) -> Result<BatchResponse<'result>, anyhow::Error> {

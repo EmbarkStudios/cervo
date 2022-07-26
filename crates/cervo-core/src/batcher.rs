@@ -10,7 +10,7 @@ use std::{collections::HashMap, ops::Range};
 
 use tract_core::tract_data::TVec;
 
-use crate::inferer::{Batch, BatchResponse, Inferer, Response, State};
+use crate::inferer::{BatchResponse, Inferer, Response, State};
 
 struct ScratchPadData {
     name: String,
@@ -45,7 +45,7 @@ impl ScratchPadData {
     }
 }
 
-struct ScratchPad {
+pub struct ScratchPad {
     slots: TVec<ScratchPadData>,
     ids: Vec<u64>,
     batch_size: usize,
@@ -55,12 +55,16 @@ struct ScratchPad {
 const DEFAULT_CAPACITY: usize = 6;
 
 impl ScratchPad {
-    fn new_for_shapes(shapes: &[(String, Vec<usize>)]) -> Self {
+    pub fn new_for_shapes(shapes: &[(String, Vec<usize>)]) -> Self {
+        Self::new_with_size(shapes, DEFAULT_CAPACITY)
+    }
+
+    pub fn new_with_size(shapes: &[(String, Vec<usize>)], capacity: usize) -> Self {
         let slots = shapes
             .iter()
             .map(|(name, shape)| {
                 let count = shape.iter().product();
-                ScratchPadData::new(name.to_owned(), count, DEFAULT_CAPACITY)
+                ScratchPadData::new(name.to_owned(), count, capacity)
             })
             .collect();
 
@@ -68,11 +72,11 @@ impl ScratchPad {
             slots,
             ids: vec![],
             batch_size: 0,
-            capacity: DEFAULT_CAPACITY,
+            capacity,
         }
     }
 
-    fn next(&mut self, id: u64) {
+    pub fn next(&mut self, id: u64) {
         self.batch_size += 1;
         self.ids.push(id);
 
@@ -85,13 +89,13 @@ impl ScratchPad {
         }
     }
 
-    fn push(&mut self, slot: usize, data: Vec<f32>) {
+    pub fn push(&mut self, slot: usize, data: Vec<f32>) {
         self.slots[slot]
             .view_mut(self.batch_size - 1..self.batch_size)
             .copy_from_slice(&data);
     }
 
-    fn chunk(&mut self, offset: usize, size: usize) -> ScratchPadView {
+    pub fn chunk(&mut self, offset: usize, size: usize) -> ScratchPadView {
         let size = size.min(self.batch_size);
         self.batch_size -= size;
 
@@ -132,7 +136,7 @@ pub struct Batcher {
 }
 
 impl Batcher {
-    pub fn new_for_inferer(inferer: &dyn Inferer) -> Self {
+    pub fn new(inferer: &dyn Inferer) -> Self {
         let input_key_to_slot: Vec<_> = inferer
             .input_shapes()
             .iter()
@@ -147,6 +151,26 @@ impl Batcher {
 
         Self {
             scratch: ScratchPad::new_for_shapes(inferer.input_shapes()),
+            input_key_to_slot,
+            output_key_to_slot,
+        }
+    }
+
+    pub fn new_sized(inferer: &dyn Inferer, size: usize) -> Self {
+        let input_key_to_slot: Vec<_> = inferer
+            .input_shapes()
+            .iter()
+            .map(|(k, _)| k.clone())
+            .collect();
+
+        let output_key_to_slot: Vec<_> = inferer
+            .output_shapes()
+            .iter()
+            .map(|(k, _)| k.clone())
+            .collect();
+
+        Self {
+            scratch: ScratchPad::new_with_size(inferer.input_shapes(), size),
             input_key_to_slot,
             output_key_to_slot,
         }
@@ -185,7 +209,7 @@ impl Batcher {
 
     pub fn execute<'a, 'b>(
         &'a mut self,
-        inferer: &'b mut impl Inferer,
+        inferer: &'b mut dyn Inferer,
     ) -> anyhow::Result<HashMap<u64, Response<'b>>> {
         let mut total_offset = 0;
         let mut response = BatchResponse::empty();
@@ -201,7 +225,7 @@ impl Batcher {
 
             let view = self.scratch.chunk(total_offset, preferred_batch_size);
 
-            let batch_response = inferer.infer_batched(view)?;
+            let batch_response = inferer.infer_raw(view)?;
             response.append(batch_response);
             total_offset += preferred_batch_size;
         }

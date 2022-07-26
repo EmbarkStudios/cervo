@@ -1,11 +1,11 @@
 /*!
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
-use super::{Batch, BatchResponse, Inferer};
+use super::{BatchResponse, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
-use tract_core::{ndarray::IntoDimension, prelude::*};
-use tract_hir::prelude::*;
+use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_hir::prelude::InferenceModel;
 
 use super::helpers;
 
@@ -72,7 +72,7 @@ impl Inferer for BasicInferer {
         1
     }
 
-    fn infer_batched<'pad, 'result>(
+    fn infer_raw<'pad, 'result>(
         &'result mut self,
         batch: ScratchPadView<'pad>,
     ) -> Result<BatchResponse<'result>, anyhow::Error> {

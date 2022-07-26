@@ -104,7 +104,7 @@ impl<'a> Batch<'a> {
     }
 
     pub fn insert(&mut self, name: &'a str, data: &'a [f32]) {
-        for (k, v) in &mut self.data {
+        for (k, _v) in &mut self.data {
             if *k != name {
                 continue;
             }
@@ -144,7 +144,32 @@ pub trait Inferer {
     fn select_batch_size(&mut self, max_count: usize) -> usize;
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_batched<'pad, 'result>(
+    fn infer_batch<'this>(
+        &'this mut self,
+        batch: HashMap<u64, State>,
+    ) -> Result<HashMap<u64, Response<'this>>, anyhow::Error>
+    where
+        Self: Sized,
+    {
+        let mut batcher = Batcher::new_sized(self, batch.len());
+        batcher.extend(batch)?;
+
+        batcher.execute(self)
+    }
+
+    /// Execute the model on the provided pre-batched data.
+    fn infer_single<'this>(&'this mut self, input: State) -> Result<Response<'this>, anyhow::Error>
+    where
+        Self: Sized,
+    {
+        let mut batcher = Batcher::new_sized(self, 1);
+        batcher.push(0, input)?;
+
+        Ok(batcher.execute(self)?.remove(&0).unwrap())
+    }
+
+    /// Execute the model on the provided pre-batched data.
+    fn infer_raw<'pad, 'result>(
         &'result mut self,
         batch: ScratchPadView<'pad>,
     ) -> Result<BatchResponse<'result>, anyhow::Error>;
@@ -237,8 +262,8 @@ where
         &mut self,
         observations: HashMap<u64, State>,
     ) -> Result<HashMap<u64, Response>, Error> {
-        let mut batcher = Batcher::new_for_inferer(self);
-        batcher.extend(observations);
+        let mut batcher = Batcher::new(self);
+        batcher.extend(observations)?;
         batcher.execute(self)
     }
 }

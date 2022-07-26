@@ -73,22 +73,24 @@ struct Record {
 fn execute_load_metrics<I: Inferer>(
     kind: &'static str,
     batch_size: usize,
-    data: HashMap<u64, State>,
+    data: HashMap<u64, State<'_>>,
     count: usize,
     inferer: &mut I,
 ) -> Result<Record> {
     let mut times = vec![];
 
+    let mut batcher = Batcher::new(inferer);
     for _ in 0..10 {
         let batch = data.clone();
-        black_box(&(inferer.infer(batch)?));
+        batcher.extend(batch)?;
+        black_box(&(batcher.execute(inferer)?));
     }
 
-    let mut batcher = Batcher::new_for_inferer(inferer);
+    let mut batcher = Batcher::new(inferer);
     for _ in 0..(count / batch_size) {
         let start = Instant::now();
         let batch = data.clone();
-        batcher.extend(batch);
+        batcher.extend(batch)?;
         black_box(&(batcher.execute(inferer)?));
         times.push(start.elapsed().as_secs_f64() * 1000.0 / batch_size as f64);
     }

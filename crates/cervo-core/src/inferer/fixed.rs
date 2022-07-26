@@ -1,9 +1,8 @@
-use super::{helpers, Batch, BatchResponse, Inferer};
+use super::{helpers, BatchResponse, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::{Context, Result};
-
-use tract_core::prelude::*;
-use tract_hir::prelude::*;
+use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_hir::prelude::InferenceModel;
 
 /// A reliable batched inferer that is a good fit if you know how much data you'll have and want stable performance.
 ///
@@ -85,7 +84,7 @@ impl FixedBatchInferer {
 }
 
 impl Inferer for FixedBatchInferer {
-    fn infer_batched<'pad, 'result>(
+    fn infer_raw<'pad, 'result>(
         &'result mut self,
         batch: ScratchPadView<'pad>,
     ) -> Result<BatchResponse<'result>, anyhow::Error> {

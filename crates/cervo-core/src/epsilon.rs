@@ -8,9 +8,9 @@ Utilities for filling noise inputs for an inference model.
 
 use crate::{
     batcher::ScratchPadView,
-    inferer::{Batch, BatchResponse, Inferer},
+    inferer::{BatchResponse, Inferer},
 };
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Result};
 use perchance::PerchanceContext;
 use rand::thread_rng;
 use rand_distr::{Distribution, StandardNormal};
@@ -120,7 +120,6 @@ impl NoiseGenerator for HighQualityNoiseGenerator {
 /// wrapper.
 pub struct EpsilonInjector<T: Inferer, NG: NoiseGenerator = HighQualityNoiseGenerator> {
     inner: T,
-    key: String,
     count: usize,
     index: usize,
     generator: NG,
@@ -162,7 +161,6 @@ where
 
         Ok(Self {
             inner: inferer,
-            key: key.to_owned(),
             index,
             count,
             generator,
@@ -179,15 +177,15 @@ where
         self.inner.select_batch_size(max_count)
     }
 
-    fn infer_batched<'pad, 'result>(
+    fn infer_raw<'pad, 'result>(
         &'result mut self,
         mut batch: ScratchPadView<'pad>,
     ) -> Result<BatchResponse<'result>, anyhow::Error> {
         let total_count = self.count * batch.len();
         let output = batch.slot_mut(self.index);
-        let epsilons = self.generator.generate(total_count, output);
+        self.generator.generate(total_count, output);
 
-        self.inner.infer_batched(batch)
+        self.inner.infer_raw(batch)
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {
