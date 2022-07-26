@@ -84,10 +84,7 @@ impl FixedBatchInferer {
 }
 
 impl Inferer for FixedBatchInferer {
-    fn infer_raw<'pad, 'result>(
-        &'result mut self,
-        batch: ScratchPadView<'pad>,
-    ) -> Result<(), anyhow::Error> {
+    fn infer_raw(&mut self, batch: ScratchPadView) -> Result<(), anyhow::Error> {
         let plan = self
             .models
             .iter_mut()

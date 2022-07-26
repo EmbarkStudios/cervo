@@ -41,9 +41,9 @@ impl ConstantGenerator {
 }
 
 impl NoiseGenerator for ConstantGenerator {
-    fn generate(&mut self, count: usize, out: &mut [f32]) {
-        for idx in 0..count {
-            out[idx] = self.value;
+    fn generate(&mut self, _count: usize, out: &mut [f32]) {
+        for o in out {
+            *o = self.value;
         }
     }
 }
@@ -75,9 +75,9 @@ impl Default for LowQualityNoiseGenerator {
 
 impl NoiseGenerator for LowQualityNoiseGenerator {
     /// Generate `count` random values.
-    fn generate(&mut self, count: usize, out: &mut [f32]) {
-        for idx in 0..count {
-            out[idx] = self.ctx.normal_f32();
+    fn generate(&mut self, _count: usize, out: &mut [f32]) {
+        for o in out {
+            *o = self.ctx.normal_f32();
         }
     }
 }
@@ -101,10 +101,10 @@ impl Default for HighQualityNoiseGenerator {
 
 impl NoiseGenerator for HighQualityNoiseGenerator {
     /// Generate `count` random values.
-    fn generate(&mut self, count: usize, out: &mut [f32]) {
+    fn generate(&mut self, _count: usize, out: &mut [f32]) {
         let mut rng = thread_rng();
-        for idx in 0..count {
-            out[idx] = self.normal_distribution.sample(&mut rng);
+        for o in out {
+            *o = self.normal_distribution.sample(&mut rng);
         }
     }
 }
@@ -174,10 +174,7 @@ where
         self.inner.select_batch_size(max_count)
     }
 
-    fn infer_raw<'pad, 'result>(
-        &'result mut self,
-        mut batch: ScratchPadView<'pad>,
-    ) -> Result<(), anyhow::Error> {
+    fn infer_raw(&mut self, mut batch: ScratchPadView) -> Result<(), anyhow::Error> {
         let total_count = self.count * batch.len();
         let output = batch.input_slot_mut(self.index);
         self.generator.generate(total_count, output);

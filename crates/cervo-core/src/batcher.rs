@@ -207,7 +207,9 @@ impl<'a> ScratchPadView<'a> {
     pub fn output_name(&self, slot: usize) -> &str {
         self.pad.output_name(slot)
     }
-    /// See [`ScratchPad::len`].
+
+    /// The batch size of this view.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.batch_range.len()
     }

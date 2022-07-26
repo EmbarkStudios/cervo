@@ -137,10 +137,7 @@ impl Inferer for MemoizingDynamicInferer {
         max_count
     }
 
-    fn infer_raw<'pad, 'result>(
-        &'result mut self,
-        mut pad: ScratchPadView<'pad>,
-    ) -> Result<(), anyhow::Error> {
+    fn infer_raw(&mut self, mut pad: ScratchPadView) -> Result<(), anyhow::Error> {
         let count = pad.len();
         let inputs = self.build_inputs(&pad)?;
 

@@ -94,10 +94,7 @@ pub trait Inferer {
     fn select_batch_size(&mut self, max_count: usize) -> usize;
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_raw<'pad, 'result>(
-        &'result mut self,
-        batch: ScratchPadView<'pad>,
-    ) -> Result<(), anyhow::Error>;
+    fn infer_raw(&mut self, batch: ScratchPadView) -> Result<(), anyhow::Error>;
 
     /// Retrieve the name and shapes of the model inputs.
     fn input_shapes(&self) -> &[(String, Vec<usize>)];

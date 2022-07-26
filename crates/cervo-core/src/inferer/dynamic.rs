@@ -88,10 +88,7 @@ impl Inferer for DynamicInferer {
         max_count
     }
 
-    fn infer_raw<'pad, 'result>(
-        &'result mut self,
-        mut pad: ScratchPadView<'pad>,
-    ) -> Result<(), anyhow::Error> {
+    fn infer_raw(&mut self, mut pad: ScratchPadView) -> Result<(), anyhow::Error> {
         let inputs = self.build_inputs(&pad)?;
 
         // Run the optimized plan to get actions back!

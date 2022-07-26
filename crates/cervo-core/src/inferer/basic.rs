@@ -58,7 +58,7 @@ impl BasicInferer {
             let total_count: usize = full_shape.iter().product();
             assert_eq!(total_count, obs.input_slot(idx).len());
 
-            let tensor = Tensor::from_shape(&full_shape, obs.input_slot(idx))?.into();
+            let tensor = Tensor::from_shape(&full_shape, obs.input_slot(idx))?;
 
             inputs.push(tensor);
         }
@@ -72,10 +72,7 @@ impl Inferer for BasicInferer {
         1
     }
 
-    fn infer_raw<'pad, 'result>(
-        &'result mut self,
-        mut pad: ScratchPadView<'pad>,
-    ) -> Result<(), anyhow::Error> {
+    fn infer_raw(&mut self, mut pad: ScratchPadView) -> Result<(), anyhow::Error> {
         let inputs = self.build_inputs(&pad)?;
 
         // Run the optimized plan to get actions back!
