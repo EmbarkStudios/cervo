@@ -14,8 +14,10 @@ or the fragility of delegating input-building a layer up.
 
 ## Choosing an inferer
 
- <p style="background:rgba(255,181,77,0.16);padding:0.75em;">
-<strong>Note:</strong> Our inferer setup hs been iterated on since 2019, and we've gone through a few variants and tested a bunch of different infering setups. While important distinctions remain, it's important to know that on x86_64 platforms tract will use a kernel optimized for a batch size of 1 or 6 elements, picking whichever works best. Similar patterns exist on arm64. This is being worked on, but limits the performance gain from various batching strategies.</p>
+ <p style="background:rgba(255,181,77,0.16);padding:0.75em;"> <strong>Note:</strong> Our inferer setup hs been iterated
+on since 2019, and we've gone through a few variants and tested a bunch of different infering setups. See the rule of
+thumb for selecting an inferer below; but it is suggested to benchmark. While undocumented, you can use the code in the
+`perf-test` folder on GitHub to run various benchmarks.</p>
 
 Cervo currently provides four different inferers, two of which we've used historially (basic and fixed) and two based on
 newer tract functionalities that we've not tested as much yet. You'll find more detail on each page, but here comes a
