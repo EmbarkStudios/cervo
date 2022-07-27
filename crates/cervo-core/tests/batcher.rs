@@ -145,7 +145,7 @@ fn test_extend_single() {
     let first = &"first";
     for id in 0..2 {
         let mut s = State::empty();
-        s.data.insert(&first, vec![0.0; 11]);
+        s.data.insert(first, vec![0.0; 11]);
         batch.insert(id, s);
     }
 
@@ -173,10 +173,10 @@ fn test_extend_double() {
 
     let mut batch: HashMap<u64, State<'static>> = HashMap::default();
 
-    let first = &"first";
+    let first = "first";
     for id in 0..4 {
         let mut s = State::empty();
-        s.data.insert(&first, vec![0.0; 11]);
+        s.data.insert(first, vec![0.0; 11]);
         batch.insert(id, s);
     }
 
@@ -217,7 +217,7 @@ fn test_values() {
     for id in 0..4 {
         let mut s = State::empty();
         s.data
-            .insert(&first, (11 * id..(id + 1) * 11).map(|i| i as f32).collect());
+            .insert(first, (11 * id..(id + 1) * 11).map(|i| i as f32).collect());
 
         batcher.push(id, s).unwrap();
     }
