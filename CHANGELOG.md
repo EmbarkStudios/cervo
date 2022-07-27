@@ -33,7 +33,8 @@ Thus, to upgrade you'll need to:
 There's also a new `Batcher` which will help with batch building,
 while also improving performance. Using this helper will further
 reduce the number of allocations per call. On average, this is about a
-10% performance gain.
+10% performance gain. The easiest way to use this is using the
+`.into_batched()` on your existing inferer.
 
 Other changes:
 

@@ -48,7 +48,7 @@ pub use fixed::FixedBatchInferer;
 pub use memoizing::MemoizingDynamicInferer;
 
 use crate::{
-    batcher::{Batcher, ScratchPadView},
+    batcher::{Batched, Batcher, ScratchPadView},
     epsilon::{EpsilonInjector, NoiseGenerator},
 };
 
@@ -168,6 +168,11 @@ pub trait InfererExt: Inferer + Sized {
         key: &str,
     ) -> Result<EpsilonInjector<Self, G>> {
         EpsilonInjector::with_generator(self, generator, key)
+    }
+
+    /// Wrap in a batching interface.
+    fn into_batched(self) -> Batched<Self> {
+        Batched::wrap(self)
     }
 
     /// Execute the model on the provided batch of elements.

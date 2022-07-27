@@ -16,7 +16,7 @@ mod model_api;
 
 /// Most core utilities are re-exported here.
 pub mod prelude {
-    pub use super::batcher::Batcher;
+    pub use super::batcher::{Batched, Batcher};
     pub use super::epsilon::{
         EpsilonInjector, HighQualityNoiseGenerator, LowQualityNoiseGenerator, NoiseGenerator,
     };
