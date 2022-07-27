@@ -1,5 +1,5 @@
 // Author: Tom Solberg <tom.solberg@embark-studios.com>
-// Copyright © 2022, Tom Solberg, all rights reserved.
+// Copyright © 2022, Embark Studios, all rights reserved.
 // Created: 22 July 2022
 
 /*!
@@ -31,7 +31,7 @@ impl ScratchPadData {
             count,
         };
 
-        this.reserve(capacity * count);
+        this.reserve(capacity);
         this
     }
 
@@ -182,28 +182,32 @@ pub struct ScratchPadView<'a> {
 }
 
 impl<'a> ScratchPadView<'a> {
-    /// See [`ScratchPad::input_slot`].
+    /// View of the input at location `slot`.
     pub fn input_slot(&self, slot: usize) -> &[f32] {
         self.pad.input_slot(slot, self.batch_range.clone())
     }
 
-    /// See [`ScratchPad::input_slot_mut`].
+    /// A mutable view of the input at location `slot`.
     pub fn input_slot_mut(&mut self, slot: usize) -> &mut [f32] {
         self.pad.input_slot_mut(slot, self.batch_range.clone())
     }
-    /// See [`ScratchPad::input_name`].
+
+    /// Retrieve the input name for `slot`.
     pub fn input_name(&self, slot: usize) -> &str {
         self.pad.input_name(slot)
     }
-    /// See [`ScratchPad::output_slot`].
+
+    /// A mutable view of the data at input `slot`.
     pub fn output_slot(&self, slot: usize) -> &[f32] {
         self.pad.output_slot(slot, self.batch_range.clone())
     }
-    /// See [`ScratchPad::output_slot_mut`].
+
+    /// A mutable view of the data at location `slot`.
     pub fn output_slot_mut(&mut self, slot: usize) -> &mut [f32] {
         self.pad.output_slot_mut(slot, self.batch_range.clone())
     }
-    /// See [`ScratchPad::output_name`].
+
+    /// Retrieve the output name for `slot`.
     pub fn output_name(&self, slot: usize) -> &str {
         self.pad.output_name(slot)
     }
@@ -312,5 +316,47 @@ impl Batcher {
         Ok(HashMap::from_iter(
             self.scratch.ids.drain(..).zip(outputs.into_iter()),
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    mod scratchppaddata {
+        use super::super::ScratchPadData;
+        #[test]
+        fn has_right_initial_space() {
+            let spd = ScratchPadData::new("epsilon".to_owned(), 24, 2);
+
+            assert_eq!(spd.count, 24);
+            assert_eq!(spd.data.len(), 48);
+            assert_eq!(spd.name, "epsilon");
+        }
+
+        #[test]
+        fn reserves_correct_size() {
+            let mut spd = ScratchPadData::new("epsilon".to_owned(), 24, 2);
+
+            spd.reserve(4);
+            assert_eq!(spd.count, 24);
+            assert_eq!(spd.data.len(), 24 * 4);
+        }
+
+        #[test]
+        fn views_correct_range() {
+            let mut spd = ScratchPadData::new("epsilon".to_owned(), 6, 4);
+
+            spd.reserve(4);
+            for idx in 0..24 {
+                spd.data[idx] = idx as f32;
+            }
+
+            assert_eq!(spd.view(0..1), [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
+            assert_eq!(spd.view_mut(0..1), [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
+            assert_eq!(spd.view(1..2), [6.0, 7.0, 8.0, 9.0, 10.0, 11.0]);
+            assert_eq!(spd.view_mut(1..2), [6.0, 7.0, 8.0, 9.0, 10.0, 11.0]);
+
+            assert_eq!(spd.view(3..4), [18.0, 19.0, 20.0, 21.0, 22.0, 23.0]);
+            assert_eq!(spd.view_mut(3..4), [18.0, 19.0, 20.0, 21.0, 22.0, 23.0]);
+        }
     }
 }
