@@ -1,5 +1,5 @@
 // Author: Tom Solberg <tom.solberg@embark-studios.com>
-// Copyright © 2022, Tom Solberg, all rights reserved.
+// Copyright © 2022, Embark Studios, all rights reserved.
 // Created: 27 July 2022
 
 /*!
