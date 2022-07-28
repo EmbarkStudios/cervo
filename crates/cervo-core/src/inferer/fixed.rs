@@ -94,7 +94,7 @@ impl Inferer for FixedBatchInferer {
         plan.execute(batch, &self.model_api)
     }
 
-    fn select_batch_size(&mut self, max_count: usize) -> usize {
+    fn select_batch_size(&self, max_count: usize) -> usize {
         // Find the smallest batch size below or equal to max_count
         self.models
             .iter()

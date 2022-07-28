@@ -25,7 +25,7 @@ where
     B: FnMut(usize) -> usize,
     R: FnMut(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
 {
-    fn select_batch_size(&mut self, max_count: usize) -> usize {
+    fn select_batch_size(&self, max_count: usize) -> usize {
         (self.batch_size)(max_count)
     }
 

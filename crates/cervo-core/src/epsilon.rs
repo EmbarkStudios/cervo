@@ -170,7 +170,7 @@ where
     T: Inferer,
     NG: NoiseGenerator,
 {
-    fn select_batch_size(&mut self, max_count: usize) -> usize {
+    fn select_batch_size(&self, max_count: usize) -> usize {
         self.inner.select_batch_size(max_count)
     }
 

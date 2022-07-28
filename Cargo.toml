@@ -1,10 +1,11 @@
 [workspace]
 members = [
     "crates/cervo",
+    "crates/cervo-asset",
     "crates/cervo-core",
     "crates/cervo-nnef",
     "crates/cervo-onnx",
-    "crates/cervo-asset",
+    "crates/cervo-runtime",
 ]
 
 exclude = [ "benchmarks/perf-test" ]

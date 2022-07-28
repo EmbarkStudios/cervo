@@ -181,6 +181,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "cervo-runtime"
+version = "0.2.1-alpha.0"
+dependencies = [
+ "cervo-core",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

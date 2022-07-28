@@ -68,7 +68,7 @@ impl BasicInferer {
 }
 
 impl Inferer for BasicInferer {
-    fn select_batch_size(&mut self, _: usize) -> usize {
+    fn select_batch_size(&self, _: usize) -> usize {
         1
     }
 

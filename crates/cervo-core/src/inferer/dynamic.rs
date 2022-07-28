@@ -84,7 +84,7 @@ impl DynamicInferer {
 }
 
 impl Inferer for DynamicInferer {
-    fn select_batch_size(&mut self, max_count: usize) -> usize {
+    fn select_batch_size(&self, max_count: usize) -> usize {
         max_count
     }
 

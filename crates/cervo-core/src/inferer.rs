@@ -93,7 +93,7 @@ impl<'a> Response<'a> {
 /// The main workhorse shared by all components in Cervo.
 pub trait Inferer {
     /// Query the inferer for how many elements it can deal with in a single batch.
-    fn select_batch_size(&mut self, max_count: usize) -> usize;
+    fn select_batch_size(&self, max_count: usize) -> usize;
 
     /// Execute the model on the provided pre-batched data.
     fn infer_raw(&mut self, batch: ScratchPadView) -> Result<(), anyhow::Error>;
@@ -213,3 +213,21 @@ pub trait InfererExt: Inferer + Sized {
 }
 
 impl<T> InfererExt for T where T: Inferer + Sized {}
+
+impl Inferer for Box<dyn Inferer> {
+    fn select_batch_size(&self, max_count: usize) -> usize {
+        self.as_ref().select_batch_size(max_count)
+    }
+
+    fn infer_raw(&mut self, batch: ScratchPadView) -> Result<(), anyhow::Error> {
+        self.as_mut().infer_raw(batch)
+    }
+
+    fn input_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.as_ref().input_shapes()
+    }
+
+    fn output_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.as_ref().output_shapes()
+    }
+}
