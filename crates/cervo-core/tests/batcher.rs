@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use cervo_core::prelude::{Batcher, Inferer, InfererExt, State};
 
 struct TestInferer<
-    B: FnMut(usize) -> usize,
+    B: Fn(usize) -> usize,
     R: FnMut(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
 > {
     batch_size: B,
@@ -22,7 +22,7 @@ struct TestInferer<
 
 impl<B, R> Inferer for TestInferer<B, R>
 where
-    B: FnMut(usize) -> usize,
+    B: Fn(usize) -> usize,
     R: FnMut(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
 {
     fn select_batch_size(&self, max_count: usize) -> usize {
