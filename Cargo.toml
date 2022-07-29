@@ -5,7 +5,6 @@ members = [
     "crates/cervo-core",
     "crates/cervo-nnef",
     "crates/cervo-onnx",
-    "crates/cervo-runtime",
 ]
 
 exclude = [ "benchmarks/perf-test" ]
