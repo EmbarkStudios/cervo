@@ -2,13 +2,13 @@
 // Copyright © 2022, Embark Studios, all rights reserved.
 // Created: 27 July 2022
 
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 use cervo_core::prelude::{Batcher, Inferer, InfererExt, State};
 
 struct TestInferer<
     B: Fn(usize) -> usize,
-    R: FnMut(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
+    R: Fn(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
 > {
     batch_size: B,
     raw: R,
@@ -19,14 +19,14 @@ struct TestInferer<
 impl<B, R> Inferer for TestInferer<B, R>
 where
     B: Fn(usize) -> usize,
-    R: FnMut(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
+    R: Fn(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
 {
     fn select_batch_size(&self, max_count: usize) -> usize {
         (self.batch_size)(max_count)
     }
 
     fn infer_raw(
-        &mut self,
+        &self,
         batch: cervo_core::batcher::ScratchPadView,
     ) -> anyhow::Result<(), anyhow::Error> {
         (self.raw)(batch)
@@ -67,11 +67,11 @@ fn test_construct_loose() {
 
 #[test]
 fn test_push_basic() {
-    let mut call_count = 0;
+    let call_count = RefCell::new(0);
     let mut inf = TestInferer {
         batch_size: |_| 1,
         raw: |b| {
-            call_count += 1;
+            *call_count.borrow_mut() += 1;
             assert_eq!(b.len(), 1);
             assert_eq!(b.input_slot(0).len(), 11);
             Ok(())
@@ -89,16 +89,42 @@ fn test_push_basic() {
     }
 
     batcher.execute(&mut inf).unwrap();
-    assert_eq!(call_count, 2);
+    assert_eq!(call_count.take(), 2);
+}
+
+#[test]
+fn test_push_wrapped() {
+    let call_count = RefCell::new(0);
+    let mut inf = TestInferer {
+        batch_size: |_| 1,
+        raw: |b| {
+            *call_count.borrow_mut() += 1;
+            assert_eq!(b.len(), 1);
+            assert_eq!(b.input_slot(0).len(), 11);
+            Ok(())
+        },
+        in_shapes: vec![("first".to_owned(), vec![11])],
+        out_shapes: vec![("out".to_owned(), vec![11])],
+    };
+
+    let mut batcher = inf.into_batched();
+
+    for id in 0..2 {
+        let s = State::empty();
+        batcher.push(id, s).unwrap();
+    }
+
+    batcher.execute().unwrap();
+    assert_eq!(call_count.take(), 2);
 }
 
 #[test]
 fn test_push_two() {
-    let mut call_count = 0;
+    let call_count = RefCell::new(0);
     let mut inf = TestInferer {
         batch_size: |_| 2,
         raw: |b| {
-            call_count += 1;
+            *call_count.borrow_mut() += 1;
             assert_eq!(b.len(), 2);
             assert_eq!(b.input_slot(0).len(), 22);
             Ok(())
@@ -116,16 +142,16 @@ fn test_push_two() {
     }
 
     batcher.execute(&mut inf).unwrap();
-    assert_eq!(call_count, 2);
+    assert_eq!(call_count.take(), 2);
 }
 
 #[test]
 fn test_extend_single() {
-    let mut call_count = 0;
+    let call_count = RefCell::new(0);
     let mut inf = TestInferer {
         batch_size: |_| 1,
         raw: |b| {
-            call_count += 1;
+            *call_count.borrow_mut() += 1;
             assert_eq!(b.len(), 1);
             assert_eq!(b.input_slot(0).len(), 11);
             Ok(())
@@ -147,16 +173,47 @@ fn test_extend_single() {
 
     batcher.extend(batch).unwrap();
     batcher.execute(&mut inf).unwrap();
-    assert_eq!(call_count, 2);
+    assert_eq!(call_count.take(), 2);
+}
+
+#[test]
+fn test_extend_wrapped() {
+    let call_count = RefCell::new(0);
+    let inf = TestInferer {
+        batch_size: |_| 1,
+        raw: |b| {
+            *call_count.borrow_mut() += 1;
+            assert_eq!(b.len(), 1);
+            assert_eq!(b.input_slot(0).len(), 11);
+            Ok(())
+        },
+        in_shapes: vec![("first".to_owned(), vec![11])],
+        out_shapes: vec![("out".to_owned(), vec![11])],
+    };
+
+    let mut batcher = inf.into_batched();
+
+    let mut batch: HashMap<u64, State<'static>> = HashMap::default();
+
+    let first = &"first";
+    for id in 0..2 {
+        let mut s = State::empty();
+        s.data.insert(first, vec![0.0; 11]);
+        batch.insert(id, s);
+    }
+
+    batcher.extend(batch).unwrap();
+    batcher.execute().unwrap();
+    assert_eq!(call_count.take(), 2);
 }
 
 #[test]
 fn test_extend_double() {
-    let mut call_count = 0;
+    let call_count = RefCell::new(0);
     let mut inf = TestInferer {
         batch_size: |_| 2,
         raw: |b| {
-            call_count += 1;
+            *call_count.borrow_mut() += 1;
             assert_eq!(b.len(), 2);
             assert_eq!(b.input_slot(0).len(), 22);
             Ok(())
@@ -178,12 +235,12 @@ fn test_extend_double() {
 
     batcher.extend(batch).unwrap();
     batcher.execute(&mut inf).unwrap();
-    assert_eq!(call_count, 2);
+    assert_eq!(call_count.take(), 2);
 }
 
 #[test]
 fn test_values() {
-    let mut call_count = 0;
+    let call_count = RefCell::new(0);
     let mut inf = TestInferer {
         batch_size: |_| 2,
         raw: |mut b| {
@@ -191,16 +248,17 @@ fn test_values() {
             assert_eq!(b.input_slot(0).len(), 22);
             assert_eq!(
                 b.input_slot(0),
-                (11 * (call_count * b.len())..(call_count * b.len() + b.len()) * 11)
+                (11 * (*call_count.borrow() * b.len())
+                    ..(*call_count.borrow() * b.len() + b.len()) * 11)
                     .map(|i| i as f32)
                     .collect::<Vec<_>>()
             );
             let l = b.len();
             let out = b.output_slot_mut(0);
             for (i, o) in out.iter_mut().enumerate() {
-                *o = (call_count * l) as f32 + i as f32 / 11.0;
+                *o = (*call_count.borrow() * l) as f32 + i as f32 / 11.0;
             }
-            call_count += 1;
+            *call_count.borrow_mut() += 1;
             Ok(())
         },
         in_shapes: vec![("first".to_owned(), vec![11])],
@@ -226,5 +284,5 @@ fn test_values() {
         assert_eq!(vals.data["out"][0], id as f32);
     }
 
-    assert_eq!(call_count, 2);
+    assert_eq!(call_count.take(), 2);
 }

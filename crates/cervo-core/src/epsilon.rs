@@ -6,6 +6,8 @@
 Utilities for filling noise inputs for an inference model.
 */
 
+use std::cell::RefCell;
+
 use crate::{batcher::ScratchPadView, inferer::Inferer};
 use anyhow::{bail, Result};
 use perchance::PerchanceContext;
@@ -15,7 +17,7 @@ use rand_distr::{Distribution, StandardNormal};
 /// NoiseGenerators are consumed by the [`EpsilonInjector`] by generating noise sampled for a standard normal
 /// distribution. Custom noise-generators can be implemented and passed via [`EpsilonInjector::with_generator`].
 pub trait NoiseGenerator {
-    fn generate(&mut self, count: usize, out: &mut [f32]);
+    fn generate(&self, count: usize, out: &mut [f32]);
 }
 
 /// A non-noisy noise generator, primarily intended for debugging or testing purposes.
@@ -41,7 +43,7 @@ impl ConstantGenerator {
 }
 
 impl NoiseGenerator for ConstantGenerator {
-    fn generate(&mut self, _count: usize, out: &mut [f32]) {
+    fn generate(&self, _count: usize, out: &mut [f32]) {
         for o in out {
             *o = self.value;
         }
@@ -53,14 +55,14 @@ impl NoiseGenerator for ConstantGenerator {
 ///
 /// The default implementation will seed the generator from the current time.
 pub struct LowQualityNoiseGenerator {
-    ctx: PerchanceContext,
+    ctx: RefCell<PerchanceContext>,
 }
 
 impl LowQualityNoiseGenerator {
     /// Create a new LQNG with the provided fixed seed.
     pub fn new(seed: u128) -> Self {
         Self {
-            ctx: PerchanceContext::new(seed),
+            ctx: RefCell::new(PerchanceContext::new(seed)),
         }
     }
 }
@@ -68,16 +70,17 @@ impl LowQualityNoiseGenerator {
 impl Default for LowQualityNoiseGenerator {
     fn default() -> Self {
         Self {
-            ctx: PerchanceContext::new(perchance::gen_time_seed()),
+            ctx: RefCell::new(PerchanceContext::new(perchance::gen_time_seed())),
         }
     }
 }
 
 impl NoiseGenerator for LowQualityNoiseGenerator {
     /// Generate `count` random values.
-    fn generate(&mut self, _count: usize, out: &mut [f32]) {
+    fn generate(&self, _count: usize, out: &mut [f32]) {
+        let mut ctx = self.ctx.borrow_mut();
         for o in out {
-            *o = self.ctx.normal_f32();
+            *o = ctx.normal_f32();
         }
     }
 }
@@ -101,7 +104,7 @@ impl Default for HighQualityNoiseGenerator {
 
 impl NoiseGenerator for HighQualityNoiseGenerator {
     /// Generate `count` random values.
-    fn generate(&mut self, _count: usize, out: &mut [f32]) {
+    fn generate(&self, _count: usize, out: &mut [f32]) {
         let mut rng = thread_rng();
         for o in out {
             *o = self.normal_distribution.sample(&mut rng);
@@ -174,7 +177,7 @@ where
         self.inner.select_batch_size(max_count)
     }
 
-    fn infer_raw(&mut self, mut batch: ScratchPadView) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, mut batch: ScratchPadView) -> Result<(), anyhow::Error> {
         let total_count = self.count * batch.len();
         let output = batch.input_slot_mut(self.index);
         self.generator.generate(total_count, output);

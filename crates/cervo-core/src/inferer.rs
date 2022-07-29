@@ -82,12 +82,6 @@ impl<'a> Response<'a> {
             data: Default::default(),
         }
     }
-
-    pub fn append(&mut self, other: Response<'_>) {
-        for (k, v) in other.data {
-            self.data.get_mut(k).unwrap().extend_from_slice(&v);
-        }
-    }
 }
 
 /// The main workhorse shared by all components in Cervo.
@@ -96,7 +90,7 @@ pub trait Inferer {
     fn select_batch_size(&self, max_count: usize) -> usize;
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_raw(&mut self, batch: ScratchPadView) -> Result<(), anyhow::Error>;
+    fn infer_raw(&self, batch: ScratchPadView) -> Result<(), anyhow::Error>;
 
     /// Retrieve the name and shapes of the model inputs.
     fn input_shapes(&self) -> &[(String, Vec<usize>)];
@@ -191,7 +185,7 @@ pub trait InfererExt: Inferer + Sized {
 
     /// Execute the model on the provided pre-batched data.
     fn infer_batch<'this>(
-        &'this mut self,
+        &'this self,
         batch: HashMap<u64, State>,
     ) -> Result<HashMap<u64, Response<'this>>, anyhow::Error> {
         let mut batcher = Batcher::new_sized(self, batch.len());
@@ -201,7 +195,7 @@ pub trait InfererExt: Inferer + Sized {
     }
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_single<'this>(&'this mut self, input: State) -> Result<Response<'this>, anyhow::Error>
+    fn infer_single<'this>(&'this self, input: State) -> Result<Response<'this>, anyhow::Error>
     where
         Self: Sized,
     {
@@ -219,8 +213,8 @@ impl Inferer for Box<dyn Inferer> {
         self.as_ref().select_batch_size(max_count)
     }
 
-    fn infer_raw(&mut self, batch: ScratchPadView) -> Result<(), anyhow::Error> {
-        self.as_mut().infer_raw(batch)
+    fn infer_raw(&self, batch: ScratchPadView) -> Result<(), anyhow::Error> {
+        self.as_ref().infer_raw(batch)
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

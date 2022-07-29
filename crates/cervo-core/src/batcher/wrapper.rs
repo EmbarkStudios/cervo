@@ -44,6 +44,11 @@ where
 
     /// Execute the model on the data that has been enqueued previously.
     pub fn execute(&mut self) -> anyhow::Result<HashMap<u64, Response>> {
-        self.batcher.execute(&mut self.inner)
+        self.batcher.execute(&self.inner)
+    }
+
+    /// Split the batcher and the inferer.
+    pub fn into_parts(self) -> (Inf, Batcher) {
+        (self.inner, self.batcher)
     }
 }

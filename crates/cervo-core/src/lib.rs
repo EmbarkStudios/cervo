@@ -22,7 +22,7 @@ pub mod prelude {
     };
     pub use super::inferer::{
         BasicInferer, DynamicInferer, FixedBatchInferer, Inferer, InfererBuilder, InfererExt,
-        InfererProvider, MemoizingDynamicInferer, State,
+        InfererProvider, MemoizingDynamicInferer, Response, State,
     };
     pub use super::model_api::ModelApi;
 }

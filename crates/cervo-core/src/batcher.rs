@@ -90,7 +90,7 @@ impl Batcher {
     /// Run the provided inferer on the data that has been enqueued previously.
     pub fn execute<'a, 'b>(
         &'a mut self,
-        inferer: &'b mut dyn Inferer,
+        inferer: &'b dyn Inferer,
     ) -> anyhow::Result<HashMap<u64, Response<'b>>> {
         // pick up as many items as possible (by slicing the stores) and feed into the model.
         // this builds up a set of output stores that'll feed in sequence.
@@ -120,5 +120,15 @@ impl Batcher {
         Ok(HashMap::from_iter(
             self.scratch.ids.drain(..).zip(outputs.into_iter()),
         ))
+    }
+
+    /// Check if there is any data to run on here.
+    pub fn is_empty(&self) -> bool {
+        self.scratch.batch_size == 0
+    }
+
+    /// Amount of elements to run on in the batch here.
+    pub fn len(&self) -> usize {
+        self.scratch.batch_size
     }
 }
