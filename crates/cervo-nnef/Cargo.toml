@@ -14,8 +14,8 @@ readme = "../../README.md"
 
 [dependencies]
 anyhow = "1.0.57"
-tract-onnx =  { version = "0.17.1" }
-tract-nnef = { version = "0.17.1" }
-tract-hir = { version = "0.17.1" }
+tract-onnx =  { version = "0.17" }
+tract-nnef = { version = "0.17" }
+tract-hir = { version = "0.17" }
 cervo-core = { version= "0.2.0", path = "../cervo-core" }
 lazy_static = "1.4"
