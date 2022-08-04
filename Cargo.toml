@@ -7,3 +7,10 @@ members = [
     "crates/cervo-asset",
 #    "benchmarks/perf-test"
 ]
+
+[patch.crates-io]
+tract-linalg =  { git = "https://github.com/EmbarkStudios/tract", branch = "aarch64-linux" }
+tract-core =  { git = "https://github.com/EmbarkStudios/tract", branch = "aarch64-linux" }
+tract-hir =  { git = "https://github.com/EmbarkStudios/tract", branch = "aarch64-linux" }
+tract-nnef =  { git = "https://github.com/EmbarkStudios/tract", branch = "aarch64-linux" }
+tract-onnx =  { git = "https://github.com/EmbarkStudios/tract", branch = "aarch64-linux" }
