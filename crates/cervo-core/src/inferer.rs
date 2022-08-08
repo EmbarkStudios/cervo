@@ -14,7 +14,7 @@ or the fragility of delegating input-building a layer up.
 
 ## Choosing an inferer
 
- <p style="background:rgba(255,181,77,0.16);padding:0.75em;"> <strong>Note:</strong> Our inferer setup hs been iterated
+ <p style="background:rgba(255,181,77,0.16);padding:0.75em;"> <strong>Note:</strong> Our inferer setup has been iterated
 on since 2019, and we've gone through a few variants and tested a bunch of different infering setups. See the rule of
 thumb for selecting an inferer below; but it is suggested to benchmark. While undocumented, you can use the code in the
 `perf-test` folder on GitHub to run various benchmarks.</p>
