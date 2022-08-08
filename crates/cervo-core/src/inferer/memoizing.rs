@@ -1,6 +1,6 @@
-use super::{helpers, Inferer, Response, State};
-use crate::model_api::ModelApi;
-use anyhow::{Error, Result};
+use super::{helpers, Inferer};
+use crate::{batcher::ScratchPadView, model_api::ModelApi};
+use anyhow::Result;
 use std::collections::{hash_map::Entry, HashMap};
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
@@ -92,34 +92,28 @@ impl MemoizingDynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&mut self, obs: Vec<State>) -> (TVec<Tensor>, usize) {
-        let size = obs.len();
-        let mut inputs = TVec::default();
-        let mut named_inputs = TVec::default();
+    fn build_inputs(&mut self, batch: &ScratchPadView) -> Result<TVec<Tensor>> {
+        let size = batch.len();
 
-        for (name, shape) in &self.model_api.inputs {
+        let mut inputs = TVec::default();
+
+        for (idx, (name, shape)) in self.model_api.inputs.iter().enumerate() {
+            assert_eq!(name, batch.input_name(idx));
+
             let mut full_shape = tvec![size];
             full_shape.extend_from_slice(shape);
 
-            let total_count = full_shape.iter().product();
-            named_inputs.push((name, (full_shape, Vec::with_capacity(total_count))));
-        }
+            let total_count: usize = full_shape.iter().product();
+            assert_eq!(total_count, batch.input_slot(idx).len());
 
-        for observation in obs {
-            for (name, (_, store)) in named_inputs.iter_mut() {
-                store.extend_from_slice(&observation.data[*name]);
-            }
-        }
+            let shape = full_shape;
 
-        for (_, (shape, store)) in named_inputs {
-            let tensor = unsafe {
-                tract_ndarray::Array::from_shape_vec_unchecked(shape.into_vec(), store).into()
-            };
+            let tensor = Tensor::from_shape(&shape, batch.input_slot(idx))?;
 
             inputs.push(tensor);
         }
 
-        (inputs, size)
+        Ok(inputs)
     }
 
     fn get_concrete_model(&mut self, size: usize) -> Result<&TypedSimplePlan<TypedModel>> {
@@ -136,43 +130,25 @@ impl MemoizingDynamicInferer {
 
         Ok(&self.model_cache[&size])
     }
-
-    fn infer_batched(&mut self, obs: Vec<State>, vec_out: &mut [Response]) -> TractResult<()> {
-        let (inputs, count) = self.build_inputs(obs);
-
-        // Run the optimized plan to get actions back!
-        let result = self.get_concrete_model(count)?.run(inputs)?;
-
-        for (idx, (name, shape)) in self.model_api.outputs.iter().enumerate() {
-            for (response_idx, value) in result[idx]
-                .to_array_view::<f32>()?
-                .as_slice()
-                .unwrap()
-                .chunks(shape.iter().product())
-                .map(|value| value.to_vec())
-                .enumerate()
-            {
-                vec_out[response_idx].data.insert(name.to_owned(), value);
-            }
-        }
-
-        Ok(())
-    }
 }
 
 impl Inferer for MemoizingDynamicInferer {
-    fn infer(
-        &mut self,
-        observations: HashMap<u64, State>,
-    ) -> Result<HashMap<u64, Response>, Error> {
-        let mut responses: Vec<Response> = vec![Response::default(); observations.len()];
-        let (ids, obs): (Vec<_>, Vec<_>) = observations.into_iter().unzip();
+    fn select_batch_size(&self, max_count: usize) -> usize {
+        max_count
+    }
 
-        self.infer_batched(obs, &mut responses)?;
+    fn infer_raw(&mut self, mut pad: ScratchPadView) -> Result<(), anyhow::Error> {
+        let count = pad.len();
+        let inputs = self.build_inputs(&pad)?;
 
-        let results: HashMap<u64, Response> = ids.into_iter().zip(responses.drain(..)).collect();
+        let result = self.get_concrete_model(count)?.run(inputs)?;
 
-        Ok(results)
+        for idx in 0..self.model_api.outputs.len() {
+            let value = result[idx].as_slice::<f32>()?;
+            pad.output_slot_mut(idx).copy_from_slice(value);
+        }
+
+        Ok(())
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

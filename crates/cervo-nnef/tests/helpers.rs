@@ -27,7 +27,7 @@ pub fn build_inputs_from_desc(count: u64, inputs: &[(String, Vec<usize>)]) -> Ha
                 State {
                     data: inputs
                         .iter()
-                        .map(|(key, count)| ((*key).clone(), vec![0.0; count.iter().product()]))
+                        .map(|(key, count)| (key.as_str(), vec![0.0; count.iter().product()]))
                         .collect(),
                 },
             )

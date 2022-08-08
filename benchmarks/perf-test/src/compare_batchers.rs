@@ -49,8 +49,8 @@ fn execute_steps(
     batch_size: usize,
 ) -> Result<Vec<Measurement>> {
     perchance::seed_global(0xff00ff00ff00ff00ff00ff00ff00ff00u128);
-    let observations =
-        crate::helpers::build_inputs_from_desc(batch_size as u64, inferer.input_shapes());
+    let inputs = inferer.input_shapes().to_vec();
+    let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
 
     let mut measurements = vec![];
     for step in 0..steps {
@@ -58,11 +58,11 @@ fn execute_steps(
             observations.clone()
         } else {
             let batch_size = perchance::global().uniform_range_usize(1..10);
-            crate::helpers::build_inputs_from_desc(batch_size as u64, inferer.input_shapes())
+            crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs)
         };
 
         let start = Instant::now();
-        let res = inferer.infer(obs)?;
+        let res = inferer.infer_batch(obs)?;
         black_box(&res);
         let elapsed = start.elapsed();
 

@@ -1,12 +1,11 @@
 /*!
 A basic unbatched inferer that doesn't require a lot of custom setup or management.
  */
-use super::{Inferer, Response, State};
-use crate::model_api::ModelApi;
-use anyhow::{Error, Result};
-use std::collections::HashMap;
-use tract_core::{ndarray::IntoDimension, prelude::*};
-use tract_hir::prelude::*;
+use super::Inferer;
+use crate::{batcher::ScratchPadView, model_api::ModelApi};
+use anyhow::Result;
+use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_hir::prelude::InferenceModel;
 
 use super::helpers;
 
@@ -47,68 +46,44 @@ impl BasicInferer {
         Ok(Self { model, model_api })
     }
 
-    fn build_inputs(&mut self, mut obs: State) -> TVec<Tensor> {
+    fn build_inputs(&mut self, obs: &ScratchPadView) -> Result<TVec<Tensor>> {
         let mut inputs = TVec::default();
 
-        for (name, shape) in self.model_api.inputs.iter() {
+        for (idx, (name, shape)) in self.model_api.inputs.iter().enumerate() {
+            assert_eq!(name, obs.input_name(idx));
+
             let mut full_shape = tvec![1];
             full_shape.extend_from_slice(shape);
 
-            debug_assert!(obs.data.contains_key(name));
+            let total_count: usize = full_shape.iter().product();
+            assert_eq!(total_count, obs.input_slot(idx).len());
 
-            let tensor = unsafe {
-                tract_ndarray::Array::from_shape_vec_unchecked(
-                    full_shape.into_dimension(),
-                    obs.data.remove(name).unwrap(),
-                )
-                .into()
-            };
+            let tensor = Tensor::from_shape(&full_shape, obs.input_slot(idx))?;
 
             inputs.push(tensor);
         }
 
-        inputs
-    }
-
-    /// Run a single pass through the model.
-    ///
-    /// # Errors
-    ///
-    /// Will only forward errors from the [`tract_core::plan::SimplePlan::run`] call.
-    pub fn infer_once(&mut self, obs: State) -> TractResult<Response> {
-        let inputs = self.build_inputs(obs);
-
-        // Run the optimized plan to get actions back!
-        let result = self.model.run(inputs)?;
-
-        let mut response = Response::default();
-        for (idx, (name, _)) in self.model_api.outputs.iter().enumerate() {
-            response.data.insert(
-                name.clone(),
-                result[idx]
-                    .to_array_view::<f32>()?
-                    .to_slice()
-                    .unwrap()
-                    .to_vec(),
-            );
-        }
-
-        Ok(response)
+        Ok(inputs)
     }
 }
 
 impl Inferer for BasicInferer {
-    fn infer(
-        &mut self,
-        observations: HashMap<u64, State>,
-    ) -> Result<HashMap<u64, Response>, Error> {
-        let mut responses = HashMap::default();
-        for (id, obs) in observations.into_iter() {
-            let response = self.infer_once(obs)?;
-            responses.insert(id, response);
+    fn select_batch_size(&self, _: usize) -> usize {
+        1
+    }
+
+    fn infer_raw(&mut self, mut pad: ScratchPadView) -> Result<(), anyhow::Error> {
+        let inputs = self.build_inputs(&pad)?;
+
+        // Run the optimized plan to get actions back!
+        let result = self.model.run(inputs)?;
+
+        for idx in 0..self.model_api.outputs.iter().len() {
+            let value = result[idx].as_slice::<f32>()?;
+            pad.output_slot_mut(idx).copy_from_slice(value);
         }
 
-        Ok(responses)
+        Ok(())
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

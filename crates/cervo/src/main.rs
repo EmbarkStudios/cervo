@@ -10,14 +10,14 @@ use commands::Command;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
-struct Tractor {
+struct Cervo {
     #[clap(subcommand)]
     command: Command,
 }
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-    let args = Tractor::parse();
+    let args = Cervo::parse();
 
     commands::run(args.command)
 }

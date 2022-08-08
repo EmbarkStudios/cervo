@@ -14,8 +14,10 @@ or the fragility of delegating input-building a layer up.
 
 ## Choosing an inferer
 
- <p style="background:rgba(255,181,77,0.16);padding:0.75em;">
-<strong>Note:</strong> Our inferer setup hs been iterated on since 2019, and we've gone through a few variants and tested a bunch of different infering setups. While important distinctions remain, it's important to know that on x86_64 platforms tract will use a kernel optimized for a batch size of 1 or 6 elements, picking whichever works best. Similar patterns exist on arm64. This is being worked on, but limits the performance gain from various batching strategies.</p>
+ <p style="background:rgba(255,181,77,0.16);padding:0.75em;"> <strong>Note:</strong> Our inferer setup has been iterated
+on since 2019, and we've gone through a few variants and tested a bunch of different infering setups. See the rule of
+thumb for selecting an inferer below; but it is suggested to benchmark. While undocumented, you can use the code in the
+`perf-test` folder on GitHub to run various benchmarks.</p>
 
 Cervo currently provides four different inferers, two of which we've used historially (basic and fixed) and two based on
 newer tract functionalities that we've not tested as much yet. You'll find more detail on each page, but here comes a
@@ -47,25 +49,54 @@ pub use dynamic::DynamicInferer;
 pub use fixed::FixedBatchInferer;
 pub use memoizing::MemoizingDynamicInferer;
 
-use crate::epsilon::{EpsilonInjector, NoiseGenerator};
+use crate::{
+    batcher::{Batched, Batcher, ScratchPadView},
+    epsilon::{EpsilonInjector, NoiseGenerator},
+};
 
 /// The data of one element in a batch.
 #[derive(Clone, Debug)]
-pub struct State {
-    pub data: HashMap<String, Vec<f32>>,
+pub struct State<'a> {
+    pub data: HashMap<&'a str, Vec<f32>>,
+}
+
+impl<'a> State<'a> {
+    /// Create a new empty state to fill with data
+    pub fn empty() -> Self {
+        Self {
+            data: Default::default(),
+        }
+    }
 }
 
 /// The output for one batch element.
 #[derive(Clone, Debug, Default)]
-pub struct Response {
-    pub data: HashMap<String, Vec<f32>>,
+pub struct Response<'a> {
+    pub data: HashMap<&'a str, Vec<f32>>,
 }
 
-/// The main workhorse shared by all components in Tractor.
+impl<'a> Response<'a> {
+    /// Create a new empty state to fill with data
+    pub fn empty() -> Self {
+        Self {
+            data: Default::default(),
+        }
+    }
+
+    pub fn append(&mut self, other: Response<'_>) {
+        for (k, v) in other.data {
+            self.data.get_mut(k).unwrap().extend_from_slice(&v);
+        }
+    }
+}
+
+/// The main workhorse shared by all components in Cervo.
 pub trait Inferer {
-    /// Execute the model on the provided batch of elements.
-    fn infer(&mut self, observations: HashMap<u64, State>)
-        -> Result<HashMap<u64, Response>, Error>;
+    /// Query the inferer for how many elements it can deal with in a single batch.
+    fn select_batch_size(&self, max_count: usize) -> usize;
+
+    /// Execute the model on the provided pre-batched data.
+    fn infer_raw(&mut self, batch: ScratchPadView) -> Result<(), anyhow::Error>;
 
     /// Retrieve the name and shapes of the model inputs.
     fn input_shapes(&self) -> &[(String, Vec<usize>)];
@@ -140,6 +171,63 @@ pub trait InfererExt: Inferer + Sized {
     ) -> Result<EpsilonInjector<Self, G>> {
         EpsilonInjector::with_generator(self, generator, key)
     }
+
+    /// Wrap in a batching interface.
+    fn into_batched(self) -> Batched<Self> {
+        Batched::wrap(self)
+    }
+
+    /// Execute the model on the provided batch of elements.
+    #[deprecated(
+        note = "Please use the more explicit 'infer_batch' instead.",
+        since = "0.3.0"
+    )]
+    fn infer(
+        &mut self,
+        observations: HashMap<u64, State>,
+    ) -> Result<HashMap<u64, Response>, Error> {
+        self.infer_batch(observations)
+    }
+
+    /// Execute the model on the provided pre-batched data.
+    fn infer_batch<'this>(
+        &'this mut self,
+        batch: HashMap<u64, State>,
+    ) -> Result<HashMap<u64, Response<'this>>, anyhow::Error> {
+        let mut batcher = Batcher::new_sized(self, batch.len());
+        batcher.extend(batch)?;
+
+        batcher.execute(self)
+    }
+
+    /// Execute the model on the provided pre-batched data.
+    fn infer_single<'this>(&'this mut self, input: State) -> Result<Response<'this>, anyhow::Error>
+    where
+        Self: Sized,
+    {
+        let mut batcher = Batcher::new_sized(self, 1);
+        batcher.push(0, input)?;
+
+        Ok(batcher.execute(self)?.remove(&0).unwrap())
+    }
 }
 
 impl<T> InfererExt for T where T: Inferer + Sized {}
+
+impl Inferer for Box<dyn Inferer> {
+    fn select_batch_size(&self, max_count: usize) -> usize {
+        self.as_ref().select_batch_size(max_count)
+    }
+
+    fn infer_raw(&mut self, batch: ScratchPadView) -> Result<(), anyhow::Error> {
+        self.as_mut().infer_raw(batch)
+    }
+
+    fn input_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.as_ref().input_shapes()
+    }
+
+    fn output_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.as_ref().output_shapes()
+    }
+}

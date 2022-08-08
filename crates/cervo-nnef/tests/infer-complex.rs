@@ -2,7 +2,7 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 10 May 2022
 
-use cervo_core::prelude::{EpsilonInjector, Inferer};
+use cervo_core::prelude::{EpsilonInjector, Inferer, InfererExt};
 
 #[path = "./helpers.rs"]
 mod helpers;
@@ -17,8 +17,9 @@ fn test_infer_once_complex() {
     )
     .unwrap();
 
-    let observations = helpers::build_inputs_from_desc(1, instance.input_shapes());
-    let result = instance.infer(observations);
+    let shapes = instance.input_shapes().to_vec();
+    let observations = helpers::build_inputs_from_desc(1, &shapes);
+    let result = instance.infer_batch(observations);
 
     assert!(result.is_ok());
     let result = result.unwrap();
@@ -38,8 +39,9 @@ fn test_infer_once_complex_batched() {
     )
     .unwrap();
 
-    let observations = helpers::build_inputs_from_desc(10, instance.input_shapes());
-    let result = instance.infer(observations);
+    let shapes = instance.input_shapes().to_vec();
+    let observations = helpers::build_inputs_from_desc(10, &shapes);
+    let result = instance.infer_batch(observations);
     assert!(result.is_ok());
 
     let result = result.unwrap();
@@ -59,8 +61,9 @@ fn test_infer_once_complex_batched_not_loaded() {
     )
     .unwrap();
 
-    let observations = helpers::build_inputs_from_desc(10, instance.input_shapes());
-    let result = instance.infer(observations);
+    let shapes = instance.input_shapes().to_vec();
+    let observations = helpers::build_inputs_from_desc(10, &shapes);
+    let result = instance.infer_batch(observations);
     eprintln!("result {:?}", result);
     assert!(result.is_ok());
 
@@ -81,8 +84,9 @@ fn test_infer_once_complex_fixed_batch() {
     )
     .unwrap();
 
-    let observations = helpers::build_inputs_from_desc(7, instance.input_shapes());
-    let result = instance.infer(observations);
+    let shapes = instance.input_shapes().to_vec();
+    let observations = helpers::build_inputs_from_desc(7, &shapes);
+    let result = instance.infer_batch(observations);
     assert!(result.is_ok());
 
     let result = result.unwrap();

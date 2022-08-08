@@ -1,9 +1,10 @@
 [workspace]
 members = [
     "crates/cervo",
+    "crates/cervo-asset",
     "crates/cervo-core",
     "crates/cervo-nnef",
     "crates/cervo-onnx",
-    "crates/cervo-asset",
-#    "benchmarks/perf-test"
 ]
+
+exclude = [ "benchmarks/perf-test" ]

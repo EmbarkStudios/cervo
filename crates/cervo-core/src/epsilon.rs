@@ -6,17 +6,16 @@
 Utilities for filling noise inputs for an inference model.
 */
 
-use crate::inferer::{Inferer, Response, State};
+use crate::{batcher::ScratchPadView, inferer::Inferer};
 use anyhow::{bail, Result};
 use perchance::PerchanceContext;
 use rand::thread_rng;
 use rand_distr::{Distribution, StandardNormal};
-use std::collections::HashMap;
 
 /// NoiseGenerators are consumed by the [`EpsilonInjector`] by generating noise sampled for a standard normal
 /// distribution. Custom noise-generators can be implemented and passed via [`EpsilonInjector::with_generator`].
 pub trait NoiseGenerator {
-    fn generate(&mut self, count: usize) -> Vec<f32>;
+    fn generate(&mut self, count: usize, out: &mut [f32]);
 }
 
 /// A non-noisy noise generator, primarily intended for debugging or testing purposes.
@@ -42,8 +41,10 @@ impl ConstantGenerator {
 }
 
 impl NoiseGenerator for ConstantGenerator {
-    fn generate(&mut self, count: usize) -> Vec<f32> {
-        vec![self.value; count]
+    fn generate(&mut self, _count: usize, out: &mut [f32]) {
+        for o in out {
+            *o = self.value;
+        }
     }
 }
 
@@ -74,8 +75,10 @@ impl Default for LowQualityNoiseGenerator {
 
 impl NoiseGenerator for LowQualityNoiseGenerator {
     /// Generate `count` random values.
-    fn generate(&mut self, count: usize) -> Vec<f32> {
-        (0..count).map(|_| self.ctx.normal_f32()).collect()
+    fn generate(&mut self, _count: usize, out: &mut [f32]) {
+        for o in out {
+            *o = self.ctx.normal_f32();
+        }
     }
 }
 
@@ -98,11 +101,11 @@ impl Default for HighQualityNoiseGenerator {
 
 impl NoiseGenerator for HighQualityNoiseGenerator {
     /// Generate `count` random values.
-    fn generate(&mut self, count: usize) -> Vec<f32> {
+    fn generate(&mut self, _count: usize, out: &mut [f32]) {
         let mut rng = thread_rng();
-        (0..count)
-            .map(|_| self.normal_distribution.sample(&mut rng))
-            .collect()
+        for o in out {
+            *o = self.normal_distribution.sample(&mut rng);
+        }
     }
 }
 
@@ -114,9 +117,8 @@ impl NoiseGenerator for HighQualityNoiseGenerator {
 /// wrapper.
 pub struct EpsilonInjector<T: Inferer, NG: NoiseGenerator = HighQualityNoiseGenerator> {
     inner: T,
-    key: String,
     count: usize,
-
+    index: usize,
     generator: NG,
 }
 
@@ -149,25 +151,17 @@ where
     pub fn with_generator(inferer: T, generator: NG, key: &str) -> Result<Self> {
         let inputs = inferer.input_shapes();
 
-        let count = match inputs.iter().find(|(k, _)| k == key) {
-            Some((_, shape)) => shape.iter().product(),
+        let (index, count) = match inputs.iter().enumerate().find(|(_, (k, _))| k == key) {
+            Some((index, (_, shape))) => (index, shape.iter().product()),
             None => bail!("model has no input key {:?}", key),
         };
 
         Ok(Self {
             inner: inferer,
-            key: key.to_owned(),
+            index,
             count,
             generator,
         })
-    }
-
-    fn inject_epsilons(&mut self, observations: &mut HashMap<u64, State>) -> Result<()> {
-        for v in observations.values_mut() {
-            v.data
-                .insert(self.key.clone(), self.generator.generate(self.count));
-        }
-        Ok(())
     }
 }
 
@@ -176,9 +170,16 @@ where
     T: Inferer,
     NG: NoiseGenerator,
 {
-    fn infer(&mut self, mut observations: HashMap<u64, State>) -> Result<HashMap<u64, Response>> {
-        self.inject_epsilons(&mut observations)?;
-        self.inner.infer(observations)
+    fn select_batch_size(&self, max_count: usize) -> usize {
+        self.inner.select_batch_size(max_count)
+    }
+
+    fn infer_raw(&mut self, mut batch: ScratchPadView) -> Result<(), anyhow::Error> {
+        let total_count = self.count * batch.len();
+        let output = batch.input_slot_mut(self.index);
+        self.generator.generate(total_count, output);
+
+        self.inner.infer_raw(batch)
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {

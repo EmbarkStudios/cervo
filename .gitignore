@@ -3,3 +3,4 @@
 Cargo.lock
 *.csv
 benchmarks/out
+/benchmarks/perf-test/target/

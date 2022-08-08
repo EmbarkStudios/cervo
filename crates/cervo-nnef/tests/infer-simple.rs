@@ -5,7 +5,7 @@
 /*!
 
 */
-use cervo_core::prelude::{EpsilonInjector, Inferer};
+use cervo_core::prelude::{EpsilonInjector, Inferer, InfererExt};
 
 #[path = "./helpers.rs"]
 mod helpers;
@@ -16,9 +16,9 @@ fn test_infer_once_simple() {
     let instance = cervo_nnef::builder(&mut reader).build_basic().unwrap();
     let mut instance = EpsilonInjector::wrap(instance, "epsilon").unwrap();
 
-    let observations = helpers::build_inputs_from_desc(1, instance.input_shapes());
-
-    let result = instance.infer(observations);
+    let shapes = instance.input_shapes().to_vec();
+    let observations = helpers::build_inputs_from_desc(1, &shapes);
+    let result = instance.infer_batch(observations);
     assert!(result.is_ok());
 
     let result = result.unwrap();
