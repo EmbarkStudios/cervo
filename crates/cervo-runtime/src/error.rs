@@ -13,6 +13,9 @@ pub enum CervoError {
     #[error("unknown brain with id {0:?}")]
     UnknownBrain(BrainId),
 
+    #[error("the runtime was cleared but the following brains still had data: {0:?}")]
+    OrphanedData(Vec<BrainId>),
+
     #[error("internal error occured: {0}")]
     Internal(anyhow::Error),
 }

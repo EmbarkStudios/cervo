@@ -33,6 +33,12 @@ impl ModelState {
             timings: RefCell::new(vec![]),
         }
     }
+
+    pub(crate) fn push(&mut self, agent_id: AgentId, state: State) {
+        let batcher = self.batcher.borrow_mut();
+        batcher.push(agent_id, state);
+    }
+
     pub(crate) fn needs_to_execute(&self) -> bool {
         !self.batcher.borrow().is_empty()
     }

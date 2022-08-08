@@ -130,6 +130,7 @@ dependencies = [
  "cervo-core",
  "cervo-nnef",
  "cervo-onnx",
+ "cervo-runtime",
  "clap",
  "log",
  "tempfile",
