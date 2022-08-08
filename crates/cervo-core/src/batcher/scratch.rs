@@ -2,10 +2,6 @@
 // Copyright © 2022, Embark Studios, all rights reserved.
 // Created: 27 July 2022
 
-/*!
-
-*/
-
 use std::ops::Range;
 use tract_core::tract_data::TVec;
 

@@ -2,10 +2,6 @@
 // Copyright © 2022, Embark Studios, all rights reserved.
 // Created: 27 July 2022
 
-/*!
-
-*/
-
 use std::collections::HashMap;
 
 use cervo_core::prelude::{Batcher, Inferer, InfererExt, State};
