@@ -90,7 +90,7 @@ pub trait Inferer {
     fn select_batch_size(&self, max_count: usize) -> usize;
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_raw(&self, batch: ScratchPadView) -> Result<(), anyhow::Error>;
+    fn infer_raw(&self, batch: ScratchPadView<'_>) -> Result<(), anyhow::Error>;
 
     /// Retrieve the name and shapes of the model inputs.
     fn input_shapes(&self) -> &[(String, Vec<usize>)];
@@ -178,15 +178,15 @@ pub trait InfererExt: Inferer + Sized {
     )]
     fn infer(
         &mut self,
-        observations: HashMap<u64, State>,
-    ) -> Result<HashMap<u64, Response>, Error> {
+        observations: HashMap<u64, State<'_>>,
+    ) -> Result<HashMap<u64, Response<'_>>, Error> {
         self.infer_batch(observations)
     }
 
     /// Execute the model on the provided pre-batched data.
     fn infer_batch<'this>(
         &'this self,
-        batch: HashMap<u64, State>,
+        batch: HashMap<u64, State<'_>>,
     ) -> Result<HashMap<u64, Response<'this>>, anyhow::Error> {
         let mut batcher = Batcher::new_sized(self, batch.len());
         batcher.extend(batch)?;
@@ -195,7 +195,7 @@ pub trait InfererExt: Inferer + Sized {
     }
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_single<'this>(&'this self, input: State) -> Result<Response<'this>, anyhow::Error>
+    fn infer_single<'this>(&'this self, input: State<'_>) -> Result<Response<'this>, anyhow::Error>
     where
         Self: Sized,
     {
@@ -213,7 +213,7 @@ impl Inferer for Box<dyn Inferer> {
         self.as_ref().select_batch_size(max_count)
     }
 
-    fn infer_raw(&self, batch: ScratchPadView) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, batch: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
         self.as_ref().infer_raw(batch)
     }
 

@@ -96,7 +96,7 @@ impl MemoizingDynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&self, batch: &ScratchPadView) -> Result<TVec<Tensor>> {
+    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<Tensor>> {
         let size = batch.len();
 
         let mut inputs = TVec::default();
@@ -154,7 +154,7 @@ impl Inferer for MemoizingDynamicInferer {
         max_count
     }
 
-    fn infer_raw(&self, mut pad: ScratchPadView) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, mut pad: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
         let count = pad.len();
         let inputs = self.build_inputs(&pad)?;
 

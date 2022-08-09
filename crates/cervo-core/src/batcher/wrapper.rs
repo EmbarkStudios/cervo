@@ -43,7 +43,7 @@ where
     }
 
     /// Execute the model on the data that has been enqueued previously.
-    pub fn execute(&mut self) -> anyhow::Result<HashMap<u64, Response>> {
+    pub fn execute(&mut self) -> anyhow::Result<HashMap<u64, Response<'_>>> {
         self.batcher.execute(&self.inner)
     }
 

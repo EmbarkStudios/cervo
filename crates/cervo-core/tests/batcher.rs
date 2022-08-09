@@ -95,7 +95,7 @@ fn test_push_basic() {
 #[test]
 fn test_push_wrapped() {
     let call_count = RefCell::new(0);
-    let mut inf = TestInferer {
+    let inf = TestInferer {
         batch_size: |_| 1,
         raw: |b| {
             *call_count.borrow_mut() += 1;

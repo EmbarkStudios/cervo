@@ -34,7 +34,7 @@ impl ModelState {
         }
     }
 
-    pub(crate) fn push(&mut self, agent_id: AgentId, state: State) -> Result<(), CervoError> {
+    pub(crate) fn push(&mut self, agent_id: AgentId, state: State<'_>) -> Result<(), CervoError> {
         let mut batcher = self.batcher.borrow_mut();
         batcher.push(agent_id, state).map_err(CervoError::Internal)
     }
@@ -69,7 +69,10 @@ impl ModelState {
         }
     }
 
-    pub(crate) fn infer_single(&mut self, state: State) -> Result<Response, CervoError> {
+    pub(crate) fn infer_single<'a>(
+        &'a mut self,
+        state: State<'_>,
+    ) -> Result<Response<'a>, CervoError> {
         let start = Instant::now();
         let mut batcher = self.batcher.borrow_mut();
 
@@ -104,7 +107,7 @@ impl ModelState {
         Ok(res)
     }
 
-    pub(crate) fn run(&self) -> Result<HashMap<AgentId, Response>, CervoError> {
+    pub(crate) fn run(&self) -> Result<HashMap<AgentId, Response<'_>>, CervoError> {
         let mut batcher = self.batcher.borrow_mut();
 
         if batcher.is_empty() {
@@ -150,7 +153,7 @@ mod tests {
 
         fn infer_raw(
             &self,
-            _batch: cervo_core::batcher::ScratchPadView,
+            _batch: cervo_core::batcher::ScratchPadView<'_>,
         ) -> anyhow::Result<(), anyhow::Error> {
             Ok(())
         }

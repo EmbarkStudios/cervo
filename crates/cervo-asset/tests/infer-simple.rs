@@ -15,7 +15,7 @@ mod helpers;
 #[test]
 fn test_infer_once_basic() {
     let mut reader = helpers::get_file("test.crvo").unwrap();
-    let mut instance = AssetData::deserialize(&mut reader)
+    let instance = AssetData::deserialize(&mut reader)
         .expect("a valid asset")
         .load_basic()
         .expect("success")
@@ -36,7 +36,7 @@ fn test_infer_once_basic() {
 #[test]
 fn test_infer_once_basic_nnef() {
     let mut reader = helpers::get_file("test-nnef.crvo").unwrap();
-    let mut instance = AssetData::deserialize(&mut reader)
+    let instance = AssetData::deserialize(&mut reader)
         .expect("a valid asset")
         .load_basic()
         .expect("an inferer")

@@ -5,7 +5,10 @@
 This crate contains some wrappers and extensions for Tract we use to
 simplify our workflows.
 
-*/
+ */
+
+#![warn(rust_2018_idioms)]
+
 pub use tract_core;
 pub use tract_hir;
 

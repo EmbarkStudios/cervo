@@ -14,7 +14,7 @@ mod helpers;
 fn test_infer_once_simple() {
     let mut reader = helpers::get_file("test.nnef.tar").unwrap();
     let instance = cervo_nnef::builder(&mut reader).build_basic().unwrap();
-    let mut instance = EpsilonInjector::wrap(instance, "epsilon").unwrap();
+    let instance = EpsilonInjector::wrap(instance, "epsilon").unwrap();
 
     let shapes = instance.input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(1, &shapes);

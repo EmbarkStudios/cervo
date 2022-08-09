@@ -2,6 +2,8 @@
 // Copyright © 2022, Embark Studios, all rights reserved.
 // Created: 28 July 2022
 
+#![warn(rust_2018_idioms)]
+
 pub mod error;
 mod state;
 mod timing;
@@ -53,7 +55,12 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    pub fn push(&mut self, brain: BrainId, agent: AgentId, state: State) -> Result<(), CervoError> {
+    pub fn push(
+        &mut self,
+        brain: BrainId,
+        agent: AgentId,
+        state: State<'_>,
+    ) -> Result<(), CervoError> {
         match self.models.iter_mut().find(|m| m.id == brain) {
             Some(model) => model.push(agent, state),
             None => Err(CervoError::UnknownBrain(brain)),
@@ -75,15 +82,15 @@ impl Runtime {
     pub fn infer_single(
         &mut self,
         brain_id: BrainId,
-        state: State,
-    ) -> Result<Response, CervoError> {
+        state: State<'_>,
+    ) -> Result<Response<'_>, CervoError> {
         match self.models.iter_mut().find(|m| m.id == brain_id) {
             Some(model) => model.infer_single(state),
             None => Err(CervoError::UnknownBrain(brain_id)),
         }
     }
 
-    pub fn run(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response>>, CervoError> {
+    pub fn run(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         let mut result = HashMap::default();
 
         for model in self.models.iter_mut() {
@@ -96,7 +103,7 @@ impl Runtime {
     pub fn run_for(
         &mut self,
         mut duration: Duration,
-    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response>>, CervoError> {
+    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         let mut result = HashMap::default();
 
         let mut any_executed = false;

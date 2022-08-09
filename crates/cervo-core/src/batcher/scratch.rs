@@ -123,7 +123,7 @@ impl ScratchPad {
     }
 
     /// View the chunk starting at batch-element `offset` containing `size` elements.x
-    pub fn chunk(&mut self, offset: usize, size: usize) -> ScratchPadView {
+    pub fn chunk(&mut self, offset: usize, size: usize) -> ScratchPadView<'_> {
         let size = size.min(self.batch_size);
         self.batch_size -= size;
 

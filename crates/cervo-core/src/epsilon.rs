@@ -177,7 +177,7 @@ where
         self.inner.select_batch_size(max_count)
     }
 
-    fn infer_raw(&self, mut batch: ScratchPadView) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, mut batch: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
         let total_count = self.count * batch.len();
         let output = batch.input_slot_mut(self.index);
         self.generator.generate(total_count, output);
