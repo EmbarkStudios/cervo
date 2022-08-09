@@ -34,9 +34,9 @@ impl ModelState {
         }
     }
 
-    pub(crate) fn push(&mut self, agent_id: AgentId, state: State) {
-        let batcher = self.batcher.borrow_mut();
-        batcher.push(agent_id, state);
+    pub(crate) fn push(&mut self, agent_id: AgentId, state: State) -> Result<(), CervoError> {
+        let mut batcher = self.batcher.borrow_mut();
+        batcher.push(agent_id, state).map_err(CervoError::Internal)
     }
 
     pub(crate) fn needs_to_execute(&self) -> bool {

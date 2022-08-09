@@ -17,17 +17,7 @@ use std::{
 
 /// Identifier for a specific brain.
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
-pub struct BrainId(u16);
-
-impl BrainId {
-    pub unsafe fn into_inner(self) -> u16 {
-        self.0
-    }
-
-    pub unsafe fn from_inner(value: u16) -> Self {
-        Self(value)
-    }
-}
+pub struct BrainId(pub u16);
 
 /// Identifier for a specific agent.
 pub type AgentId = u64;
@@ -65,10 +55,7 @@ pub struct Runtime {
 impl Runtime {
     pub fn push(&mut self, brain: BrainId, agent: AgentId, state: State) -> Result<(), CervoError> {
         match self.models.iter_mut().find(|m| m.id == brain) {
-            Some(model) => {
-                model.push(agent, state);
-                Ok(())
-            }
+            Some(model) => model.push(agent, state),
             None => Err(CervoError::UnknownBrain(brain)),
         }
     }

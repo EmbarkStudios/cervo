@@ -63,6 +63,8 @@ let model = cervo_onnx::builder(model_data)
 
 */
 
+#![warn(rust_2018_idioms)]
+
 pub use cervo_asset as asset;
 pub use cervo_core as core;
 pub use cervo_nnef as nnef;
