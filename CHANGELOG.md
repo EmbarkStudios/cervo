@@ -41,6 +41,9 @@ Other changes:
 * To match the new `Inferer` API; `NoiseGenerators` have to generate
   noise in-place instead of into a new vector.
 
+* Upgrade all dependencies to tract 0.17.4
+    * Adds `aarch64-unknown-linux-gnu` support
+
 ## [0.2.0] - 2022-07-11
 
 * Upgrade all dependencies to tract 0.17.1
