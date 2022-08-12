@@ -152,6 +152,13 @@ impl Runtime {
         Ok(result)
     }
 
+    pub fn output_shapes(&self, brain: BrainId) -> Result<&[(String, Vec<usize>)], CervoError> {
+        match self.models.iter().find(|m| m.id == brain) {
+            Some(model) => Ok(model.inferer.output_shapes()),
+            None => Err(CervoError::UnknownBrain(brain)),
+        }
+    }
+
     /// Clear all models and all related data. Will error (after
     /// clearing *all* data) if there was queued items that are now
     /// orphaned.
@@ -171,6 +178,38 @@ impl Runtime {
             Err(CervoError::OrphanedData(has_data))
         } else {
             Ok(())
+        }
+    }
+
+    /// Clear a models and all related data. Will error (after
+    /// clearing *all* data) if there was queued items that are now
+    /// orphaned.
+    pub fn remove_inferer(&mut self, brain: BrainId) -> Result<(), CervoError> {
+        // TODO[TSolberg]: when BinaryHeap::retain is stabilized, use that here.
+        let mut to_repush = vec![];
+        while !self.queue.is_empty() {
+            // Safety: ^ must contain 1 item
+            let elem = self.queue.pop().unwrap();
+
+            if elem.1 == brain {
+                break;
+            } else {
+                to_repush.push(elem);
+            }
+        }
+
+        self.queue.extend(to_repush);
+
+        if let Some(index) = self.models.iter().position(|state| state.id == brain) {
+            // Safety: ^ we just found the index.
+            let state = self.models.remove(index);
+            if state.needs_to_execute() {
+                Err(CervoError::OrphanedData(vec![brain]))
+            } else {
+                Ok(())
+            }
+        } else {
+            Err(CervoError::UnknownBrain(brain))
         }
     }
 }
