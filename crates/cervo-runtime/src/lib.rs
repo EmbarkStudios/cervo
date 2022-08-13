@@ -159,6 +159,13 @@ impl Runtime {
         }
     }
 
+    pub fn input_shapes(&self, brain: BrainId) -> Result<&[(String, Vec<usize>)], CervoError> {
+        match self.models.iter().find(|m| m.id == brain) {
+            Some(model) => Ok(model.inferer.output_shapes()),
+            None => Err(CervoError::UnknownBrain(brain)),
+        }
+    }
+
     /// Clear all models and all related data. Will error (after
     /// clearing *all* data) if there was queued items that are now
     /// orphaned.
