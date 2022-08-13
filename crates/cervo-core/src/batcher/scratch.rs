@@ -44,7 +44,10 @@ impl ScratchPadData {
     /// A mutable view over the specified range of batch elements.
     #[inline]
     fn view_mut(&mut self, range: Range<usize>) -> &mut [f32] {
-        &mut self.data[range.start * self.count..range.end * self.count]
+        let start = range.start * self.count;
+        let end = range.end * self.count;
+
+        &mut self.data[start..end]
     }
 }
 
@@ -110,6 +113,10 @@ impl ScratchPad {
             self.capacity *= 2;
 
             for slot in &mut self.inputs {
+                slot.reserve(self.capacity);
+            }
+
+            for slot in &mut self.outputs {
                 slot.reserve(self.capacity);
             }
         }
