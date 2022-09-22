@@ -118,7 +118,11 @@ struct BatchedModel {
 }
 
 impl BatchedModel {
-    fn build_inputs(&self, batch: &ScratchPadView<'_>, model_api: &ModelApi) -> Result<TVec<Tensor>> {
+    fn build_inputs(
+        &self,
+        batch: &ScratchPadView<'_>,
+        model_api: &ModelApi,
+    ) -> Result<TVec<Tensor>> {
         assert_eq!(batch.len(), self.size);
         let size = self.size;
 
