@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Batching
+
 This update focuses on improving performance and simplifying
 batching. To do this; there's a few changes that'll require updating
 your code. These should generally be fairly simple, and in some-cases
@@ -40,6 +42,15 @@ Other changes:
 
 * To match the new `Inferer` API; `NoiseGenerators` have to generate
   noise in-place instead of into a new vector.
+
+### Cervo Runtime
+
+As part of the performance work it's also become easier to deal with
+multiple models. The new Cervo Runtime helps with managing multiple
+inference engines and their execution time. While someone already
+running with a batched mode will not see huge gains, it should
+hopefully provide a good building block and make adaptation easier in
+an ECS.
 
 ## [0.2.0] - 2022-07-11
 
