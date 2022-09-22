@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
-## [Unreleased] - ReleaseDate
+## [Unreleased] - Release
 
 ### Batching
 
@@ -46,11 +46,17 @@ Other changes:
 ### Cervo Runtime
 
 As part of the performance work it's also become easier to deal with
-multiple models. The new Cervo Runtime helps with managing multiple
-inference engines and their execution time. While someone already
+multiple models using the new Cervo Runtime. The runtime helps with
+managing multiple inference engines and their execution time,
+enforcing batching and simplifying ownership. While someone already
 running with a batched mode will not see huge gains, it should
 hopefully provide a good building block and make adaptation easier in
 an ECS.
+
+### Other changes:
+
+* In general, all forward passes of an inferer should now be
+  immutable, simplifying synchronization.
 
 ## [0.2.0] - 2022-07-11
 
