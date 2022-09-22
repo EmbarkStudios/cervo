@@ -25,6 +25,12 @@ pub struct Runtime {
     brain_generation: u16,
 }
 
+impl Default for Runtime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Runtime {
     /// Create a new empty runtime.
     pub fn new() -> Self {
@@ -219,12 +225,11 @@ impl Runtime {
 
 #[cfg(test)]
 mod tests {
+    use super::Runtime;
+    use crate::BrainId;
+    use cervo_core::prelude::{Inferer, State};
     use std::time::Duration;
 
-    use crate::BrainId;
-
-    use super::Runtime;
-    use cervo_core::prelude::{Inferer, State};
     struct DummyInferer {
         sleep_duration: Duration,
     }
