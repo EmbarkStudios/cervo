@@ -226,7 +226,7 @@ impl Runtime {
 #[cfg(test)]
 mod tests {
     use super::Runtime;
-    use crate::BrainId;
+    use crate::{BrainId, CervoError};
     use cervo_core::prelude::{Inferer, State};
     use std::time::Duration;
 
@@ -331,5 +331,117 @@ mod tests {
         let res = runtime.run_for(Duration::from_secs_f32(0.0)).unwrap();
         assert_eq!(res.len(), 1);
         assert!(res.contains_key(&keys[2]));
+    }
+
+    #[test]
+    fn test_run_single() {
+        let mut runtime = Runtime::new();
+
+        let k = runtime.add_inferer(DummyInferer {
+            sleep_duration: Duration::from_secs_f32(0.01),
+        });
+
+        runtime.infer_single(k, State::empty()).unwrap();
+        let r = runtime.run().unwrap();
+        assert_eq!(r.len(), 0);
+    }
+
+    #[test]
+    fn test_run_single_with_push() {
+        let mut runtime = Runtime::new();
+
+        let k = runtime.add_inferer(DummyInferer {
+            sleep_duration: Duration::from_secs_f32(0.01),
+        });
+
+        runtime.push(k, 0, State::empty()).unwrap();
+
+        runtime.infer_single(k, State::empty()).unwrap();
+        let mut r = runtime.run().unwrap();
+        assert_eq!(r.len(), 1);
+        let data = r.remove(&k).unwrap();
+
+        assert_eq!(data.len(), 1);
+        assert!(data.contains_key(&0));
+    }
+
+    #[test]
+    fn unknown_brain_push() {
+        let mut runtime = Runtime::new();
+        let res = runtime.push(BrainId(10), 0, State::empty());
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+
+        if let CervoError::UnknownBrain(BrainId(10)) = err {
+        } else {
+            panic!("expected CervoError::UnknownBrain")
+        }
+    }
+
+    #[test]
+    fn unknown_brain_infer_single() {
+        let mut runtime = Runtime::new();
+        let res = runtime.infer_single(BrainId(10), State::empty());
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+
+        if let CervoError::UnknownBrain(BrainId(10)) = err {
+        } else {
+            panic!("expected CervoError::UnknownBrain")
+        }
+    }
+
+    #[test]
+    fn unknown_brain_remove() {
+        let mut runtime = Runtime::new();
+        let res = runtime.remove_inferer(BrainId(10));
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+
+        if let CervoError::UnknownBrain(BrainId(10)) = err {
+        } else {
+            panic!("expected CervoError::UnknownBrain")
+        }
+    }
+
+    #[test]
+    fn unknown_brain_remove_orphaned() {
+        let mut runtime = Runtime::new();
+        let k = runtime.add_inferer(DummyInferer {
+            sleep_duration: Duration::from_secs_f32(0.1),
+        });
+        runtime.push(k, 0, State::empty()).unwrap();
+        let res = runtime.remove_inferer(k);
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+
+        if let CervoError::OrphanedData(keys) = err {
+            assert_eq!(keys, vec![k])
+        } else {
+            panic!("expected CervoError::OrphanedData")
+        }
+    }
+
+    #[test]
+    fn unknown_brain_clear_orphaned() {
+        let mut runtime = Runtime::new();
+        let k = runtime.add_inferer(DummyInferer {
+            sleep_duration: Duration::from_secs_f32(0.1),
+        });
+        runtime.push(k, 0, State::empty()).unwrap();
+        let res = runtime.clear();
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+
+        if let CervoError::OrphanedData(keys) = err {
+            assert_eq!(keys, vec![k])
+        } else {
+            panic!("expected CervoError::OrphanedData")
+        }
     }
 }

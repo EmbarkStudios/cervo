@@ -88,7 +88,7 @@ fn test_push_basic() {
         batcher.push(id, s).unwrap();
     }
 
-    batcher.execute(&mut inf).unwrap();
+    batcher.execute(&inf).unwrap();
     assert_eq!(call_count.take(), 2);
 }
 
@@ -141,14 +141,14 @@ fn test_push_two() {
         batcher.push(id, s).unwrap();
     }
 
-    batcher.execute(&mut inf).unwrap();
+    batcher.execute(&inf).unwrap();
     assert_eq!(call_count.take(), 2);
 }
 
 #[test]
 fn test_extend_single() {
     let call_count = RefCell::new(0);
-    let mut inf = TestInferer {
+    let inf = TestInferer {
         batch_size: |_| 1,
         raw: |b| {
             *call_count.borrow_mut() += 1;
@@ -172,7 +172,7 @@ fn test_extend_single() {
     }
 
     batcher.extend(batch).unwrap();
-    batcher.execute(&mut inf).unwrap();
+    batcher.execute(&inf).unwrap();
     assert_eq!(call_count.take(), 2);
 }
 
@@ -210,7 +210,7 @@ fn test_extend_wrapped() {
 #[test]
 fn test_extend_double() {
     let call_count = RefCell::new(0);
-    let mut inf = TestInferer {
+    let inf = TestInferer {
         batch_size: |_| 2,
         raw: |b| {
             *call_count.borrow_mut() += 1;
@@ -234,14 +234,14 @@ fn test_extend_double() {
     }
 
     batcher.extend(batch).unwrap();
-    batcher.execute(&mut inf).unwrap();
+    batcher.execute(&inf).unwrap();
     assert_eq!(call_count.take(), 2);
 }
 
 #[test]
 fn test_values() {
     let call_count = RefCell::new(0);
-    let mut inf = TestInferer {
+    let inf = TestInferer {
         batch_size: |_| 2,
         raw: |mut b| {
             assert_eq!(b.len(), 2);
@@ -276,7 +276,7 @@ fn test_values() {
         batcher.push(id, s).unwrap();
     }
 
-    let r = batcher.execute(&mut inf).unwrap();
+    let r = batcher.execute(&inf).unwrap();
     assert_eq!(r.len(), 4);
     dbg!(&r);
     for (id, vals) in r {
