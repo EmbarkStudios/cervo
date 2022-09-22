@@ -18,13 +18,13 @@ use crate::{error::CervoError, BrainId};
 
 pub(crate) struct ModelState {
     pub(crate) id: BrainId,
-    pub(crate) inferer: Box<dyn Inferer + 'static>,
+    pub(crate) inferer: Box<dyn Inferer + 'static + Send>,
     batcher: RefCell<Batcher>,
     timings: RefCell<Vec<TimingBucket>>,
 }
 
 impl ModelState {
-    pub(crate) fn new(id: BrainId, inferer: impl Inferer + 'static) -> Self {
+    pub(crate) fn new(id: BrainId, inferer: impl Inferer + 'static + Send) -> Self {
         let batcher = RefCell::new(Batcher::new(&inferer));
         Self {
             id,

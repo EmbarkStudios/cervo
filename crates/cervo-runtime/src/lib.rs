@@ -2,20 +2,85 @@
 // Copyright © 2022, Embark Studios, all rights reserved.
 // Created: 28 July 2022
 
+/*!
+The Cervo runtime is a combined front for multiple inference models,
+managing data routing and offering higher-level constructs for
+execution.
+
+The goal of the runtime is to simplify batched execution, especially
+in the face of time-slotted execution.
+
+```no_run
+use cervo_asset::{AssetData, AssetKind};
+use cervo_runtime::{BrainId, Runtime, AgentId};
+use std::time::Duration;
+# fn load_bytes(s: &str) -> Vec<u8> { vec![] }
+# fn load_model(name: &str) -> AssetData { AssetData::new(AssetKind::Onnx, load_bytes(name)) }
+# mod game {
+#     use std::collections::HashMap;
+#     use cervo_runtime::{BrainId, Runtime, AgentId};
+#     pub fn observe_trucks(key: BrainId, r: &mut Runtime) {}
+#     pub fn observe_racecars(key: BrainId, r: &mut Runtime) {}
+#     pub fn assign_actions(response: HashMap<BrainId, HashMap<AgentId, cervo_core::prelude::Response<'_>>>) {}
+# }
+
+let mut runtime = Runtime::new();
+
+let racer_asset = load_model("racing-car");
+let racer_inferer = racer_asset.load_basic()?;
+let racer_infer_key = runtime.add_inferer(racer_inferer);
+
+let truck_asset = load_model("monster-truck");
+let truck_inferer = truck_asset.load_basic()?;
+let truck_infer_key = runtime.add_inferer(truck_inferer);
+
+game::observe_racecars(racer_infer_key, &mut runtime);
+game::observe_trucks(truck_infer_key, &mut runtime);
+
+let responses = runtime.run_for(Duration::from_millis(1))?;
+game::assign_actions(responses);
+
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+## Notes on time-slotted execution
+
+There is a very experimental feature for using time-slotted execution
+based on collected performance metrics. Each time a model is executed
+the runtime records the batch size and time-cost. This is then used to
+estimate the cost of future batches.
+
+The implementation currently requires that whichever model is first in
+the queue for execution gets to run. This is to ensure that models
+don't end up in back-off. This means that
+`Runtime::run_for(Duration::from_millis(0))` will still execute one
+model.
+
+Once the first model has executed, models will be processed in order,
+starting by the one that has waited longest for running. Models that
+would take too long to run will be skipped and end up at the back of
+the queue. This ensures that the first skipped model is at the start
+of the queue next round.
+
+The estimation algorithm uses Welford's Online Algorithm which can
+integrate mean and variance without requiring extra storage. However,
+this update method can be quite unstable with few samples. This can
+lead to some stuttering early on by underestimating cost, or running
+too few models by overestimation.
+
+ */
+
 #![warn(rust_2018_idioms)]
 
-pub mod error;
+mod error;
+mod runtime;
 mod state;
 mod timing;
 
+#[doc(inline)]
 pub use crate::error::CervoError;
-use crate::state::ModelState;
-use cervo_core::prelude::{Inferer, Response, State};
-use std::{
-    cmp::Ordering,
-    collections::{BinaryHeap, HashMap},
-    time::{Duration, Instant},
-};
+#[doc(inline)]
+pub use runtime::Runtime;
 
 /// Identifier for a specific brain.
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
@@ -23,200 +88,3 @@ pub struct BrainId(pub u16);
 
 /// Identifier for a specific agent.
 pub type AgentId = u64;
-
-struct Ticket(u64, BrainId);
-
-impl PartialEq for Ticket {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Eq for Ticket {}
-
-impl PartialOrd for Ticket {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.0.partial_cmp(&self.0)
-    }
-}
-
-impl Ord for Ticket {
-    fn cmp(&self, other: &Ticket) -> Ordering {
-        self.partial_cmp(other).unwrap()
-    }
-}
-
-#[derive(Default)]
-pub struct Runtime {
-    models: Vec<ModelState>,
-    queue: BinaryHeap<Ticket>,
-    ticket_generation: u64,
-    brain_generation: u16,
-}
-
-impl Runtime {
-    pub fn push(
-        &mut self,
-        brain: BrainId,
-        agent: AgentId,
-        state: State<'_>,
-    ) -> Result<(), CervoError> {
-        match self.models.iter_mut().find(|m| m.id == brain) {
-            Some(model) => model.push(agent, state),
-            None => Err(CervoError::UnknownBrain(brain)),
-        }
-    }
-
-    pub fn add_inferer(&mut self, inferer: impl Inferer + 'static) -> BrainId {
-        let id = BrainId(self.brain_generation);
-        self.brain_generation += 1;
-
-        self.models.push(ModelState::new(id, inferer));
-
-        // New models always go to head of queue
-        self.queue.push(Ticket(0, id));
-
-        id
-    }
-
-    pub fn infer_single(
-        &mut self,
-        brain_id: BrainId,
-        state: State<'_>,
-    ) -> Result<Response<'_>, CervoError> {
-        match self.models.iter_mut().find(|m| m.id == brain_id) {
-            Some(model) => model.infer_single(state),
-            None => Err(CervoError::UnknownBrain(brain_id)),
-        }
-    }
-
-    pub fn run(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
-        let mut result = HashMap::default();
-
-        for model in self.models.iter_mut() {
-            result.insert(model.id, model.run()?);
-        }
-
-        Ok(result)
-    }
-
-    pub fn run_for(
-        &mut self,
-        mut duration: Duration,
-    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
-        let mut result = HashMap::default();
-
-        let mut any_executed = false;
-        let mut executed: Vec<BrainId> = vec![];
-        let mut non_executed = vec![];
-
-        for ticket in self.queue.drain() {
-            // Break the lifetimes. :-) This is safe *assuming* that each model only has one ticket.
-
-            let res = match self.models.iter().find(|m| m.id == ticket.1) {
-                Some(model) => {
-                    if !model.needs_to_execute() || any_executed && !model.can_run_in_time(duration)
-                    {
-                        Ok(None)
-                    } else {
-                        let start = Instant::now();
-                        let r = model.run();
-
-                        duration -= start.elapsed();
-                        any_executed = true;
-                        r.map(Some)
-                    }
-                }
-
-                None => return Err(CervoError::UnknownBrain(ticket.1)),
-            }?;
-
-            match res {
-                Some(res) => {
-                    result.insert(ticket.1, res);
-                    executed.push(ticket.1)
-                }
-                None => {
-                    non_executed.push(ticket);
-                }
-            }
-        }
-
-        self.queue.extend(non_executed);
-        for id in executed {
-            let gen = self.ticket_generation;
-            self.ticket_generation += 1;
-            self.queue.push(Ticket(gen, id));
-        }
-
-        Ok(result)
-    }
-
-    pub fn output_shapes(&self, brain: BrainId) -> Result<&[(String, Vec<usize>)], CervoError> {
-        match self.models.iter().find(|m| m.id == brain) {
-            Some(model) => Ok(model.inferer.output_shapes()),
-            None => Err(CervoError::UnknownBrain(brain)),
-        }
-    }
-
-    pub fn input_shapes(&self, brain: BrainId) -> Result<&[(String, Vec<usize>)], CervoError> {
-        match self.models.iter().find(|m| m.id == brain) {
-            Some(model) => Ok(model.inferer.input_shapes()),
-            None => Err(CervoError::UnknownBrain(brain)),
-        }
-    }
-
-    /// Clear all models and all related data. Will error (after
-    /// clearing *all* data) if there was queued items that are now
-    /// orphaned.
-    pub fn clear(&mut self) -> Result<(), CervoError> {
-        // N.b. we don't clear brain generation; to avoid generational issues.
-        self.queue.clear();
-        self.ticket_generation = 0;
-
-        let mut has_data = vec![];
-        for model in self.models.drain(..) {
-            if model.needs_to_execute() {
-                has_data.push(model.id);
-            }
-        }
-
-        if !has_data.is_empty() {
-            Err(CervoError::OrphanedData(has_data))
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Clear a models and all related data. Will error (after
-    /// clearing *all* data) if there was queued items that are now
-    /// orphaned.
-    pub fn remove_inferer(&mut self, brain: BrainId) -> Result<(), CervoError> {
-        // TODO[TSolberg]: when BinaryHeap::retain is stabilized, use that here.
-        let mut to_repush = vec![];
-        while !self.queue.is_empty() {
-            // Safety: ^ must contain 1 item
-            let elem = self.queue.pop().unwrap();
-
-            if elem.1 == brain {
-                break;
-            } else {
-                to_repush.push(elem);
-            }
-        }
-
-        self.queue.extend(to_repush);
-
-        if let Some(index) = self.models.iter().position(|state| state.id == brain) {
-            // Safety: ^ we just found the index.
-            let state = self.models.remove(index);
-            if state.needs_to_execute() {
-                Err(CervoError::OrphanedData(vec![brain]))
-            } else {
-                Ok(())
-            }
-        } else {
-            Err(CervoError::UnknownBrain(brain))
-        }
-    }
-}

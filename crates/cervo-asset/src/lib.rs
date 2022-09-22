@@ -1,5 +1,5 @@
 /*!
-To support isomg NNEF and ONNX interchangeably we have a small
+To support using NNEF and ONNX interchangeably we have a small
 wrapping binary format which can contain either type of data, helping
 keep track of which data is what.
 

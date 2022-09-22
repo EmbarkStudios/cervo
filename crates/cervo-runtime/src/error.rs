@@ -8,6 +8,7 @@
 use crate::BrainId;
 use thiserror::Error;
 
+/// Errors that can be returned by Cervo Runtime.
 #[derive(Error, Debug)]
 pub enum CervoError {
     #[error("unknown brain with id {0:?}")]
