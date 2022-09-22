@@ -114,7 +114,10 @@ impl Runtime {
                         let start = Instant::now();
                         let r = model.run();
 
-                        duration -= start.elapsed();
+                        let elapsed = start.elapsed();
+
+                        duration = duration.saturating_sub(elapsed);
+
                         any_executed = true;
                         r.map(Some)
                     }
@@ -211,5 +214,117 @@ impl Runtime {
         } else {
             Err(CervoError::UnknownBrain(brain))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use crate::BrainId;
+
+    use super::Runtime;
+    use cervo_core::prelude::{Inferer, State};
+    struct DummyInferer {
+        sleep_duration: Duration,
+    }
+
+    impl Inferer for DummyInferer {
+        fn select_batch_size(&self, count: usize) -> usize {
+            assert_eq!(count, 1);
+            count
+        }
+
+        fn infer_raw(
+            &self,
+            _batch: cervo_core::batcher::ScratchPadView<'_>,
+        ) -> anyhow::Result<(), anyhow::Error> {
+            std::thread::sleep(self.sleep_duration);
+            Ok(())
+        }
+
+        fn input_shapes(&self) -> &[(String, Vec<usize>)] {
+            &[]
+        }
+
+        fn output_shapes(&self) -> &[(String, Vec<usize>)] {
+            &[]
+        }
+    }
+
+    #[test]
+    fn test_run_for_rotation() {
+        let mut runtime = Runtime::new();
+        let mut keys = vec![];
+        for sleep in [0.02, 0.04, 0.06] {
+            keys.push(runtime.add_inferer(DummyInferer {
+                sleep_duration: Duration::from_secs_f32(sleep),
+            }));
+        }
+
+        let push = |runtime: &mut Runtime, keys: &[BrainId]| {
+            for k in keys {
+                runtime.push(*k, 0, State::empty()).unwrap();
+            }
+        };
+
+        for _ in 0..10 {
+            push(&mut runtime, &keys);
+            runtime.run().unwrap();
+        }
+
+        push(&mut runtime, &keys);
+        let res = runtime.run_for(Duration::from_secs_f32(0.07)).unwrap();
+        assert_eq!(res.len(), 2, "got keys: {:?}", res.keys());
+        assert!(res.contains_key(&keys[0]));
+        assert!(res.contains_key(&keys[1]));
+
+        // queue should be 2, 0, 1
+        let res = runtime.run_for(Duration::from_secs_f32(0.07)).unwrap();
+        assert_eq!(res.len(), 1);
+        assert!(res.contains_key(&keys[2]));
+
+        push(&mut runtime, &keys);
+        let res = runtime.run_for(Duration::from_secs_f32(0.07)).unwrap();
+        assert_eq!(res.len(), 2, "got keys: {:?}", res.keys());
+        assert!(res.contains_key(&keys[0]));
+        assert!(res.contains_key(&keys[1]));
+    }
+
+    #[test]
+    fn test_run_for_greedy() {
+        let mut runtime = Runtime::new();
+        let mut keys = vec![];
+        for sleep in [0.02, 0.04, 0.06] {
+            keys.push(runtime.add_inferer(DummyInferer {
+                sleep_duration: Duration::from_secs_f32(sleep),
+            }));
+        }
+
+        let push = |runtime: &mut Runtime, keys: &[BrainId]| {
+            for k in keys {
+                runtime.push(*k, 0, State::empty()).unwrap();
+            }
+        };
+
+        for _ in 0..10 {
+            push(&mut runtime, &keys);
+            runtime.run().unwrap();
+        }
+
+        push(&mut runtime, &keys);
+        let res = runtime.run_for(Duration::from_secs_f32(0.00)).unwrap();
+        assert_eq!(res.len(), 1, "got keys: {:?}", res.keys());
+        assert!(res.contains_key(&keys[0]));
+
+        // queue should be 1, 2, 0
+        let res = runtime.run_for(Duration::from_secs_f32(0.0)).unwrap();
+        assert_eq!(res.len(), 1);
+        assert!(res.contains_key(&keys[1]));
+
+        // queue should be 2, 1, 0
+        let res = runtime.run_for(Duration::from_secs_f32(0.0)).unwrap();
+        assert_eq!(res.len(), 1);
+        assert!(res.contains_key(&keys[2]));
     }
 }
