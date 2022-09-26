@@ -68,7 +68,7 @@ fn test_construct_loose() {
 #[test]
 fn test_push_basic() {
     let call_count = RefCell::new(0);
-    let mut inf = TestInferer {
+    let inf = TestInferer {
         batch_size: |_| 1,
         raw: |b| {
             *call_count.borrow_mut() += 1;
@@ -121,7 +121,7 @@ fn test_push_wrapped() {
 #[test]
 fn test_push_two() {
     let call_count = RefCell::new(0);
-    let mut inf = TestInferer {
+    let inf = TestInferer {
         batch_size: |_| 2,
         raw: |b| {
             *call_count.borrow_mut() += 1;
