@@ -6,7 +6,7 @@ authors = [
     "Tom Solberg <tom.solberg@embark-studios.com",
 ]
 license = "MIT OR Apache-2.0"
-description = "Multi-model mutli-agent RL runtime for games."
+description = "Multi-model multi-agent RL runtime for games."
 repository = "https://github.com/EmbarkStudios/cervo"
 keywords = [ "machinelearning", "inference" ]
 categories = [ "science" ]
