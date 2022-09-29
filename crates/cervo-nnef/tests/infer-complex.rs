@@ -11,7 +11,7 @@ mod helpers;
 fn test_infer_once_complex() {
     let mut reader = helpers::get_file("test-complex.nnef.tar").unwrap();
 
-    let mut instance = EpsilonInjector::wrap(
+    let instance = EpsilonInjector::wrap(
         cervo_nnef::builder(&mut reader).build_basic().unwrap(),
         "epsilon",
     )
@@ -31,7 +31,7 @@ fn test_infer_once_complex() {
 fn test_infer_once_complex_batched() {
     let mut reader = helpers::get_file("test-complex.nnef.tar").unwrap();
 
-    let mut instance = EpsilonInjector::wrap(
+    let instance = EpsilonInjector::wrap(
         cervo_nnef::builder(&mut reader)
             .build_memoizing(&[10])
             .unwrap(),
@@ -53,7 +53,7 @@ fn test_infer_once_complex_batched() {
 fn test_infer_once_complex_batched_not_loaded() {
     let mut reader = helpers::get_file("test-complex.nnef.tar").unwrap();
 
-    let mut instance = EpsilonInjector::wrap(
+    let instance = EpsilonInjector::wrap(
         cervo_nnef::builder(&mut reader)
             .build_memoizing(&[5])
             .unwrap(),
@@ -76,7 +76,7 @@ fn test_infer_once_complex_batched_not_loaded() {
 fn test_infer_once_complex_fixed_batch() {
     let mut reader = helpers::get_file("test-complex.nnef.tar").unwrap();
 
-    let mut instance = EpsilonInjector::wrap(
+    let instance = EpsilonInjector::wrap(
         cervo_nnef::builder(&mut reader)
             .build_fixed(&[4, 2, 1])
             .unwrap(),

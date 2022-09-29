@@ -5,7 +5,10 @@
 This crate contains some wrappers and extensions for Tract we use to
 simplify our workflows.
 
-*/
+ */
+
+#![warn(rust_2018_idioms)]
+
 pub use tract_core;
 pub use tract_hir;
 
@@ -22,7 +25,7 @@ pub mod prelude {
     };
     pub use super::inferer::{
         BasicInferer, DynamicInferer, FixedBatchInferer, Inferer, InfererBuilder, InfererExt,
-        InfererProvider, MemoizingDynamicInferer, State,
+        InfererProvider, MemoizingDynamicInferer, Response, State,
     };
     pub use super::model_api::ModelApi;
 }

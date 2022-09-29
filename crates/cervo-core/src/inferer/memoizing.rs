@@ -1,7 +1,11 @@
 use super::{helpers, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
-use std::collections::{hash_map::Entry, HashMap};
+use parking_lot::{RwLock, RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    ops::Deref,
+};
 use tract_core::prelude::*;
 use tract_hir::prelude::*;
 
@@ -42,7 +46,7 @@ pub struct MemoizingDynamicInferer {
     symbol: Symbol,
     model: TypedModel,
     model_api: ModelApi,
-    model_cache: HashMap<usize, TypedSimplePlan<TypedModel>>,
+    model_cache: RwLock<HashMap<usize, TypedSimplePlan<TypedModel>>>,
 }
 
 impl MemoizingDynamicInferer {
@@ -55,7 +59,7 @@ impl MemoizingDynamicInferer {
         let model_api = ModelApi::for_model(&model)?;
 
         let (symbol, model) = helpers::build_symbolic_model(model, &model_api.inputs)?;
-        let mut this = Self {
+        let this = Self {
             symbol,
             model,
             model_api,
@@ -78,7 +82,7 @@ impl MemoizingDynamicInferer {
         let model_api = ModelApi::for_typed_model(&model)?;
 
         let symbol = helpers::build_symbolic_typed(&mut model)?;
-        let mut this = Self {
+        let this = Self {
             symbol,
             model,
             model_api,
@@ -92,7 +96,7 @@ impl MemoizingDynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&mut self, batch: &ScratchPadView) -> Result<TVec<Tensor>> {
+    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<Tensor>> {
         let size = batch.len();
 
         let mut inputs = TVec::default();
@@ -116,19 +120,32 @@ impl MemoizingDynamicInferer {
         Ok(inputs)
     }
 
-    fn get_concrete_model(&mut self, size: usize) -> Result<&TypedSimplePlan<TypedModel>> {
-        if let Entry::Vacant(e) = self.model_cache.entry(size) {
-            let p = self
-                .model
-                .concretize_dims(&SymbolValues::default().with(self.symbol, size as i64))?
-                .into_optimized()?
-                .into_decluttered()?
-                .into_runnable()?;
+    fn get_concrete_model(
+        &self,
+        size: usize,
+    ) -> Result<impl Deref<Target = TypedSimplePlan<TypedModel>> + '_> {
+        let cache = self.model_cache.upgradable_read();
+        let cache = {
+            if !cache.contains_key(&size) {
+                let mut content = RwLockUpgradableReadGuard::upgrade(cache);
+                if let Entry::Vacant(e) = content.entry(size) {
+                    let p = self
+                        .model
+                        .concretize_dims(&SymbolValues::default().with(self.symbol, size as i64))?
+                        .into_optimized()?
+                        .into_decluttered()?
+                        .into_runnable()?;
 
-            e.insert(p);
-        }
+                    e.insert(p);
+                }
 
-        Ok(&self.model_cache[&size])
+                RwLockWriteGuard::downgrade(content)
+            } else {
+                RwLockUpgradableReadGuard::downgrade(cache)
+            }
+        };
+
+        Ok(RwLockReadGuard::map(cache, |c| &c[&size]))
     }
 }
 
@@ -137,7 +154,7 @@ impl Inferer for MemoizingDynamicInferer {
         max_count
     }
 
-    fn infer_raw(&mut self, mut pad: ScratchPadView) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, mut pad: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
         let count = pad.len();
         let inputs = self.build_inputs(&pad)?;
 
