@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-core"
-version = "0.3.0"
+version = "0.3.1-alpha.0"
 dependencies = [
  "anyhow",
  "parking_lot",
