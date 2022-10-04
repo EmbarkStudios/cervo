@@ -1,6 +1,6 @@
 [package]
 name = "cervo"
-version = "0.2.1-alpha.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Tom Solberg <tom.solberg@emark-studios.com"]
 license = "MIT OR Apache-2.0"
