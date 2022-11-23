@@ -391,12 +391,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "glam"
-version = "0.20.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f43e957e744be03f5801a55472f593d43fabdebf25a4585db250f04d86b1675f"
-
-[[package]]
 name = "half"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -562,16 +556,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "macaw"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7781d94ea559f76030086786c74fdf28d768535269653382f39824562fd02e73"
-dependencies = [
- "glam",
- "num-traits",
 ]
 
 [[package]]
@@ -762,11 +746,10 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "perchance"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b6268b17d3b26bf66d772097e4826f4d99d9661f427bcc02b361f31b38b443b"
+checksum = "262ea49a93cf5c8d911d320b56967a64aec6fc403d35d915959e6d72e5bbace9"
 dependencies = [
- "macaw",
  "once_cell",
  "ordered-float",
 ]
