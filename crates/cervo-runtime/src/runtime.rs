@@ -135,7 +135,7 @@ impl Runtime {
             match res {
                 Some(res) => {
                     result.insert(ticket.1, res);
-                    executed.push(ticket.1)
+                    executed.push(ticket.1);
                 }
                 None => {
                     non_executed.push(ticket);

@@ -22,13 +22,13 @@ pub(super) fn describe(config: DescribeArgs) -> Result<()> {
     let mut reader = File::open(&config.file)?;
 
     if cervo_nnef::is_nnef_tar(&config.file) {
-        println!("a NNEF file")
+        println!("a NNEF file");
     } else {
         match config.file.extension().and_then(|ext| ext.to_str()) {
             Some("onnx") => println!("an ONNX file"),
             Some("crvo") => {
                 let asset = AssetData::deserialize(&mut reader)?;
-                println!("a native cervo file containing {} data", asset.kind())
+                println!("a native cervo file containing {} data", asset.kind());
             }
             Some(other) => bail!("unknown file type {:?}", other),
             None => bail!("missing file extension {:?}", config.file),

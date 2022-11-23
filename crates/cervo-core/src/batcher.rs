@@ -117,9 +117,12 @@ impl Batcher {
             }
         }
 
-        Ok(HashMap::from_iter(
-            self.scratch.ids.drain(..).zip(outputs.into_iter()),
-        ))
+        Ok(self
+            .scratch
+            .ids
+            .drain(..)
+            .zip(outputs.into_iter())
+            .collect::<_>())
     }
 
     /// Check if there is any data to run on here.

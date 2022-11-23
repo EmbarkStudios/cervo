@@ -45,7 +45,7 @@ lazy_static::lazy_static! {
 /// ahead of time.
 pub fn init() {
     use lazy_static::LazyStatic;
-    NNEF::initialize(&NNEF)
+    NNEF::initialize(&NNEF);
 }
 
 /// Utility function to check if a file name is `.nnef.tar`.
