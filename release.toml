@@ -2,3 +2,4 @@ pre-release-commit-message = "Release {{version}}"
 dev-version = true
 tag-message = "Release {{version}}"
 tag-name = "{{version}}"
+consolidate-commits = true
