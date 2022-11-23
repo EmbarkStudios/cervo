@@ -90,9 +90,7 @@ pub fn builder<T: Read>(read: T) -> InfererBuilder<OnnxData<T>> {
 pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u8>> {
     let mut model = model_for_reader(reader)?;
 
-    let batch = batch_size
-        .map(|v| v.to_dim())
-        .unwrap_or_else(|| Symbol::from('N').to_dim());
+    let batch = batch_size.map_or_else(|| Symbol::from('N').to_dim(), |v| v.to_dim());
 
     let input_outlets = model.input_outlets()?.to_vec();
 

@@ -14,7 +14,7 @@ use perchance::PerchanceContext;
 use rand::thread_rng;
 use rand_distr::{Distribution, StandardNormal};
 
-/// NoiseGenerators are consumed by the [`EpsilonInjector`] by generating noise sampled for a standard normal
+/// `NoiseGenerators` are consumed by the [`EpsilonInjector`] by generating noise sampled for a standard normal
 /// distribution. Custom noise-generators can be implemented and passed via [`EpsilonInjector::with_generator`].
 pub trait NoiseGenerator {
     fn generate(&self, count: usize, out: &mut [f32]);
@@ -89,7 +89,7 @@ impl NoiseGenerator for LowQualityNoiseGenerator {
 /// use-cases.
 ///
 /// This implementation uses [`rand::thread_rng`] internally as the entropy source, and uses the optimized
-/// StandardNormal distribution for sampling.
+/// `StandardNormal` distribution for sampling.
 pub struct HighQualityNoiseGenerator {
     normal_distribution: StandardNormal,
 }

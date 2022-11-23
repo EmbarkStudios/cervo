@@ -83,7 +83,7 @@ impl ScratchPad {
             .iter()
             .map(|(name, shape)| {
                 let count = shape.iter().product();
-                ScratchPadData::new(name.to_owned(), count, capacity)
+                ScratchPadData::new(name.clone(), count, capacity)
             })
             .collect();
 
@@ -91,7 +91,7 @@ impl ScratchPad {
             .iter()
             .map(|(name, shape)| {
                 let count = shape.iter().product();
-                ScratchPadData::new(name.to_owned(), count, capacity)
+                ScratchPadData::new(name.clone(), count, capacity)
             })
             .collect();
 

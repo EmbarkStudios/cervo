@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn initial_mean_initial_value() {
         let state = WelfordState::new(Duration::from_secs_f32(1.0));
-        assert!(is_close(state.mean().as_secs_f32(), 1.0))
+        assert!(is_close(state.mean().as_secs_f32(), 1.0));
     }
 
     #[test]
@@ -89,7 +89,7 @@ mod tests {
             state.update(Duration::from_secs_f32(1.0));
         }
 
-        assert_eq!(state.mean().as_secs_f32(), 1.0)
+        assert_eq!(state.mean().as_secs_f32(), 1.0);
     }
 
     #[test]
@@ -100,7 +100,7 @@ mod tests {
             state.update(Duration::from_secs_f32(v as f32));
         }
 
-        assert_eq!(state.mean().as_secs_f32(), 4.5)
+        assert_eq!(state.mean().as_secs_f32(), 4.5);
     }
 
     #[test]
@@ -111,6 +111,6 @@ mod tests {
             state.update(Duration::from_secs_f32(v as f32));
         }
 
-        assert_eq!(state.mean().as_secs_f32(), 49.5)
+        assert_eq!(state.mean().as_secs_f32(), 49.5);
     }
 }

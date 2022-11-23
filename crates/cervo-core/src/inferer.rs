@@ -195,10 +195,10 @@ pub trait InfererExt: Inferer + Sized {
     }
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_single<'this>(&'this self, input: State<'_>) -> Result<Response<'this>, anyhow::Error>
-    where
-        Self: Sized,
-    {
+    fn infer_single<'this>(
+        &'this self,
+        input: State<'_>,
+    ) -> Result<Response<'this>, anyhow::Error> {
         let mut batcher = Batcher::new_sized(self, 1);
         batcher.push(0, input)?;
 

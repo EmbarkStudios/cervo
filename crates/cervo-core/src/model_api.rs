@@ -9,7 +9,7 @@
 use tract_core::{model::TypedModel, tract_data::TractResult};
 use tract_hir::{infer::Factoid, prelude::InferenceModel};
 
-/// The ModelApi describes the inputs and outputs for a model.
+/// The `ModelApi` describes the inputs and outputs for a model.
 pub struct ModelApi {
     /// The named model inputs.
     pub inputs: Vec<(String, Vec<usize>)>,

@@ -19,7 +19,10 @@ pub fn get_file(name: &'static str) -> std::io::Result<File> {
     std::fs::File::open(path)
 }
 
-pub fn build_inputs_from_desc(count: u64, inputs: &[(String, Vec<usize>)]) -> HashMap<u64, State> {
+pub fn build_inputs_from_desc(
+    count: u64,
+    inputs: &[(String, Vec<usize>)],
+) -> HashMap<u64, State<'_>> {
     (0..count)
         .map(|idx| {
             (

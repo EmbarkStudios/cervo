@@ -26,7 +26,7 @@ use std::io::{Cursor, Read, Write};
 /// Magic used to ensure assets are valid.
 pub const MAGIC: [u8; 4] = [b'C', b'R', b'V', b'O'];
 
-/// AssetKind denotes what kind of policy is contained inside an [`AssetData`].
+/// `AssetKind` denotes what kind of policy is contained inside an [`AssetData`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum AssetKind {
@@ -66,7 +66,7 @@ pub struct AssetData {
 }
 
 impl AssetData {
-    /// Create a new AssetData from parts.
+    /// Create a new `AssetData` from parts.
     ///
     /// Note: Does not validate the data.
     pub fn new<Data: Into<Vec<u8>>>(kind: AssetKind, data: Data) -> Self {
@@ -76,7 +76,7 @@ impl AssetData {
         }
     }
 
-    /// Create a new AssetData from a reader and a kind.
+    /// Create a new `AssetData` from a reader and a kind.
     ///
     /// Note: Does not validate the data.
     pub fn from_reader<Reader: Read>(kind: AssetKind, mut reader: Reader) -> Result<Self> {
@@ -146,7 +146,7 @@ impl AssetData {
 
     /// Load a simple unbatching inferer from this asset.
     ///
-    /// See ['BasicInferer'] for more details.
+    /// See ['`BasicInferer`'] for more details.
     pub fn load_basic(&self) -> Result<BasicInferer> {
         let mut cursor = Cursor::new(&self.data);
         match self.kind {

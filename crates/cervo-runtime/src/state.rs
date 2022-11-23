@@ -96,12 +96,11 @@ impl ModelState {
 
         let elapsed = start.elapsed();
         let mut timings = self.timings.borrow_mut();
-        match timings.iter_mut().find(|b| b.size == 1) {
-            Some(bucket) => bucket.add(elapsed),
-            None => {
-                timings.push(TimingBucket::new(1, elapsed));
-                timings.sort_by_key(|b| b.size);
-            }
+        if let Some(bucket) = timings.iter_mut().find(|b| b.size == 1) {
+            bucket.add(elapsed);
+        } else {
+            timings.push(TimingBucket::new(1, elapsed));
+            timings.sort_by_key(|b| b.size);
         }
 
         Ok(res)
@@ -123,12 +122,11 @@ impl ModelState {
 
         let elapsed = start.elapsed();
         let mut timings = self.timings.borrow_mut();
-        match timings.iter_mut().find(|b| b.size == batch_size) {
-            Some(bucket) => bucket.add(elapsed),
-            None => {
-                timings.push(TimingBucket::new(batch_size, elapsed));
-                timings.sort_by_key(|b| b.size);
-            }
+        if let Some(bucket) = timings.iter_mut().find(|b| b.size == batch_size) {
+            bucket.add(elapsed);
+        } else {
+            timings.push(TimingBucket::new(batch_size, elapsed));
+            timings.sort_by_key(|b| b.size);
         }
 
         Ok(res)

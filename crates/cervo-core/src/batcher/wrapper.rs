@@ -10,7 +10,7 @@ use std::collections::HashMap;
 /// data-insertion and execution, which generally improves
 /// performance.
 ///
-/// Can be easily constructed using [InfererExt::into_batched](crate::prelude::InfererExt::into_batched).
+/// Can be easily constructed using [`InfererExt::into_batched`](crate::prelude::InfererExt::into_batched).
 pub struct Batched<Inf: Inferer> {
     inner: Inf,
     batcher: Batcher,

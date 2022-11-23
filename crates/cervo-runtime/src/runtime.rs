@@ -135,7 +135,7 @@ impl Runtime {
             match res {
                 Some(res) => {
                     result.insert(ticket.1, res);
-                    executed.push(ticket.1)
+                    executed.push(ticket.1);
                 }
                 None => {
                     non_executed.push(ticket);
@@ -420,7 +420,7 @@ mod tests {
         let err = res.unwrap_err();
 
         if let CervoError::OrphanedData(keys) = err {
-            assert_eq!(keys, vec![k])
+            assert_eq!(keys, vec![k]);
         } else {
             panic!("expected CervoError::OrphanedData")
         }
@@ -439,7 +439,7 @@ mod tests {
         let err = res.unwrap_err();
 
         if let CervoError::OrphanedData(keys) = err {
-            assert_eq!(keys, vec![k])
+            assert_eq!(keys, vec![k]);
         } else {
             panic!("expected CervoError::OrphanedData")
         }
