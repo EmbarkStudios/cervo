@@ -278,7 +278,7 @@ fn test_values() {
 
     let r = batcher.execute(&inf).unwrap();
     assert_eq!(r.len(), 4);
-    &r;
+    let _ = &r;
     for (id, vals) in r {
         assert_eq!(vals.data["out"].len(), 11);
         assert_eq!(vals.data["out"][0], id as f32);
