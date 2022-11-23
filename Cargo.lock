@@ -123,7 +123,7 @@ checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
 
 [[package]]
 name = "cervo"
-version = "0.3.1-alpha.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "cervo-asset",
@@ -139,7 +139,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-asset"
-version = "0.3.1-alpha.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "cervo-core",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-core"
-version = "0.3.1-alpha.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "parking_lot",
@@ -162,7 +162,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-nnef"
-version = "0.3.1-alpha.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "cervo-core",
@@ -174,7 +174,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-onnx"
-version = "0.3.1-alpha.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "cervo-core",
@@ -184,7 +184,7 @@ dependencies = [
 
 [[package]]
 name = "cervo-runtime"
-version = "0.3.1-alpha.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "cervo-asset",
