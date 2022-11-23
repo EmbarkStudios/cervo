@@ -8,7 +8,7 @@ use cervo_core::prelude::{Batcher, Inferer, InfererExt, State};
 
 struct TestInferer<
     B: Fn(usize) -> usize,
-    R: Fn(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
+    R: Fn(cervo_core::batcher::ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error>,
 > {
     batch_size: B,
     raw: R,
@@ -19,7 +19,7 @@ struct TestInferer<
 impl<B, R> Inferer for TestInferer<B, R>
 where
     B: Fn(usize) -> usize,
-    R: Fn(cervo_core::batcher::ScratchPadView) -> anyhow::Result<(), anyhow::Error>,
+    R: Fn(cervo_core::batcher::ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error>,
 {
     fn select_batch_size(&self, max_count: usize) -> usize {
         (self.batch_size)(max_count)
@@ -27,7 +27,7 @@ where
 
     fn infer_raw(
         &self,
-        batch: cervo_core::batcher::ScratchPadView,
+        batch: cervo_core::batcher::ScratchPadView<'_>,
     ) -> anyhow::Result<(), anyhow::Error> {
         (self.raw)(batch)
     }
@@ -278,7 +278,7 @@ fn test_values() {
 
     let r = batcher.execute(&inf).unwrap();
     assert_eq!(r.len(), 4);
-    dbg!(&r);
+    &r;
     for (id, vals) in r {
         assert_eq!(vals.data["out"].len(), 11);
         assert_eq!(vals.data["out"][0], id as f32);
