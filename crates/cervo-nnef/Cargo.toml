@@ -1,6 +1,6 @@
 [package]
 name = "cervo-nnef"
-version = "0.4.0"
+version = "0.4.1-alpha.0"
 edition = "2021"
 authors = [
     "Tom Solberg <tom.solberg@embark-studios.com"
@@ -17,5 +17,5 @@ anyhow = "1.0.57"
 tract-onnx =  { version = "0.17.1" }
 tract-nnef = { version = "0.17.1" }
 tract-hir = { version = "0.17.1" }
-cervo-core = { version= "0.4.0", path = "../cervo-core" }
+cervo-core = { version= "0.4.1-alpha.0", path = "../cervo-core" }
 lazy_static = "1.4"
