@@ -11,6 +11,7 @@ use anyhow::Result;
 use clap::Parser;
 
 mod api;
+mod benchmark;
 mod describe;
 mod package;
 mod to_nnef;
@@ -23,6 +24,7 @@ pub(crate) enum Command {
     Api(api::ApiArgs),
     Package(package::PackageArgs),
     Describe(describe::DescribeArgs),
+    Benchmark(benchmark::Args),
 }
 
 pub(crate) fn run(command: Command) -> Result<()> {
@@ -32,5 +34,6 @@ pub(crate) fn run(command: Command) -> Result<()> {
         Command::Api(config) => api::describe_api(config),
         Command::Describe(config) => describe::describe(config),
         Command::Package(config) => package::package(config),
+        Command::Benchmark(config) => benchmark::run(config),
     }
 }
