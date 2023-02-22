@@ -25,6 +25,9 @@ pub(crate) struct Args {
     batch_sizes: std::vec::Vec<usize>,
     #[clap(short, long, default_value = "1000")]
     count: usize,
+
+    #[clap(short, long)]
+    with_epsilon: Option<String>,
 }
 
 fn mean(data: &[f64]) -> Option<f64> {
@@ -132,18 +135,27 @@ pub(super) fn run(config: Args) -> Result<()> {
                 Some(other) => bail!("unknown file type {:?}", other),
                 None => bail!("missing file extension {:?}", config.file),
             }
-        }
-        .with_default_epsilon("epsilon")?;
-        let shapes = inferer
-            .input_shapes()
-            .iter()
-            .cloned()
-            .filter(|(k, _)| k.as_str() != "epsilon")
-            .collect::<Vec<_>>();
+        };
 
-        let observations = build_inputs_from_desc(batch_size as u64, &shapes);
+        let record = if let Some(epsilon) = config.with_epsilon.as_ref() {
+            let mut inferer = inferer.with_default_epsilon(epsilon)?;
+            // TODO[TSolberg]: Issue #31.
+            let shapes = inferer
+                .input_shapes()
+                .iter()
+                .cloned()
+                .filter(|(k, _)| k.as_str() != epsilon)
+                .collect::<Vec<_>>();
 
-        let record = execute_load_metrics(batch_size, observations, config.count, &mut inferer)?;
+            let observations = build_inputs_from_desc(batch_size as u64, &shapes);
+
+            execute_load_metrics(batch_size, observations, config.count, &mut inferer)?
+        } else {
+            let shapes = inferer.input_shapes().to_vec();
+            let observations = build_inputs_from_desc(batch_size as u64, &shapes);
+
+            execute_load_metrics(batch_size, observations, config.count, &mut inferer)?
+        };
 
         println!(
             "Batch Size {}: {:.2} ms ± {:.2} per element, {:.2} ms total",
