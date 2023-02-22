@@ -62,6 +62,6 @@ pub(super) fn package(config: PackageArgs) -> Result<()> {
 
     let file = config.outfile.with_extension("crvo");
     let data = asset.serialize()?;
-    std::fs::write(&file, data)?;
+    std::fs::write(file, data)?;
     Ok(())
 }

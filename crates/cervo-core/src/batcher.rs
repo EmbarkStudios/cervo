@@ -88,8 +88,8 @@ impl Batcher {
     }
 
     /// Run the provided inferer on the data that has been enqueued previously.
-    pub fn execute<'a, 'b>(
-        &'a mut self,
+    pub fn execute<'b>(
+        &mut self,
         inferer: &'b dyn Inferer,
     ) -> anyhow::Result<HashMap<u64, Response<'b>>> {
         // pick up as many items as possible (by slicing the stores) and feed into the model.
