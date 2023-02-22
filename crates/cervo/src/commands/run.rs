@@ -5,14 +5,18 @@ use clap::Parser;
 
 use std::{collections::HashMap, fs::File, path::PathBuf, time::Instant};
 
-/// Shortly describe the model file.
+/// Run a model once.
 #[derive(Parser, Debug)]
 #[clap()]
 pub(crate) struct Args {
+    /// The model file to use - ONNX, NNEF or CRVO format.
     file: PathBuf,
+
+    /// The batch size to feed the network.
     #[clap(short, long)]
     batch_size: usize,
 
+    /// An epsilon key to randomize noise.
     #[clap(short, long)]
     with_epsilon: Option<String>,
 }

@@ -11,11 +11,14 @@ fn number_range_parser(num: &str) -> Result<Vec<usize>, String> {
     Ok(rng.collect())
 }
 
-/// Shortly describe the model file.
+/// Run a model with different batch sizes to estimate performance.
 #[derive(Parser, Debug)]
 #[clap()]
 pub(crate) struct Args {
+    /// The model file to use - ONNX, NNEF or CRVO format.
     file: PathBuf,
+
+    /// The batch sizes to test.
     #[clap(
         short,
         long,
@@ -23,9 +26,12 @@ pub(crate) struct Args {
         value_parser(number_range_parser)
     )]
     batch_sizes: std::vec::Vec<usize>,
+
+    /// How many total elements to test per batch-size.
     #[clap(short, long, default_value = "1000")]
     count: usize,
 
+    /// An epsilon key to randomize noise.
     #[clap(short, long)]
     with_epsilon: Option<String>,
 }
