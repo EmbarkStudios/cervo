@@ -14,6 +14,7 @@ mod api;
 mod benchmark;
 mod describe;
 mod package;
+mod run;
 mod to_nnef;
 
 /// The command to run.
@@ -25,6 +26,7 @@ pub(crate) enum Command {
     Package(package::PackageArgs),
     Describe(describe::DescribeArgs),
     Benchmark(benchmark::Args),
+    Run(run::Args),
 }
 
 pub(crate) fn run(command: Command) -> Result<()> {
@@ -35,5 +37,6 @@ pub(crate) fn run(command: Command) -> Result<()> {
         Command::Describe(config) => describe::describe(config),
         Command::Package(config) => package::package(config),
         Command::Benchmark(config) => benchmark::run(config),
+        Command::Run(config) => run::run(config),
     }
 }
