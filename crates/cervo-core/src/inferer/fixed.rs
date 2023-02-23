@@ -154,7 +154,7 @@ impl BatchedModel {
         Ok(inputs)
     }
 
-    fn execute<'a>(&self, mut pad: ScratchPadView<'_>, model_api: &'a ModelApi) -> Result<()> {
+    fn execute(&self, mut pad: ScratchPadView<'_>, model_api: &ModelApi) -> Result<()> {
         let inputs = self.build_inputs(&pad, model_api)?;
         let result = self.plan.run(inputs)?;
 
