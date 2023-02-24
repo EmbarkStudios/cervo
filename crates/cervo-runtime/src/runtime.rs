@@ -12,6 +12,7 @@ use crate::{error::CervoError, state::ModelState, AgentId, BrainId};
 use ticket::Ticket;
 
 use cervo_core::prelude::{Inferer, Response, State};
+use rayon::prelude::*;
 use std::{
     collections::{BinaryHeap, HashMap},
     time::{Duration, Instant},
@@ -83,8 +84,43 @@ impl Runtime {
         }
     }
 
-    /// Executes all models with queued data.
     pub fn run(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
+        #[cfg(feature = "threaded")]
+        {
+            Ok(self.run_threaded())
+        }
+        #[cfg(not(feature = "threaded"))]
+        {
+            self.run_inner()
+        }
+    }
+
+    pub fn run_for(
+        &mut self,
+        duration: Duration,
+    
+    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
+        #[cfg(feature = "threaded")]
+        {
+           self.run_for_threaded(duration)
+        }
+        #[cfg(not(feature = "threaded"))]
+        {
+            self.run_for_inner(duration)
+        }
+    }
+
+    fn run_threaded(&mut self) -> HashMap<BrainId, HashMap<AgentId, Response<'_>>> {
+        // Use the iterator method from rayon
+        self.models
+            .par_iter_mut()
+            .filter(|model| model.needs_to_execute())
+            .map(|model| (model.id, model.run().unwrap()))
+            .collect::<HashMap<BrainId, HashMap<AgentId, Response<'_>>>>()
+    }
+
+    /// Executes all models with queued data.
+    fn run_inner(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         let mut result = HashMap::default();
 
         for model in self.models.iter_mut() {
@@ -98,10 +134,74 @@ impl Runtime {
         Ok(result)
     }
 
+    fn run_for_threaded(
+        &mut self,
+        duration: Duration,
+    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
+        let start = Instant::now();
+        let mut any_executed = false;
+
+        // TODO: luc: Is there a better way?
+        let mut sorted_queue: Vec<Ticket> = Vec::with_capacity(self.queue.len());
+        while !self.queue.is_empty() {
+            sorted_queue.push(self.queue.pop().unwrap());
+        }
+
+        let queue = sorted_queue
+            .iter()
+            .filter_map(|ticket| {
+                if let Some(model) = self.models.iter().find(|m| m.id == ticket.1) {
+                    if model.needs_to_execute() || !any_executed {
+                        any_executed = true;
+                        return Some((ticket, model));
+                    }
+                }
+                None
+            })
+            .collect::<Vec<(&Ticket, &ModelState)>>();
+
+
+        let results = queue
+            .into_par_iter()
+            .map(|(ticket, model)| {
+                if start.elapsed() > duration {
+                    return None;
+                }
+                let time_remaining = duration.clone().saturating_sub(start.elapsed());
+                if model.can_run_in_time(time_remaining) {
+                    if let Some(r) = model.run().ok() {
+                        return Some((ticket.1, r));
+                    }
+                }
+                None
+            })
+            .flatten()
+            .collect::<HashMap<BrainId, HashMap<AgentId, Response<'_>>>>();
+
+        let finished = sorted_queue
+            .iter()
+            .filter(|ticket| results.contains_key(&ticket.1))
+            .map(|ticket| {
+                let gen = self.ticket_generation;
+                self.ticket_generation += 1;
+                Ticket(gen, ticket.1)
+            })
+            .collect::<Vec<Ticket>>();
+        let unfinished = sorted_queue
+            .iter()
+            .filter(|ticket| !results.contains_key(&ticket.1))
+            .cloned()
+            .collect::<Vec<Ticket>>();
+        self.queue = unfinished.into();
+        self.queue.extend(finished.iter());
+
+        Ok(results)
+    }
+
     /// Executes all models with queued data. Will attempt to keep
     /// total time below the provided duration, but due to noise or lack
     /// of samples might miss the deadline. See the note in [the root](./index.html).
-    pub fn run_for(
+    fn run_for_inner(
         &mut self,
         mut duration: Duration,
     ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
@@ -230,6 +330,7 @@ mod tests {
     use crate::{BrainId, CervoError};
     use cervo_core::prelude::{Inferer, State};
     use std::time::Duration;
+    use std::time::Instant;
 
     struct DummyInferer {
         sleep_duration: Duration,

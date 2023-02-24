@@ -23,6 +23,9 @@ pub(crate) struct ModelState {
     timings: RefCell<Vec<TimingBucket>>,
 }
 
+// SAFETY: ModelState is only ever accessed from a single thread, and is never shared between threads
+unsafe impl Sync for ModelState {}
+
 impl ModelState {
     pub(crate) fn new(id: BrainId, inferer: impl Inferer + 'static + Send) -> Self {
         let batcher = RefCell::new(Batcher::new(&inferer));
