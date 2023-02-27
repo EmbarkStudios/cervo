@@ -110,7 +110,8 @@ impl Runtime {
         let mut executed: Vec<BrainId> = vec![];
         let mut non_executed = vec![];
 
-        for ticket in self.queue.drain() {
+        while !self.queue.is_empty() {
+            let ticket = self.queue.pop().unwrap();
             let res = match self.models.iter().find(|m| m.id == ticket.1) {
                 Some(model) => {
                     if !model.needs_to_execute() || any_executed && !model.can_run_in_time(duration)
@@ -261,7 +262,7 @@ mod tests {
     fn test_run_for_rotation() {
         let mut runtime = Runtime::new();
         let mut keys = vec![];
-        for sleep in [0.02, 0.04, 0.06] {
+        for sleep in [0.02, 0.04, 0.06, 0.04] {
             keys.push(runtime.add_inferer(DummyInferer {
                 sleep_duration: Duration::from_secs_f32(sleep),
             }));
