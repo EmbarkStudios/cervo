@@ -285,16 +285,22 @@ mod tests {
         assert!(res.contains_key(&keys[0]));
         assert!(res.contains_key(&keys[1]));
 
-        // queue should be 2, 0, 1
         let res = runtime.run_for(Duration::from_secs_f32(0.07)).unwrap();
         assert_eq!(res.len(), 1);
         assert!(res.contains_key(&keys[2]));
 
-        push(&mut runtime, &keys);
+        // queue should be 3, 0, 1, 2
         let res = runtime.run_for(Duration::from_secs_f32(0.07)).unwrap();
-        assert_eq!(res.len(), 2, "got keys: {:?}", res.keys());
+        assert_eq!(res.len(), 1);
+        assert!(res.contains_key(&keys[3]));
+
+        push(&mut runtime, &keys);
+        let res = runtime.run_for(Duration::from_secs_f32(0.161)).unwrap();
+        assert_eq!(res.len(), 4, "got keys: {:?}", res.keys());
         assert!(res.contains_key(&keys[0]));
         assert!(res.contains_key(&keys[1]));
+        assert!(res.contains_key(&keys[2]));
+        assert!(res.contains_key(&keys[3]));
     }
 
     #[test]
