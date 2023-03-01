@@ -42,7 +42,7 @@ impl Runtime {
         }
     }
 
-    /// Add a new inferer to this runtime.
+    /// Add a new inferer to this runtime. The new infererer will be at the end of the inference queue when using timed inference.
     pub fn add_inferer(&mut self, inferer: impl Inferer + 'static + Send) -> BrainId {
         let id = BrainId(self.brain_generation);
         self.brain_generation += 1;
@@ -50,7 +50,8 @@ impl Runtime {
         self.models.push(ModelState::new(id, inferer));
 
         // New models always go to head of queue
-        self.queue.push(Ticket(0, id));
+        self.queue.push(Ticket(self.ticket_generation, id));
+        self.ticket_generation += 1;
 
         id
     }
@@ -110,7 +111,8 @@ impl Runtime {
         let mut executed: Vec<BrainId> = vec![];
         let mut non_executed = vec![];
 
-        for ticket in self.queue.drain() {
+        while !self.queue.is_empty() {
+            let ticket = self.queue.pop().unwrap();
             let res = match self.models.iter().find(|m| m.id == ticket.1) {
                 Some(model) => {
                     if !model.needs_to_execute() || any_executed && !model.can_run_in_time(duration)
@@ -121,7 +123,6 @@ impl Runtime {
                         let r = model.run();
 
                         let elapsed = start.elapsed();
-
                         duration = duration.saturating_sub(elapsed);
 
                         any_executed = true;
@@ -261,7 +262,7 @@ mod tests {
     fn test_run_for_rotation() {
         let mut runtime = Runtime::new();
         let mut keys = vec![];
-        for sleep in [0.02, 0.04, 0.06] {
+        for sleep in [0.02, 0.04, 0.06, 0.04] {
             keys.push(runtime.add_inferer(DummyInferer {
                 sleep_duration: Duration::from_secs_f32(sleep),
             }));
@@ -284,16 +285,52 @@ mod tests {
         assert!(res.contains_key(&keys[0]));
         assert!(res.contains_key(&keys[1]));
 
-        // queue should be 2, 0, 1
         let res = runtime.run_for(Duration::from_secs_f32(0.07)).unwrap();
         assert_eq!(res.len(), 1);
         assert!(res.contains_key(&keys[2]));
 
-        push(&mut runtime, &keys);
+        // queue should be 3, 0, 1, 2.
+        // The below can run both 3 and 0 but only 3 has data.
         let res = runtime.run_for(Duration::from_secs_f32(0.07)).unwrap();
-        assert_eq!(res.len(), 2, "got keys: {:?}", res.keys());
+        assert_eq!(res.len(), 1);
+        assert!(res.contains_key(&keys[3]));
+
+        push(&mut runtime, &keys);
+        let res = runtime.run_for(Duration::from_secs_f32(0.165)).unwrap();
+        assert_eq!(res.len(), 4, "got keys: {:?}", res.keys());
         assert!(res.contains_key(&keys[0]));
         assert!(res.contains_key(&keys[1]));
+        assert!(res.contains_key(&keys[2]));
+        assert!(res.contains_key(&keys[3]));
+    }
+
+    #[test]
+    fn test_run_skip_expensive() {
+        let mut runtime = Runtime::new();
+        let mut keys = vec![];
+        for sleep in [0.02, 0.04, 0.06, 0.04] {
+            keys.push(runtime.add_inferer(DummyInferer {
+                sleep_duration: Duration::from_secs_f32(sleep),
+            }));
+        }
+
+        let push = |runtime: &mut Runtime, keys: &[BrainId]| {
+            for k in keys {
+                runtime.push(*k, 0, State::empty()).unwrap();
+            }
+        };
+
+        for _ in 0..10 {
+            push(&mut runtime, &keys);
+            runtime.run().unwrap();
+        }
+
+        push(&mut runtime, &keys);
+        let res = runtime.run_for(Duration::from_secs_f32(0.11)).unwrap();
+        assert_eq!(res.len(), 3, "got keys: {:?}", res.keys());
+        assert!(res.contains_key(&keys[0]));
+        assert!(res.contains_key(&keys[1]));
+        assert!(res.contains_key(&keys[3]));
     }
 
     #[test]
@@ -318,7 +355,7 @@ mod tests {
         }
 
         push(&mut runtime, &keys);
-        let res = runtime.run_for(Duration::from_secs_f32(0.00)).unwrap();
+        let res = runtime.run_for(Duration::from_secs_f32(0.0)).unwrap();
         assert_eq!(res.len(), 1, "got keys: {:?}", res.keys());
         assert!(res.contains_key(&keys[0]));
 
