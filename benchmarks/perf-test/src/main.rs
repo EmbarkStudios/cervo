@@ -10,6 +10,7 @@ mod compare_batchers;
 mod compare_batchsize;
 mod compare_loading;
 mod compare_noise;
+mod compare_threading;
 mod helpers;
 
 use compare_batchers::BatcherComparison;
@@ -23,6 +24,7 @@ enum MeasureMode {
     Batchers(BatcherComparison),
     Noise(NoiseComparison),
     Loading(LoadComparison),
+    MultiThreading,
 }
 
 #[derive(Debug, Parser)]
@@ -67,6 +69,9 @@ fn main() {
         MeasureMode::Noise(config) => compare_noise::execute_comparison(config).unwrap(),
         MeasureMode::Loading(config) => {
             compare_loading::compare_loadtimes(config).unwrap();
+        }
+        MeasureMode::MultiThreading => {
+            compare_threading::compare_threading();
         }
     }
 }

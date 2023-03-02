@@ -35,7 +35,7 @@ struct Measurement {
 }
 
 fn execute_steps(
-    mut inferer: impl Inferer,
+    inferer: impl Inferer,
     kind: &'static str,
     steps: usize,
     batch_size: usize,
@@ -87,6 +87,15 @@ pub(crate) fn execute_comparison(config: NoiseComparison) -> Result<()> {
     let hq = test_hq(onnx_path, config.steps, config.batch_size)?;
 
     let mut file = std::fs::File::create(config.output_file)?;
+
+    for measurement in lq.iter() {
+        println!(
+            "kind set and data are {:?}, {:?}, {:?}",
+            measurement.kind,
+            measurement.step,
+            measurement.time.as_micros()
+        );
+    }
 
     let denom = config.batch_size as f64;
     for series in [lq, hq] {

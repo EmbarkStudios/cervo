@@ -43,7 +43,7 @@ struct Measurement {
 }
 
 fn execute_steps(
-    mut inferer: impl Inferer,
+    inferer: impl Inferer,
     kind: &'static str,
     steps: usize,
     batch_size: usize,
