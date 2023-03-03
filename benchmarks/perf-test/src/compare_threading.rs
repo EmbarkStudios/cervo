@@ -25,7 +25,7 @@ fn add_inferers_to_runtime(runtime: &mut Runtime, onnx_paths: &[&str], runs: usi
             
             for (key, val) in observations.iter() {
                 runtime
-                    .push(BrainId(i as u16), i as u64, val.clone())
+                    .push(BrainId(i as u16), 0, val.clone())
                     .expect(&format!("Could not push to runtime key: {}, val: {:?}", key, val));
             }
 
