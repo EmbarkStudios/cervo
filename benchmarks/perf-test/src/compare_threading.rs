@@ -1,38 +1,38 @@
 use cervo_core::inferer::InfererExt;
 use cervo_core::prelude::Inferer;
+use cervo_core::prelude::LowQualityNoiseGenerator;
 use cervo_core::prelude::State;
 use cervo_runtime::BrainId;
 use cervo_runtime::Runtime;
 use std::time::Duration;
 use std::time::Instant;
 
-// TODO: Luc: How does runtime take care of observations? 
-// TODO: Luc: Feed data to the model while testing... Even if it is random noise. 
 // TODO: Luc: Experiment with batches of 2, 4, 8, 16, 32, 64. 
 // TODO: Luc: For run for, let it do a cold run first, then do the actual run to let the models determine the time it takes to run
 
 fn add_inferers_to_runtime(runtime: &mut Runtime, onnx_paths: &[&str], runs: usize) {
-    // let mut keys = vec![];
+    let batch_size = 32;
     for i in 0..runs {
         for onnx_path in onnx_paths {
             let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
-            let inferer = cervo_onnx::builder(&mut reader)
-                .build_dynamic()
+            let mut inferer = cervo_onnx::builder(&mut reader)
+                .build_fixed(&[batch_size])
+                // .build_dynamic()
+                // .unwrap()
+                // .with_epsilon(LowQualityNoiseGenerator::default(), "epsilon")
                 .unwrap();
-                // .with_default_epsilon("epsilon")
-                // .unwrap();
 
 
             let inputs = inferer.input_shapes().to_vec();
-            println!("Input shapes are {:?}", inputs);
-            let mut state = State::empty();
-            for (key, value) in inputs.iter() {
-                state.data.insert(key, vec![2.0; value.len()]);
-            }
+            let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
             runtime.add_inferer(inferer);
-            runtime
-                .push(BrainId(i as u16), 0, state)
-                .expect("Could not push to runtime");
+            
+            for (key, val) in observations.iter() {
+                runtime
+                    .push(BrainId(i as u16), *key, val.clone())
+                    .expect(&format!("Could not push to runtime key: {}, val: {:?}", key, val));
+            }
+
         }
     }
 }
@@ -126,8 +126,8 @@ pub(crate) fn compare_threading() {
         println!("Heterogeneous (different models once)");
         let onnx_paths = vec![
             "../../brains/test.onnx",
-            "../../brains/test-large.onnx",
-            "../../brains/test-complex.onnx",
+            // "../../brains/test-large.onnx",
+            // "../../brains/test-complex.onnx",
         ];
         compare_one_shot(&onnx_paths, 1);
     }
