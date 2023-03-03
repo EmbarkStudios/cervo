@@ -7,25 +7,31 @@ use cervo_runtime::Runtime;
 use std::time::Duration;
 use std::time::Instant;
 
-// TODO: Luc: Experiment with batches of 2, 4, 8, 16, 32, 64. 
+// TODO: Luc: grid runs vs batch 2, 4, 8, 16, 32, 64. 
 // TODO: Luc: For run for, let it do a cold run first, then do the actual run to let the models determine the time it takes to run
+// TODO: Luc: Rename runs to brain_repetitions
+// TODO: Luc: Later: Document the runtime (readme and functions)
 
 fn add_inferers_to_runtime(runtime: &mut Runtime, onnx_paths: &[&str], runs: usize) {
-    let batch_size = 32;
-    for i in 0..runs {
+    let batch_size = 512;
+    for i in 0..1 {
         for onnx_path in onnx_paths {
+            println!("Path is {}", onnx_path);
             let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
             let mut inferer = cervo_onnx::builder(&mut reader)
                 .build_fixed(&[batch_size])
                 .unwrap();
 
+
             let inputs = inferer.input_shapes().to_vec();
+            println!("Input are {:?}", inputs);
             let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
-            runtime.add_inferer(inferer);
+            // println!("Observations are {:?}", observations);
+            let brain_id = runtime.add_inferer(inferer);
             
             for (key, val) in observations.iter() {
                 runtime
-                    .push(BrainId(i as u16), 0, val.clone())
+                    .push(brain_id, *key, val.clone())
                     .expect(&format!("Could not push to runtime key: {}, val: {:?}", key, val));
             }
 
