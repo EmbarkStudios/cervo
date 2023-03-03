@@ -17,11 +17,7 @@ fn add_inferers_to_runtime(runtime: &mut Runtime, onnx_paths: &[&str], runs: usi
             let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
             let mut inferer = cervo_onnx::builder(&mut reader)
                 .build_fixed(&[batch_size])
-                // .build_dynamic()
-                // .unwrap()
-                // .with_epsilon(LowQualityNoiseGenerator::default(), "epsilon")
                 .unwrap();
-
 
             let inputs = inferer.input_shapes().to_vec();
             let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
@@ -29,7 +25,7 @@ fn add_inferers_to_runtime(runtime: &mut Runtime, onnx_paths: &[&str], runs: usi
             
             for (key, val) in observations.iter() {
                 runtime
-                    .push(BrainId(i as u16), *key, val.clone())
+                    .push(BrainId(i as u16), i as u64, val.clone())
                     .expect(&format!("Could not push to runtime key: {}, val: {:?}", key, val));
             }
 
@@ -122,45 +118,32 @@ pub(crate) fn compare_threading() {
             compare_one_shot(&onnx_paths, runs);
         }
 
-        println!("-------------------------------");
-        println!("Heterogeneous (different models once)");
-        let onnx_paths = vec![
-            "../../brains/test.onnx",
-            // "../../brains/test-large.onnx",
-            // "../../brains/test-complex.onnx",
-        ];
-        compare_one_shot(&onnx_paths, 1);
+        // TODO: Luc: Keys don't match inputs at the moment.
+        // println!("-------------------------------");
+        // println!("Heterogeneous (different models once)");
+        // let onnx_paths = vec![
+        //     "../../brains/test.onnx",
+        //     "../../brains/test-large.onnx",
+        //     "../../brains/test-complex.onnx",
+        // ];
+        // for runs in [10, 100, 500] {
+        //     compare_one_shot(&onnx_paths, runs);
+        // }
     }
 
-    // println!("Run for tests (running as many times as possible in a given time)");
-    // println!(" ");
-    // {
-    //     println!("-------------------------------");
-    //     println!("Homogenous (same model n times)");
-    //     let onnx_paths = vec!["../../brains/test.onnx"];
-    //     let duration = Duration::from_secs(5);
-    //     compare_run_for(&onnx_paths, duration);
+    println!("Run for tests (running as many times as possible in a given time)");
+    println!(" ");
+    {
+        println!("-------------------------------");
+        println!("Homogenous (same model n times)");
+        let onnx_paths = vec!["../../brains/test.onnx"];
+        let duration = Duration::from_secs(5);
+        compare_run_for(&onnx_paths, duration);
 
-    //     println!("-------------------------------");
-    //     println!("Heterogeneous (different models once)");
-    //     let onnx_paths = vec!["../../brains/test.onnx", "../../brains/test-large.onnx", "../../brains/test-complex.onnx"];
-    //     compare_run_for(&onnx_paths, duration);
+        println!("-------------------------------");
+        println!("Heterogeneous (different models once)");
+        let onnx_paths = vec!["../../brains/test.onnx", "../../brains/test-large.onnx", "../../brains/test-complex.onnx"];
+        compare_run_for(&onnx_paths, duration);
 
-    // }
+    }
 }
-
-// Run
-//     Heterogeneous (different models once)
-//         Threaded
-//         Non threaded
-//     Homogenous (same model 10 times)
-//         Threaded
-//         Non threaded
-
-// Run For
-//     Heterogeneous (different models once)
-//         Threaded
-//         Non threaded
-//     Homogenous (same model 10 times)
-//         Threaded
-//         Non threaded
