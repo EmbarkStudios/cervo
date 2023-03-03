@@ -43,6 +43,14 @@ impl Runtime {
         }
     }
 
+    pub fn queue_len(&self) -> usize {
+        self.queue.len()
+    }
+
+    pub fn model_len(&self) -> usize {
+        self.models.len()
+    }
+
     /// Add a new inferer to this runtime. The new infererer will be at the end of the inference queue when using timed inference.
     pub fn add_inferer(&mut self, inferer: impl Inferer + 'static + Send) -> BrainId {
         let id = BrainId(self.brain_generation);
@@ -110,7 +118,7 @@ impl Runtime {
         }
     }
 
-    fn run_threaded(&mut self) -> HashMap<BrainId, HashMap<AgentId, Response<'_>>> {
+    pub fn run_threaded(&mut self) -> HashMap<BrainId, HashMap<AgentId, Response<'_>>> {
         // Use the iterator method from rayon
         self.models
             .par_iter_mut()
@@ -120,7 +128,7 @@ impl Runtime {
     }
 
     /// Executes all models with queued data.
-    fn run_inner(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
+    pub fn run_non_threaded(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         let mut result = HashMap::default();
 
         for model in self.models.iter_mut() {
@@ -134,7 +142,7 @@ impl Runtime {
         Ok(result)
     }
 
-    fn run_for_threaded(
+    pub fn run_for_threaded(
         &mut self,
         duration: Duration,
     ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
@@ -201,7 +209,7 @@ impl Runtime {
     /// Executes all models with queued data. Will attempt to keep
     /// total time below the provided duration, but due to noise or lack
     /// of samples might miss the deadline. See the note in [the root](./index.html).
-    fn run_for_inner(
+    pub fn run_for_non_threaded(
         &mut self,
         mut duration: Duration,
     ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
