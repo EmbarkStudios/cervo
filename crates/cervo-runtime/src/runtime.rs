@@ -51,6 +51,14 @@ impl Runtime {
         self.models.len()
     }
 
+    pub fn brain_ids(&self) -> Vec<BrainId> {
+        self.models.iter().map(|model| model.id).collect()
+    }
+
+    pub fn all_input_shapes(&self) -> Vec<Vec<(String, Vec<usize>)>> {
+        self.models.iter().map(|model| model.inferer.input_shapes().to_vec()).collect()
+    }
+
     /// Add a new inferer to this runtime. The new infererer will be at the end of the inference queue when using timed inference.
     pub fn add_inferer(&mut self, inferer: impl Inferer + 'static + Send) -> BrainId {
         let id = BrainId(self.brain_generation);
@@ -92,6 +100,7 @@ impl Runtime {
         }
     }
 
+    /// Executes all models with queued data.
     pub fn run(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         #[cfg(feature = "threaded")]
         {
@@ -103,6 +112,7 @@ impl Runtime {
         }
     }
 
+    /// Executes as many models as possible within the given duration.
     pub fn run_for(
         &mut self,
         duration: Duration,
@@ -149,7 +159,6 @@ impl Runtime {
         let start = Instant::now();
         let mut any_executed = false;
 
-        // TODO: luc: Is there a better way?
         let mut sorted_queue: Vec<Ticket> = Vec::with_capacity(self.queue.len());
         while !self.queue.is_empty() {
             sorted_queue.push(self.queue.pop().unwrap());
