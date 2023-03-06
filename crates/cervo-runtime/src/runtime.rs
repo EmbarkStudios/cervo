@@ -56,7 +56,10 @@ impl Runtime {
     }
 
     pub fn all_input_shapes(&self) -> Vec<Vec<(String, Vec<usize>)>> {
-        self.models.iter().map(|model| model.inferer.input_shapes().to_vec()).collect()
+        self.models
+            .iter()
+            .map(|model| model.inferer.input_shapes().to_vec())
+            .collect()
     }
 
     /// Add a new inferer to this runtime. The new infererer will be at the end of the inference queue when using timed inference.
@@ -116,11 +119,10 @@ impl Runtime {
     pub fn run_for(
         &mut self,
         duration: Duration,
-    
     ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         #[cfg(feature = "threaded")]
         {
-           self.run_for_threaded(duration)
+            self.run_for_threaded(duration)
         }
         #[cfg(not(feature = "threaded"))]
         {
@@ -138,7 +140,9 @@ impl Runtime {
     }
 
     /// Executes all models with queued data.
-    pub fn run_non_threaded(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
+    pub fn run_non_threaded(
+        &mut self,
+    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         let mut result = HashMap::default();
 
         for model in self.models.iter_mut() {
@@ -176,7 +180,6 @@ impl Runtime {
                 None
             })
             .collect::<Vec<(&Ticket, &ModelState)>>();
-
 
         let results = queue
             .into_par_iter()
