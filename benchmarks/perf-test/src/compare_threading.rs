@@ -4,13 +4,19 @@ use std::time::Duration;
 use std::time::Instant;
 
 fn push_tickets(runtime: &mut Runtime, batch_size: usize) {
-    for (inputs, brain_id) in runtime.all_input_shapes().iter().zip(runtime.brain_ids().iter()) {
+    for (inputs, brain_id) in runtime
+        .all_input_shapes()
+        .iter()
+        .zip(runtime.brain_ids().iter())
+    {
         let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
         for (key, val) in observations.iter() {
-            runtime.push(brain_id.clone(), *key, val.clone()).expect(&format!(
-                "Could not push to runtime key: {}, val: {:?}",
-                key, val
-            ));
+            runtime
+                .push(brain_id.clone(), *key, val.clone())
+                .expect(&format!(
+                    "Could not push to runtime key: {}, val: {:?}",
+                    key, val
+                ));
         }
     }
 }
@@ -20,7 +26,7 @@ fn add_inferers_to_runtime(
     onnx_paths: &[&str],
     brain_repetitions: usize,
     batch_size: usize,
-)  {
+) {
     for _ in 0..brain_repetitions {
         for onnx_path in onnx_paths {
             let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
@@ -126,8 +132,7 @@ pub(crate) fn compare_threading() {
     println!("One-shot run tests (running through all models once)");
     println!(" ");
     for brain_repetitions in brain_repetition_values {
-        for batch_size in batch_sizes
-        {
+        for batch_size in batch_sizes {
             println!("-------------------------------");
             println!("Homogenous (same model n times)");
             let onnx_paths = vec!["../../brains/test.onnx"];
@@ -156,7 +161,11 @@ pub(crate) fn compare_threading() {
 
         println!("-------------------------------");
         println!("Heterogeneous (different models once)");
-        let onnx_paths = vec!["../../brains/test.onnx", "../../brains/test-large.onnx", "../../brains/test-complex.onnx"];
+        let onnx_paths = vec![
+            "../../brains/test.onnx",
+            "../../brains/test-large.onnx",
+            "../../brains/test-complex.onnx",
+        ];
         compare_run_for(&onnx_paths, duration, batch_size);
         break;
     }
