@@ -56,7 +56,10 @@ fn add_inferers_to_runtime(
     }
 }
 
-
+/// Add all the brains in `onnx_paths` to a runtime for `brain_repetitions` times and execute
+/// all of them once. The time it takes is returned.
+/// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.
+/// The `batch_size` is the number of observations per brain.
 fn run_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize, threaded: bool) -> Duration {
     let mut runtime = Runtime::new();
     add_inferers_to_runtime(&mut runtime, &onnx_paths, brain_repetitions, batch_size);
@@ -70,6 +73,10 @@ fn run_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize
     elapsed_time
 }
 
+/// Run the runtime for `duration` seconds and count the number of runs.
+/// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.	
+/// The `batch_size` is the number of observations per brain.
+/// The number of runs is returned.
 fn run_for(threaded: bool, onnx_paths: &[&str], duration: Duration, batch_size: usize) -> usize {
     let mut runtime = Runtime::new();
     add_inferers_to_runtime(&mut runtime, &onnx_paths, 1000, batch_size);
@@ -87,6 +94,10 @@ fn run_for(threaded: bool, onnx_paths: &[&str], duration: Duration, batch_size: 
     result.len()
 }
 
+/// Compare the time it takes to run a single inference for `brain_repetitions` times the brains in
+/// `onnx_paths` for `batch_size` observations. 
+/// Outputs the speedup obtained by using threading by comparing the time it takes to run the
+/// non-threaded version to the threaded version.
 fn compare_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize) {
     let non_threaded_time = run_one_shot(&onnx_paths, brain_repetitions, batch_size, false);
     let threaded_time = run_one_shot(&onnx_paths, brain_repetitions, batch_size, true);
@@ -101,6 +112,10 @@ fn compare_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: u
     println!("----")
 }
 
+/// Compare the number of runs obtained in `duration` seconds for `brain_repetitions` times the brains in
+/// `onnx_paths` for `batch_size` observations. 
+/// Outputs the speedup obtained by using threading by comparing the number of runs of the
+/// non-threaded version to the threaded version.
 fn compare_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) {
     let non_threaded_runs = run_for(false, &onnx_paths, duration, batch_size);
     let threaded_runs = run_for(true, &onnx_paths, duration, batch_size);
@@ -115,6 +130,7 @@ fn compare_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) {
     println!("----")
 }
 
+/// Measures the speedup obtained by using threading for the runtime.
 pub(crate) fn compare_threading() {
     let brain_repetition_values = [1, 10, 20, 50, 100];
     let batch_sizes = [2, 4, 8, 16, 32, 64];
