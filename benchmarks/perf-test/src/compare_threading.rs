@@ -9,20 +9,24 @@ use std::time::Instant;
 
 /// Given an existing runtime with brains, push new tickets based on inputs.
 fn push_tickets(runtime: &mut Runtime, batch_size: usize) {
-    for (inputs, brain_id) in runtime
-        .all_input_shapes()
-        .iter()
-        .zip(runtime.brain_ids().iter())
+    let mut observation_vec = vec![];
+    for (inputs, brain_id) in runtime.models.iter().map(|model| {
+        (model.inferer.input_shapes().to_vec(), model.id)
+    })
     {
         let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
         for (key, val) in observations.iter() {
-            runtime
-                .push(brain_id.clone(), *key, val.clone())
-                .expect(&format!(
-                    "Could not push to runtime key: {}, val: {:?}",
-                    key, val
-                ));
+            observation_vec.push((brain_id.clone(), &key, val.clone()));
         }
+    }
+    for (brain_id, key, val) in observation_vec {
+        runtime
+        // TODO: LUc: Entrypoint:
+            .push(brain_id, *key.clone(), val)
+            .expect(&format!(
+                "Could not push to runtime key: {}, val: {:?}",
+                key, val
+            ));
     }
 }
 
