@@ -24,6 +24,7 @@ pub(crate) struct ModelState {
 }
 
 // SAFETY: ModelState is only ever accessed from a single thread, and is never shared between threads
+#[allow(unsafe_code)]
 unsafe impl Sync for ModelState {}
 
 impl ModelState {
