@@ -1,8 +1,13 @@
 use cervo_core::prelude::Inferer;
+use cervo_core::prelude::Response;
+use std::collections::HashMap;
+use cervo_runtime::BrainId;
+use cervo_runtime::AgentId;
 use cervo_runtime::Runtime;
 use std::time::Duration;
 use std::time::Instant;
 
+/// Given an existing runtime with brains, push new tickets based on inputs.
 fn push_tickets(runtime: &mut Runtime, batch_size: usize) {
     for (inputs, brain_id) in runtime
         .all_input_shapes()
@@ -21,6 +26,9 @@ fn push_tickets(runtime: &mut Runtime, batch_size: usize) {
     }
 }
 
+
+/// Create a new runtime with for `brain_repetitions` times the brains in `onnx_paths`.
+/// Also generates observations based on the inferers' input shapes.
 fn add_inferers_to_runtime(
     runtime: &mut Runtime,
     onnx_paths: &[&str],
@@ -48,31 +56,21 @@ fn add_inferers_to_runtime(
     }
 }
 
-fn threaded_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize) -> Duration {
+
+fn run_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize, threaded: bool) -> Duration {
     let mut runtime = Runtime::new();
     add_inferers_to_runtime(&mut runtime, &onnx_paths, brain_repetitions, batch_size);
-
     let start_time = Instant::now();
-    runtime.run_threaded();
+    if threaded {
+        let _ = runtime.run_threaded();
+    } else {
+        let _ = runtime.run_non_threaded();
+    };
     let elapsed_time = start_time.elapsed();
     elapsed_time
 }
 
-fn non_threaded_one_shot(
-    onnx_paths: &[&str],
-    brain_repetitions: usize,
-    batch_size: usize,
-) -> Duration {
-    let mut runtime = Runtime::new();
-    add_inferers_to_runtime(&mut runtime, &onnx_paths, brain_repetitions, batch_size);
-
-    let start_time = Instant::now();
-    let _ = runtime.run_non_threaded();
-    let elapsed_time = start_time.elapsed();
-    elapsed_time
-}
-
-fn threaded_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) -> usize {
+fn run_for(threaded: bool, onnx_paths: &[&str], duration: Duration, batch_size: usize) -> usize {
     let mut runtime = Runtime::new();
     add_inferers_to_runtime(&mut runtime, &onnx_paths, 1000, batch_size);
     // Do a cold run
@@ -80,27 +78,18 @@ fn threaded_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) 
     push_tickets(&mut runtime, batch_size);
 
     // Do the actual run
-    let result = runtime.run_for_threaded(duration).unwrap();
+    let result: HashMap<BrainId, HashMap<AgentId, Response<'_>>> = if threaded {
+        runtime.run_for_threaded(duration).unwrap()
+    } else {
+        runtime.run_for_non_threaded(duration).unwrap()
+    };
     println!("Result len for threaded is {}", result.len());
     result.len()
 }
 
-fn non_threaded_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) -> usize {
-    let mut runtime = Runtime::new();
-    // Do a cold run
-    add_inferers_to_runtime(&mut runtime, &onnx_paths, 500, batch_size);
-    runtime.run_threaded();
-    push_tickets(&mut runtime, batch_size);
-
-    // Do the actual run
-    let result = runtime.run_for_non_threaded(duration).unwrap();
-    println!("Result len for non threaded is {}", result.len());
-    result.len()
-}
-
 fn compare_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize) {
-    let non_threaded_time = non_threaded_one_shot(&onnx_paths, brain_repetitions, batch_size);
-    let threaded_time = threaded_one_shot(&onnx_paths, brain_repetitions, batch_size);
+    let non_threaded_time = run_one_shot(&onnx_paths, brain_repetitions, batch_size, false);
+    let threaded_time = run_one_shot(&onnx_paths, brain_repetitions, batch_size, true);
     let ratio: f32 = non_threaded_time.as_nanos() as f32 / threaded_time.as_nanos() as f32;
     println!("Batch size is {}", batch_size);
     println!(
@@ -113,8 +102,8 @@ fn compare_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: u
 }
 
 fn compare_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) {
-    let non_threaded_runs = non_threaded_run_for(&onnx_paths, duration, batch_size);
-    let threaded_runs = threaded_run_for(&onnx_paths, duration, batch_size);
+    let non_threaded_runs = run_for(false, &onnx_paths, duration, batch_size);
+    let threaded_runs = run_for(true, &onnx_paths, duration, batch_size);
     let ratio: f32 = threaded_runs as f32 / non_threaded_runs as f32;
     println!(
         "For {} seconds, threaded is {} times more efficient than non threaded",
