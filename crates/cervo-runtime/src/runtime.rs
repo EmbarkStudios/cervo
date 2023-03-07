@@ -20,7 +20,7 @@ use std::{
 
 /// The runtime wraps a multitude of inference models with batching support, and support for time-limited execution.
 pub struct Runtime {
-    models: Vec<ModelState>,
+    pub models: Vec<ModelState>,
     queue: BinaryHeap<Ticket>,
     ticket_generation: u64,
     brain_generation: u16,
@@ -43,24 +43,16 @@ impl Runtime {
         }
     }
 
-    pub fn queue_len(&self) -> usize {
-        self.queue.len()
-    }
+    // pub fn brain_ids(&self) -> Vec<BrainId> {
+    //     self.models.iter().map(|model| model.id).collect()
+    // }
 
-    pub fn model_len(&self) -> usize {
-        self.models.len()
-    }
-
-    pub fn brain_ids(&self) -> Vec<BrainId> {
-        self.models.iter().map(|model| model.id).collect()
-    }
-
-    pub fn all_input_shapes(&self) -> Vec<Vec<(String, Vec<usize>)>> {
-        self.models
-            .iter()
-            .map(|model| model.inferer.input_shapes().to_vec())
-            .collect()
-    }
+    // pub fn all_input_shapes(&self) -> Vec<Vec<(String, Vec<usize>)>> {
+    //     self.models
+    //         .iter()
+    //         .map(|model| model.inferer.input_shapes().to_vec())
+    //         .collect()
+    // }
 
     /// Add a new inferer to this runtime. The new infererer will be at the end of the inference queue when using timed inference.
     pub fn add_inferer(&mut self, inferer: impl Inferer + 'static + Send) -> BrainId {
@@ -207,13 +199,14 @@ impl Runtime {
                 Ticket(gen, ticket.1)
             })
             .collect::<Vec<Ticket>>();
-        let unfinished = sorted_queue
-            .iter()
-            .filter(|ticket| !results.contains_key(&ticket.1))
-            .cloned()
-            .collect::<Vec<Ticket>>();
-        self.queue = unfinished.into();
-        self.queue.extend(finished.iter());
+
+        self.queue.clear();
+        for ticket in sorted_queue {
+            self.queue.push(ticket);
+        }
+        for ticket in finished {
+            self.queue.push(ticket)
+        }
 
         Ok(results)
     }

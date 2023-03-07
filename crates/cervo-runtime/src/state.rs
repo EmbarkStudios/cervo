@@ -16,9 +16,9 @@ use std::{
 
 use crate::{error::CervoError, BrainId};
 
-pub(crate) struct ModelState {
-    pub(crate) id: BrainId,
-    pub(crate) inferer: Box<dyn Inferer + 'static + Send>,
+pub struct ModelState {
+    pub id: BrainId,
+    pub inferer: Box<dyn Inferer + 'static + Send>,
     batcher: RefCell<Batcher>,
     timings: RefCell<Vec<TimingBucket>>,
 }
