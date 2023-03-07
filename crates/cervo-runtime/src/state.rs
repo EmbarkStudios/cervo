@@ -47,6 +47,8 @@ impl ModelState {
         !self.batcher.borrow().is_empty()
     }
 
+
+    #[cfg(feature = "threaded")]
     pub(crate) fn estimated_time(&self) -> Duration {
         if self.timings.borrow().is_empty() {
             return Duration::ZERO;
