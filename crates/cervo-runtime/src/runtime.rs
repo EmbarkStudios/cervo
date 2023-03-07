@@ -12,7 +12,9 @@ use crate::{error::CervoError, state::ModelState, AgentId, BrainId};
 use ticket::Ticket;
 
 use cervo_core::prelude::{Inferer, Response, State};
-use rayon::prelude::*;
+use rayon::iter::ParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::IntoParallelRefMutIterator;
 use std::{
     collections::{BinaryHeap, HashMap},
     time::{Duration, Instant},
