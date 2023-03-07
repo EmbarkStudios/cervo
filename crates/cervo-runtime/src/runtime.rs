@@ -12,8 +12,11 @@ use crate::{error::CervoError, state::ModelState, AgentId, BrainId};
 use ticket::Ticket;
 
 use cervo_core::prelude::{Inferer, Response, State};
+#[cfg(feature = "threaded")]
 use rayon::iter::ParallelIterator;
+#[cfg(feature = "threaded")]
 use rayon::iter::IntoParallelIterator;
+#[cfg(feature = "threaded")]
 use rayon::iter::IntoParallelRefMutIterator;
 use std::{
     collections::{BinaryHeap, HashMap},
@@ -44,17 +47,6 @@ impl Runtime {
             brain_generation: 0,
         }
     }
-
-    // pub fn brain_ids(&self) -> Vec<BrainId> {
-    //     self.models.iter().map(|model| model.id).collect()
-    // }
-
-    // pub fn all_input_shapes(&self) -> Vec<Vec<(String, Vec<usize>)>> {
-    //     self.models
-    //         .iter()
-    //         .map(|model| model.inferer.input_shapes().to_vec())
-    //         .collect()
-    // }
 
     /// Add a new inferer to this runtime. The new infererer will be at the end of the inference queue when using timed inference.
     pub fn add_inferer(&mut self, inferer: impl Inferer + 'static + Send) -> BrainId {
@@ -97,33 +89,8 @@ impl Runtime {
         }
     }
 
-    /// Executes all models with queued data.
-    pub fn run(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
-        #[cfg(feature = "threaded")]
-        {
-            Ok(self.run_threaded())
-        }
-        #[cfg(not(feature = "threaded"))]
-        {
-            self.run_inner()
-        }
-    }
 
-    /// Executes as many models as possible within the given duration.
-    pub fn run_for(
-        &mut self,
-        duration: Duration,
-    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
-        #[cfg(feature = "threaded")]
-        {
-            self.run_for_threaded(duration)
-        }
-        #[cfg(not(feature = "threaded"))]
-        {
-            self.run_for_inner(duration)
-        }
-    }
-
+    #[cfg(feature = "threaded")]
     pub fn run_threaded(&mut self) -> HashMap<BrainId, HashMap<AgentId, Response<'_>>> {
         // Use the iterator method from rayon
         self.models
@@ -134,7 +101,7 @@ impl Runtime {
     }
 
     /// Executes all models with queued data.
-    pub fn run_non_threaded(
+    pub fn run(
         &mut self,
     ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         let mut result = HashMap::default();
@@ -150,6 +117,7 @@ impl Runtime {
         Ok(result)
     }
 
+    #[cfg(feature = "threaded")]
     pub fn run_for_threaded(
         &mut self,
         duration: Duration,
@@ -216,7 +184,7 @@ impl Runtime {
     /// Executes all models with queued data. Will attempt to keep
     /// total time below the provided duration, but due to noise or lack
     /// of samples might miss the deadline. See the note in [the root](./index.html).
-    pub fn run_for_non_threaded(
+    pub fn run_for(
         &mut self,
         mut duration: Duration,
     ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {

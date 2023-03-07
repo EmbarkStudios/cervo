@@ -70,7 +70,7 @@ fn run_one_shot(
     if threaded {
         let _ = runtime.run_threaded();
     } else {
-        let _ = runtime.run_non_threaded();
+        let _ = runtime.run();
     };
     let elapsed_time = start_time.elapsed();
     elapsed_time
@@ -91,7 +91,7 @@ fn run_for(threaded: bool, onnx_paths: &[&str], duration: Duration, batch_size: 
     let result: HashMap<BrainId, HashMap<AgentId, Response<'_>>> = if threaded {
         runtime.run_for_threaded(duration).unwrap()
     } else {
-        runtime.run_for_non_threaded(duration).unwrap()
+        runtime.run_for(duration).unwrap()
     };
     println!("Result len for threaded is {}", result.len());
     result.len()
