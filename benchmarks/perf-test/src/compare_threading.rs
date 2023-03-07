@@ -7,52 +7,129 @@ use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
 
-/// Given an existing runtime with brains, push new tickets based on inputs.
-fn push_tickets(runtime: &mut Runtime, batch_size: usize) {
-    for i in 0..runtime.models.len() {
-        if let Some(model) = runtime.models.get(i) {
-            let inputs = model.inferer.input_shapes().to_vec();
-            let id = model.id;
+struct Tester {
+    runtime: Runtime,
+    batch_size: usize,
+    brain_repetitions: usize,
+    onnx_paths: Vec<&'static str>,
+    brain_ids: Vec<BrainId>,
+}
 
-            let map = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs).clone();
-            for (key, val) in map.iter() {
-                runtime.push(id, *key, val.clone()).expect(&format!(
-                    "Could not push to runtime key: {}, val: {:?}",
-                    key, val
-                ));
+impl Tester {
+    fn new(batch_size: usize, brain_repetitions: usize, onnx_paths: Vec<&'static str>) -> Self {
+        let mut tester = Self {
+            runtime: Runtime::new(),
+            batch_size,
+            brain_repetitions,
+            onnx_paths,
+        };
+
+        tester.add_inferers_to_runtime();
+    }
+
+    fn add_inferers_to_runtime(&mut self) {
+        for _ in 0..self.brain_repetitions {
+            for onnx_path in self.onnx_paths.iter() {
+                let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
+                let inferer = cervo_onnx::builder(&mut reader)
+                    .build_fixed(&[batch_size])
+                    .unwrap();
+
+                let inputs = inferer.input_shapes().to_vec();
+                let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
+                let brain_id = runtime.add_inferer(inferer);
+
+                for (key, val) in observations.iter() {
+                    self.runtime.push(brain_id, *key, val.clone()).expect(&format!(
+                        "Could not push to runtime key: {}, val: {:?}",
+                        key, val
+                    ));
+                    self.brain_ids.push(brain_id);
+                }
             }
         }
     }
+
+    /// Given an existing runtime with brains, push new tickets based on inputs.
+    fn push_tickets(&mut self) {
+        // TODO: Luc: Do this with brain ID
+
+    }
+
+    /// Add all the brains in `onnx_paths` to a runtime for `brain_repetitions` times and execute
+    /// all of them once. The time it takes is returned.
+    /// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.
+    /// The `batch_size` is the number of observations per brain.
+    fn run_one_shot(
+        &mut self, 
+        threaded: bool,
+    ) -> Duration {
+        let mut runtime = Runtime::new();
+        add_inferers_to_runtime(&mut runtime, &onnx_paths, brain_repetitions, batch_size);
+        let start_time = Instant::now();
+        if threaded {
+            let _ = runtime.run_threaded();
+        } else {
+            let _ = runtime.run();
+        };
+        let elapsed_time = start_time.elapsed();
+        elapsed_time
+    }
+
+
+
 }
+
+
+// /// Given an existing runtime with brains, push new tickets based on inputs.
+// fn push_tickets(runtime: &mut Runtime, batch_size: usize) {
+//     for i in 0..runtime.models.len() {
+//         if let Some(model) = runtime.models.get(i) {
+//             let inputs = model.inferer.input_shapes().to_vec();
+//             let id = model.id;
+
+//             let map = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs).clone();
+//             for (key, val) in map.iter() {
+//                 runtime.push(id, *key, val.clone()).expect(&format!(
+//                     "Could not push to runtime key: {}, val: {:?}",
+//                     key, val
+//                 ));
+//             }
+//         }
+//     }
+// }
+
+// TODO: Luc: Store the brain keys in a struct now
+// TODO: Luc: test for different numbers of threads and shoehorn into some format...
 
 /// Create a new runtime with for `brain_repetitions` times the brains in `onnx_paths`.
 /// Also generates observations based on the inferers' input shapes.
-fn add_inferers_to_runtime(
-    runtime: &mut Runtime,
-    onnx_paths: &[&str],
-    brain_repetitions: usize,
-    batch_size: usize,
-) {
-    for _ in 0..brain_repetitions {
-        for onnx_path in onnx_paths {
-            let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
-            let inferer = cervo_onnx::builder(&mut reader)
-                .build_fixed(&[batch_size])
-                .unwrap();
+// fn add_inferers_to_runtime(
+//     runtime: &mut Runtime,
+//     onnx_paths: &[&str],
+//     brain_repetitions: usize,
+//     batch_size: usize,
+// ) {
+//     for _ in 0..brain_repetitions {
+//         for onnx_path in onnx_paths {
+//             let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
+//             let inferer = cervo_onnx::builder(&mut reader)
+//                 .build_fixed(&[batch_size])
+//                 .unwrap();
 
-            let inputs = inferer.input_shapes().to_vec();
-            let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
-            let brain_id = runtime.add_inferer(inferer);
+//             let inputs = inferer.input_shapes().to_vec();
+//             let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
+//             let brain_id = runtime.add_inferer(inferer);
 
-            for (key, val) in observations.iter() {
-                runtime.push(brain_id, *key, val.clone()).expect(&format!(
-                    "Could not push to runtime key: {}, val: {:?}",
-                    key, val
-                ));
-            }
-        }
-    }
-}
+//             for (key, val) in observations.iter() {
+//                 runtime.push(brain_id, *key, val.clone()).expect(&format!(
+//                     "Could not push to runtime key: {}, val: {:?}",
+//                     key, val
+//                 ));
+//             }
+//         }
+//     }
+// }
 
 /// Add all the brains in `onnx_paths` to a runtime for `brain_repetitions` times and execute
 /// all of them once. The time it takes is returned.
@@ -135,6 +212,11 @@ fn compare_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) {
 
 /// Measures the speedup obtained by using threading for the runtime.
 pub(crate) fn compare_threading() {
+    println!("Current number of threads is {}", rayon::current_num_threads());
+    rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
+    println!("Current number of threads is now {}", rayon::current_num_threads());
+
+
     let brain_repetition_values = [1, 10, 20, 50, 100];
     let batch_sizes = [2, 4, 8, 16, 32, 64];
     println!("One-shot run tests (running through all models once)");

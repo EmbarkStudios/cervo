@@ -60,6 +60,7 @@ fn std_deviation(data: &[f64]) -> Option<f64> {
     }
 }
 
+#[allow(unsafe_code)]
 fn black_box<T>(dummy: T) -> T {
     unsafe { std::ptr::read_volatile(&dummy) }
 }

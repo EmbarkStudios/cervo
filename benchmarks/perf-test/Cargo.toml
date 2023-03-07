@@ -14,3 +14,5 @@ cervo-nnef = { path = "../../crates/cervo-nnef" }
 cervo-core = { path = "../../crates/cervo-core" }
 cervo-runtime = { path = "../../crates/cervo-runtime", features = ["threaded"] }
 perchance = { version = "0.4", default-features = false }
+rayon = { version = "1.5"}
+
