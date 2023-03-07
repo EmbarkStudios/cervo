@@ -1,35 +1,29 @@
 use cervo_core::prelude::Inferer;
 use cervo_core::prelude::Response;
-use std::collections::HashMap;
-use cervo_runtime::BrainId;
 use cervo_runtime::AgentId;
+use cervo_runtime::BrainId;
 use cervo_runtime::Runtime;
+use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
 
 /// Given an existing runtime with brains, push new tickets based on inputs.
 fn push_tickets(runtime: &mut Runtime, batch_size: usize) {
-    let mut observation_vec = vec![];
-    for (inputs, brain_id) in runtime.models.iter().map(|model| {
-        (model.inferer.input_shapes().to_vec(), model.id)
-    })
-    {
-        let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
-        for (key, val) in observations.iter() {
-            observation_vec.push((brain_id.clone(), &key, val.clone()));
+    for i in 0..runtime.models.len() {
+        if let Some(model) = runtime.models.get(i) {
+            let inputs = model.inferer.input_shapes().to_vec();
+            let id = model.id;
+
+            let map = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs).clone();
+            for (key, val) in map.iter() {
+                runtime.push(id, *key, val.clone()).expect(&format!(
+                    "Could not push to runtime key: {}, val: {:?}",
+                    key, val
+                ));
+            }
         }
     }
-    for (brain_id, key, val) in observation_vec {
-        runtime
-        // TODO: LUc: Entrypoint:
-            .push(brain_id, *key.clone(), val)
-            .expect(&format!(
-                "Could not push to runtime key: {}, val: {:?}",
-                key, val
-            ));
-    }
 }
-
 
 /// Create a new runtime with for `brain_repetitions` times the brains in `onnx_paths`.
 /// Also generates observations based on the inferers' input shapes.
@@ -64,7 +58,12 @@ fn add_inferers_to_runtime(
 /// all of them once. The time it takes is returned.
 /// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.
 /// The `batch_size` is the number of observations per brain.
-fn run_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize, threaded: bool) -> Duration {
+fn run_one_shot(
+    onnx_paths: &[&str],
+    brain_repetitions: usize,
+    batch_size: usize,
+    threaded: bool,
+) -> Duration {
     let mut runtime = Runtime::new();
     add_inferers_to_runtime(&mut runtime, &onnx_paths, brain_repetitions, batch_size);
     let start_time = Instant::now();
@@ -78,7 +77,7 @@ fn run_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize
 }
 
 /// Run the runtime for `duration` seconds and count the number of runs.
-/// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.	
+/// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.
 /// The `batch_size` is the number of observations per brain.
 /// The number of runs is returned.
 fn run_for(threaded: bool, onnx_paths: &[&str], duration: Duration, batch_size: usize) -> usize {
@@ -99,7 +98,7 @@ fn run_for(threaded: bool, onnx_paths: &[&str], duration: Duration, batch_size: 
 }
 
 /// Compare the time it takes to run a single inference for `brain_repetitions` times the brains in
-/// `onnx_paths` for `batch_size` observations. 
+/// `onnx_paths` for `batch_size` observations.
 /// Outputs the speedup obtained by using threading by comparing the time it takes to run the
 /// non-threaded version to the threaded version.
 fn compare_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize) {
@@ -117,7 +116,7 @@ fn compare_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: u
 }
 
 /// Compare the number of runs obtained in `duration` seconds for `brain_repetitions` times the brains in
-/// `onnx_paths` for `batch_size` observations. 
+/// `onnx_paths` for `batch_size` observations.
 /// Outputs the speedup obtained by using threading by comparing the number of runs of the
 /// non-threaded version to the threaded version.
 fn compare_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) {
