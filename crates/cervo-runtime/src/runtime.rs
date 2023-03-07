@@ -13,11 +13,11 @@ use ticket::Ticket;
 
 use cervo_core::prelude::{Inferer, Response, State};
 #[cfg(feature = "threaded")]
-use rayon::iter::ParallelIterator;
-#[cfg(feature = "threaded")]
 use rayon::iter::IntoParallelIterator;
 #[cfg(feature = "threaded")]
 use rayon::iter::IntoParallelRefMutIterator;
+#[cfg(feature = "threaded")]
+use rayon::iter::ParallelIterator;
 use std::{
     collections::{BinaryHeap, HashMap},
     time::{Duration, Instant},
@@ -89,7 +89,6 @@ impl Runtime {
         }
     }
 
-
     #[cfg(feature = "threaded")]
     pub fn run_threaded(&mut self) -> HashMap<BrainId, HashMap<AgentId, Response<'_>>> {
         // Use the iterator method from rayon
@@ -101,9 +100,7 @@ impl Runtime {
     }
 
     /// Executes all models with queued data.
-    pub fn run(
-        &mut self,
-    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
+    pub fn run(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         let mut result = HashMap::default();
 
         for model in self.models.iter_mut() {
@@ -122,63 +119,99 @@ impl Runtime {
         &mut self,
         duration: Duration,
     ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
-        let start = Instant::now();
-        let mut any_executed = false;
+        let mut available_cpu_time = duration * rayon::current_num_threads() as u32;
+        let mut selected_jobs = Vec::new();
+        let mut unselected_jobs = Vec::new();
 
-        let mut sorted_queue: Vec<Ticket> = Vec::with_capacity(self.queue.len());
-        while !self.queue.is_empty() {
-            sorted_queue.push(self.queue.pop().unwrap());
+        while let Some(ticket) = self.queue.pop() {
+            let Some(model) = self.models.iter().find(|m| m.id == ticket.1) else {continue};
+
+            if model.needs_to_execute()
+                && (selected_jobs.is_empty() || model.can_run_in_time(available_cpu_time))
+            {
+                available_cpu_time = available_cpu_time.saturating_sub(model.estimated_time());
+                selected_jobs.push((ticket, model));
+            } else {
+                unselected_jobs.push(ticket);
+            }
         }
 
-        let queue = sorted_queue
-            .iter()
-            .filter_map(|ticket| {
-                if let Some(model) = self.models.iter().find(|m| m.id == ticket.1) {
-                    if model.needs_to_execute() || !any_executed {
-                        any_executed = true;
-                        return Some((ticket, model));
-                    }
-                }
-                None
-            })
-            .collect::<Vec<(&Ticket, &ModelState)>>();
-
-        let results = queue
+        let results = selected_jobs
             .into_par_iter()
-            .map(|(ticket, model)| {
-                if start.elapsed() > duration {
-                    return None;
-                }
-                let time_remaining = duration.clone().saturating_sub(start.elapsed());
-                if model.can_run_in_time(time_remaining) {
-                    if let Some(r) = model.run().ok() {
-                        return Some((ticket.1, r));
-                    }
-                }
-                None
-            })
-            .flatten()
-            .collect::<HashMap<BrainId, HashMap<AgentId, Response<'_>>>>();
+            .map(|(ticket, model)| (ticket.1, model.run()))
+            .collect::<Vec<(_, _)>>(); // collect necessary to conserve ordering
 
-        let finished = sorted_queue
-            .iter()
-            .filter(|ticket| results.contains_key(&ticket.1))
-            .map(|ticket| {
-                let gen = self.ticket_generation;
-                self.ticket_generation += 1;
-                Ticket(gen, ticket.1)
-            })
-            .collect::<Vec<Ticket>>();
+        let new_tickets = results.iter().map(|(b, _)| {
+            let gen = self.ticket_generation;
+            self.ticket_generation += 1;
+            Ticket(gen, *b)
+        });
 
-        self.queue.clear();
-        for ticket in sorted_queue {
-            self.queue.push(ticket);
-        }
-        for ticket in finished {
-            self.queue.push(ticket)
-        }
+        self.queue.extend(unselected_jobs.into_iter().chain(new_tickets));
 
-        Ok(results)
+        // transpose Iter<(B, Res<V, E>)> into Iter<Res<(B, Val)>> before collecting
+        results
+            .into_iter()
+            .map(|(b, res)| res.map(|val| (b, val)))
+            .collect::<Result<_, _>>()
+
+        // let start = Instant::now();
+        // let mut any_executed = false;
+
+        // let mut sorted_queue: Vec<Ticket> = Vec::with_capacity(self.queue.len());
+        // while !self.queue.is_empty() {
+        //     sorted_queue.push(self.queue.pop().unwrap());
+        // }
+
+        // let queue = sorted_queue
+        //     .iter()
+        //     .filter_map(|ticket| {
+        //         if let Some(model) = self.models.iter().find(|m| m.id == ticket.1) {
+        //             if model.needs_to_execute() || !any_executed {
+        //                 any_executed = true;
+        //                 return Some((ticket, model));
+        //             }
+        //         }
+        //         None
+        //     })
+        //     .collect::<Vec<(&Ticket, &ModelState)>>();
+
+        // let results = queue
+        //     .into_par_iter()
+        //     .map(|(ticket, model)| {
+        //         if start.elapsed() > duration {
+        //             return None;
+        //         }
+        //         let time_remaining = duration.clone().saturating_sub(start.elapsed());
+        //         if model.can_run_in_time(time_remaining) {
+        //             if let Some(r) = model.run().ok() {
+        //                 return Some((ticket.1, r));
+        //             }
+        //         }
+        //         None
+        //     })
+        //     .flatten()
+        //     .collect::<HashMap<BrainId, HashMap<AgentId, Response<'_>>>>();
+
+        // let finished = sorted_queue
+        //     .iter()
+        //     .filter(|ticket| results.contains_key(&ticket.1))
+        //     .map(|ticket| {
+        //         let gen = self.ticket_generation;
+        //         self.ticket_generation += 1;
+        //         Ticket(gen, ticket.1)
+        //     })
+        //     .collect::<Vec<Ticket>>();
+
+        // self.queue.clear();
+        // for ticket in sorted_queue {
+        //     self.queue.push(ticket);
+        // }
+        // for ticket in finished {
+        //     self.queue.push(ticket)
+        // }
+
+        // Ok(results)
     }
 
     /// Executes all models with queued data. Will attempt to keep

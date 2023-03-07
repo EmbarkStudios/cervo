@@ -24,4 +24,4 @@ cervo-asset = { version = "0.4.1-alpha.0", path = "../cervo-asset"}
 
 [features]
 threaded = ["rayon"]
-default = []
+default = ["threaded"] # TODO: Luc; Turn off

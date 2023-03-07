@@ -47,6 +47,32 @@ impl ModelState {
         !self.batcher.borrow().is_empty()
     }
 
+    pub(crate) fn estimated_time(&self) -> Duration {
+        if self.timings.borrow().is_empty() {
+            return Duration::ZERO;
+        }
+
+        let size = self.batcher.borrow().len();
+        let timings = self.timings.borrow();
+        let partition = timings.partition_point(|b| b.size <= size);
+
+        if partition == timings.len() {
+            let last = timings.last().unwrap();
+            last.scaled_mean(size)
+        } else {
+            let elem = &timings[partition];
+            if elem.size == size {
+                elem.mean()
+            } else if partition == 0 {
+                let elem = &timings[partition];
+                elem.scaled_mean(size)
+            } else {
+                let elem = &timings[partition - 1];
+                elem.scaled_mean(size)
+            }
+        }
+    }
+
     pub(crate) fn can_run_in_time(&self, duration: Duration) -> bool {
         if self.timings.borrow().is_empty() {
             return true;
