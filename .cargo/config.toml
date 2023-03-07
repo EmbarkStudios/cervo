@@ -5,7 +5,7 @@ rustflags = [
     # BEGIN - Embark standard lints v6 for Rust 1.55+
     # do not change or add/remove here, but one can add exceptions after this section
     # for more info see: <https://github.com/EmbarkStudios/rust-ecosystem/issues/59>
-    # "-Dunsafe_code",
+    "-Dunsafe_code",
     "-Wclippy::all",
     "-Wclippy::await_holding_lock",
     "-Wclippy::char_lit_as_u8",

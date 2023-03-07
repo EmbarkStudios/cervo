@@ -6,10 +6,6 @@ use crate::BrainId;
 #[derive(Debug)]
 pub(super) struct Ticket(pub(super) u64, pub(super) BrainId);
 
-// SAFETY: Ticket is only ever accessed from a single thread, and is never shared between threads
-#[allow(unsafe_code)]
-unsafe impl Sync for Ticket {}
-
 impl PartialEq for Ticket {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0

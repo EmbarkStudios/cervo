@@ -17,8 +17,8 @@ use std::{
 use crate::{error::CervoError, BrainId};
 
 pub struct ModelState {
-    pub id: BrainId,
-    pub inferer: Box<dyn Inferer + 'static + Send>,
+    pub(crate) id: BrainId,
+    pub(crate) inferer: Box<dyn Inferer + 'static + Send>,
     batcher: RefCell<Batcher>,
     timings: RefCell<Vec<TimingBucket>>,
 }
@@ -47,7 +47,6 @@ impl ModelState {
         !self.batcher.borrow().is_empty()
     }
 
-    #[cfg(feature = "threaded")]
     pub(crate) fn estimated_time(&self) -> Duration {
         if self.timings.borrow().is_empty() {
             return Duration::ZERO;
@@ -75,29 +74,7 @@ impl ModelState {
     }
 
     pub(crate) fn can_run_in_time(&self, duration: Duration) -> bool {
-        if self.timings.borrow().is_empty() {
-            return true;
-        }
-
-        let size = self.batcher.borrow().len();
-        let timings = self.timings.borrow();
-        let partition = timings.partition_point(|b| b.size <= size);
-
-        if partition == timings.len() {
-            let last = timings.last().unwrap();
-            last.scaled_mean(size) <= duration
-        } else {
-            let elem = &timings[partition];
-            if elem.size == size {
-                elem.mean() <= duration
-            } else if partition == 0 {
-                let elem = &timings[partition];
-                elem.scaled_mean(size) <= duration
-            } else {
-                let elem = &timings[partition - 1];
-                elem.scaled_mean(size) <= duration
-            }
-        }
+        self.estimated_time() <= duration
     }
 
     pub(crate) fn infer_single<'a>(

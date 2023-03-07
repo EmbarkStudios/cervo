@@ -25,7 +25,7 @@ use std::{
 
 /// The runtime wraps a multitude of inference models with batching support, and support for time-limited execution.
 pub struct Runtime {
-    pub models: Vec<ModelState>,
+    models: Vec<ModelState>,
     queue: BinaryHeap<Ticket>,
     ticket_generation: u64,
     brain_generation: u16,
