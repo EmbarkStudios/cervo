@@ -154,64 +154,6 @@ impl Runtime {
             .into_iter()
             .map(|(b, res)| res.map(|val| (b, val)))
             .collect::<Result<_, _>>()
-
-        // let start = Instant::now();
-        // let mut any_executed = false;
-
-        // let mut sorted_queue: Vec<Ticket> = Vec::with_capacity(self.queue.len());
-        // while !self.queue.is_empty() {
-        //     sorted_queue.push(self.queue.pop().unwrap());
-        // }
-
-        // let queue = sorted_queue
-        //     .iter()
-        //     .filter_map(|ticket| {
-        //         if let Some(model) = self.models.iter().find(|m| m.id == ticket.1) {
-        //             if model.needs_to_execute() || !any_executed {
-        //                 any_executed = true;
-        //                 return Some((ticket, model));
-        //             }
-        //         }
-        //         None
-        //     })
-        //     .collect::<Vec<(&Ticket, &ModelState)>>();
-
-        // let results = queue
-        //     .into_par_iter()
-        //     .map(|(ticket, model)| {
-        //         if start.elapsed() > duration {
-        //             return None;
-        //         }
-        //         let time_remaining = duration.clone().saturating_sub(start.elapsed());
-        //         if model.can_run_in_time(time_remaining) {
-        //             if let Some(r) = model.run().ok() {
-        //                 return Some((ticket.1, r));
-        //             }
-        //         }
-        //         None
-        //     })
-        //     .flatten()
-        //     .collect::<HashMap<BrainId, HashMap<AgentId, Response<'_>>>>();
-
-        // let finished = sorted_queue
-        //     .iter()
-        //     .filter(|ticket| results.contains_key(&ticket.1))
-        //     .map(|ticket| {
-        //         let gen = self.ticket_generation;
-        //         self.ticket_generation += 1;
-        //         Ticket(gen, ticket.1)
-        //     })
-        //     .collect::<Vec<Ticket>>();
-
-        // self.queue.clear();
-        // for ticket in sorted_queue {
-        //     self.queue.push(ticket);
-        // }
-        // for ticket in finished {
-        //     self.queue.push(ticket)
-        // }
-
-        // Ok(results)
     }
 
     /// Executes all models with queued data. Will attempt to keep
