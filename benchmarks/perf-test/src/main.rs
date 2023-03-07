@@ -70,8 +70,6 @@ fn main() {
         MeasureMode::Loading(config) => {
             compare_loading::compare_loadtimes(config).unwrap();
         }
-        MeasureMode::MultiThreading => {
-            compare_threading::compare_threading();
-        }
+        MeasureMode::MultiThreading => compare_threading::compare_threading().unwrap(),
     }
 }

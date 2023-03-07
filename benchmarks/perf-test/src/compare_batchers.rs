@@ -16,7 +16,6 @@ use anyhow::Result;
 use cervo_core::prelude::{Inferer, InfererExt};
 use clap::Parser;
 
-
 #[allow(unsafe_code)]
 fn black_box<T>(dummy: T) -> T {
     unsafe { std::ptr::read_volatile(&dummy) }

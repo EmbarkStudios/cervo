@@ -1,50 +1,241 @@
+use anyhow::Result;
 use cervo_core::prelude::Inferer;
-use cervo_core::prelude::Response;
-use cervo_runtime::AgentId;
 use cervo_runtime::BrainId;
 use cervo_runtime::Runtime;
-use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
 
-struct Tester {
+use std::{
+    io::Write,
+};
+
+/// Measures the speedup obtained by using threading for the runtime.
+pub(crate) fn compare_threading() -> Result<()> {
+    let brain_repetition_values = vec![100];
+    // let brain_repetition_values = vec![1, 10, 20, 50, 100];
+    let batch_sizes = vec![32];
+    // let batch_sizes = vec![2, 4, 8, 16, 32, 64];
+    let onnx_paths = vec![
+        "../../brains/test.onnx",
+        "../../brains/test-large.onnx",
+        "../../brains/test-complex.onnx",
+    ];
+    // TODO: Luc: Test this
+    // println!("Current number of threads is {}", rayon::current_num_threads());
+    // rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
+    // println!("Current number of threads is now {}", rayon::current_num_threads());
+    let mut tester = Tester::new(brain_repetition_values, batch_sizes, onnx_paths);
+    tester.run();
+
+    // Get averaged values from tester.metrics
+
+    let mut file = std::fs::File::create("temp.csv")?;
+
+    for (avg_run, avg_run_for) in tester
+        .metrics
+        .average_run_speedup_per_core
+        .iter()
+        .zip(tester.metrics.average_run_for_speedup_per_core.iter())
+    {
+        writeln!(file, "{},{}", avg_run, avg_run_for)?;
+    }
+    // writeln!(
+    //     file,
+    //     "{:?},{},{}",
+    //     row.kind,
+    //     row.step,
+    //     row.time.as_secs_f64() * 1e6 / denom
+    // )?;
+
+    Ok(())
+
+    // TODO: Luc: Gather the results and plot them.
+}
+
+#[derive(Default)]
+struct TesterState {
     runtime: Runtime,
     batch_size: usize,
     brain_repetitions: usize,
-    onnx_paths: Vec<&'static str>,
+    duration: Duration,
     brain_ids: Vec<BrainId>,
+    thread_count: usize,
+}
+
+enum Threaded {
+    Threaded,
+    SingleThreaded,
+}
+
+#[derive(Default)]
+struct TesterMetrics {
+    // Needs to be averaged
+    run_speedup_per_core: Vec<Vec<f64>>,
+    pub average_run_speedup_per_core: Vec<f64>,
+    run_for_speedup_per_core: Vec<Vec<f64>>,
+    pub average_run_for_speedup_per_core: Vec<f64>,
+}
+
+#[derive(Default)]
+struct Tester {
+    brain_repetition_values: Vec<usize>,
+    batch_sizes: Vec<usize>,
+    onnx_paths: Vec<&'static str>,
+    state: TesterState,
+    pub metrics: TesterMetrics,
 }
 
 impl Tester {
-    fn new(batch_size: usize, brain_repetitions: usize, onnx_paths: Vec<&'static str>) -> Self {
-        let mut tester = Self {
-            runtime: Runtime::new(),
-            batch_size,
-            brain_repetitions,
-            onnx_paths,
+    fn new(
+        brain_repetition_values: Vec<usize>,
+        batch_sizes: Vec<usize>,
+        onnx_paths: Vec<&'static str>,
+    ) -> Self {
+        let runtime = Runtime::new();
+        let state = TesterState {
+            runtime,
+            duration: Duration::from_millis(5),
+            ..Default::default()
         };
+        let metrics = TesterMetrics {
+            run_speedup_per_core: vec![Vec::new(); rayon::current_num_threads()],
+            run_for_speedup_per_core: vec![Vec::new(); rayon::current_num_threads()],
+            average_run_for_speedup_per_core: vec![0.0; rayon::current_num_threads()],
+            average_run_speedup_per_core: vec![0.0; rayon::current_num_threads()],
+        };
+        Self {
+            brain_repetition_values,
+            batch_sizes,
+            onnx_paths,
+            state,
+            metrics,
+        }
+    }
 
-        tester.add_inferers_to_runtime();
+    fn run(&mut self) -> Option<()> {
+        let max_threads = rayon::current_num_threads();
+        for i in 10..max_threads {
+            match rayon::ThreadPoolBuilder::new().num_threads(i + 1).build() {
+                Err(_e) => None,
+                Ok(pool) => Some(pool),
+            }?
+            .install(|| {
+                // Set rayon threads to i + 1
+                println!("Thread count is now {}", rayon::current_num_threads());
+                self.state.thread_count = i;
+                self.run_one_shot_tests();
+                self.run_for_tests();
+            });
+        }
+        self.metrics.average_run_speedup_per_core = self
+            .metrics
+            .run_speedup_per_core
+            .iter()
+            .map(|v| v.iter().sum::<f64>() / v.len() as f64)
+            .collect();
+        self.metrics.average_run_for_speedup_per_core = self
+            .metrics
+            .run_for_speedup_per_core
+            .iter()
+            .map(|v| v.iter().sum::<f64>() / v.len() as f64)
+            .collect();
+        Some(())
+    }
+
+    fn run_one_shot_tests(&mut self) {
+        for brain_repetitions in self.brain_repetition_values.clone() {
+            for batch_size in self.batch_sizes.clone() {
+                println!(
+                    "Running oneshot for {} threads, {} repetitions, {} batch size",
+                    self.state.thread_count, brain_repetitions, batch_size
+                );
+                self.state.brain_repetitions = brain_repetitions;
+                self.state.batch_size = batch_size;
+                println!("Running threaded");
+                let threaded_duration = self.run_one_shot(Threaded::Threaded);
+                println!("Running single threaded");
+                let single_duration = self.run_one_shot(Threaded::SingleThreaded);
+                let speedup = single_duration.as_secs_f64() / threaded_duration.as_secs_f64();
+                println!("Speed up is {}", speedup);
+                self.metrics.run_speedup_per_core[self.state.thread_count].push(speedup);
+            }
+        }
+    }
+
+    fn run_for_tests(&mut self) {
+        for brain_repetitions in self.brain_repetition_values.clone() {
+            for batch_size in self.batch_sizes.clone() {
+                println!(
+                    "Running dur for {} threads, {} repetitions, {} batch size",
+                    self.state.thread_count, brain_repetitions, batch_size
+                );
+                self.state.brain_repetitions = brain_repetitions;
+                self.state.batch_size = batch_size;
+                println!("Running threaded");
+                let threaded_count = self.run_for(Threaded::Threaded);
+                println!("Running single threaded");
+                let unthreaded_count = self.run_for(Threaded::SingleThreaded);
+                let speedup = threaded_count as f64 / unthreaded_count as f64;
+                println!("Speed up is {}", speedup);
+                self.metrics.run_for_speedup_per_core[self.state.thread_count].push(speedup);
+            }
+        }
+    }
+
+    fn run_for(&mut self, threaded: Threaded) -> usize {
+        self.state.runtime = Runtime::new();
+        self.add_inferers_to_runtime();
+        // Do a cold run
+        self.state.runtime.run_threaded();
+
+        self.push_tickets();
+
+        let result = match threaded {
+            Threaded::Threaded => self.state.runtime.run_for_threaded(self.state.duration),
+            Threaded::SingleThreaded => self.state.runtime.run_for(self.state.duration),
+        }
+        .unwrap();
+        result.len()
+    }
+
+    fn run_one_shot(&mut self, threaded: Threaded) -> Duration {
+        self.state.runtime = Runtime::new();
+        self.add_inferers_to_runtime();
+        let start_time = Instant::now();
+        match threaded {
+            Threaded::Threaded => {
+                let _ = self.state.runtime.run_threaded();
+            }
+            Threaded::SingleThreaded => {
+                let _ = self.state.runtime.run();
+            }
+        };
+        let elapsed_time = start_time.elapsed();
+        elapsed_time
     }
 
     fn add_inferers_to_runtime(&mut self) {
-        for _ in 0..self.brain_repetitions {
+        for _ in 0..self.state.brain_repetitions {
             for onnx_path in self.onnx_paths.iter() {
                 let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
                 let inferer = cervo_onnx::builder(&mut reader)
-                    .build_fixed(&[batch_size])
+                    .build_fixed(&[self.state.batch_size])
                     .unwrap();
 
                 let inputs = inferer.input_shapes().to_vec();
-                let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
-                let brain_id = runtime.add_inferer(inferer);
+                let observations =
+                    crate::helpers::build_inputs_from_desc(self.state.batch_size as u64, &inputs);
+                let brain_id = self.state.runtime.add_inferer(inferer);
 
                 for (key, val) in observations.iter() {
-                    self.runtime.push(brain_id, *key, val.clone()).expect(&format!(
-                        "Could not push to runtime key: {}, val: {:?}",
-                        key, val
-                    ));
-                    self.brain_ids.push(brain_id);
+                    self.state
+                        .runtime
+                        .push(brain_id, *key, val.clone())
+                        .expect(&format!(
+                            "Could not push to runtime key: {}, val: {:?}",
+                            key, val
+                        ));
+                    self.state.brain_ids.push(brain_id);
                 }
             }
         }
@@ -52,211 +243,23 @@ impl Tester {
 
     /// Given an existing runtime with brains, push new tickets based on inputs.
     fn push_tickets(&mut self) {
-        // TODO: Luc: Do this with brain ID
-
-    }
-
-    /// Add all the brains in `onnx_paths` to a runtime for `brain_repetitions` times and execute
-    /// all of them once. The time it takes is returned.
-    /// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.
-    /// The `batch_size` is the number of observations per brain.
-    fn run_one_shot(
-        &mut self, 
-        threaded: bool,
-    ) -> Duration {
-        let mut runtime = Runtime::new();
-        add_inferers_to_runtime(&mut runtime, &onnx_paths, brain_repetitions, batch_size);
-        let start_time = Instant::now();
-        if threaded {
-            let _ = runtime.run_threaded();
-        } else {
-            let _ = runtime.run();
-        };
-        let elapsed_time = start_time.elapsed();
-        elapsed_time
-    }
-
-
-
-}
-
-
-// /// Given an existing runtime with brains, push new tickets based on inputs.
-// fn push_tickets(runtime: &mut Runtime, batch_size: usize) {
-//     for i in 0..runtime.models.len() {
-//         if let Some(model) = runtime.models.get(i) {
-//             let inputs = model.inferer.input_shapes().to_vec();
-//             let id = model.id;
-
-//             let map = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs).clone();
-//             for (key, val) in map.iter() {
-//                 runtime.push(id, *key, val.clone()).expect(&format!(
-//                     "Could not push to runtime key: {}, val: {:?}",
-//                     key, val
-//                 ));
-//             }
-//         }
-//     }
-// }
-
-// TODO: Luc: Store the brain keys in a struct now
-// TODO: Luc: test for different numbers of threads and shoehorn into some format...
-
-/// Create a new runtime with for `brain_repetitions` times the brains in `onnx_paths`.
-/// Also generates observations based on the inferers' input shapes.
-// fn add_inferers_to_runtime(
-//     runtime: &mut Runtime,
-//     onnx_paths: &[&str],
-//     brain_repetitions: usize,
-//     batch_size: usize,
-// ) {
-//     for _ in 0..brain_repetitions {
-//         for onnx_path in onnx_paths {
-//             let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
-//             let inferer = cervo_onnx::builder(&mut reader)
-//                 .build_fixed(&[batch_size])
-//                 .unwrap();
-
-//             let inputs = inferer.input_shapes().to_vec();
-//             let observations = crate::helpers::build_inputs_from_desc(batch_size as u64, &inputs);
-//             let brain_id = runtime.add_inferer(inferer);
-
-//             for (key, val) in observations.iter() {
-//                 runtime.push(brain_id, *key, val.clone()).expect(&format!(
-//                     "Could not push to runtime key: {}, val: {:?}",
-//                     key, val
-//                 ));
-//             }
-//         }
-//     }
-// }
-
-/// Add all the brains in `onnx_paths` to a runtime for `brain_repetitions` times and execute
-/// all of them once. The time it takes is returned.
-/// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.
-/// The `batch_size` is the number of observations per brain.
-fn run_one_shot(
-    onnx_paths: &[&str],
-    brain_repetitions: usize,
-    batch_size: usize,
-    threaded: bool,
-) -> Duration {
-    let mut runtime = Runtime::new();
-    add_inferers_to_runtime(&mut runtime, &onnx_paths, brain_repetitions, batch_size);
-    let start_time = Instant::now();
-    if threaded {
-        let _ = runtime.run_threaded();
-    } else {
-        let _ = runtime.run();
-    };
-    let elapsed_time = start_time.elapsed();
-    elapsed_time
-}
-
-/// Run the runtime for `duration` seconds and count the number of runs.
-/// If `threaded` is true, the runtime is multithreaded, otherwise it is single threaded.
-/// The `batch_size` is the number of observations per brain.
-/// The number of runs is returned.
-fn run_for(threaded: bool, onnx_paths: &[&str], duration: Duration, batch_size: usize) -> usize {
-    let mut runtime = Runtime::new();
-    add_inferers_to_runtime(&mut runtime, &onnx_paths, 1000, batch_size);
-    // Do a cold run
-    runtime.run_threaded();
-    push_tickets(&mut runtime, batch_size);
-
-    // Do the actual run
-    let result: HashMap<BrainId, HashMap<AgentId, Response<'_>>> = if threaded {
-        runtime.run_for_threaded(duration).unwrap()
-    } else {
-        runtime.run_for(duration).unwrap()
-    };
-    println!("Result len for threaded is {}", result.len());
-    result.len()
-}
-
-/// Compare the time it takes to run a single inference for `brain_repetitions` times the brains in
-/// `onnx_paths` for `batch_size` observations.
-/// Outputs the speedup obtained by using threading by comparing the time it takes to run the
-/// non-threaded version to the threaded version.
-fn compare_one_shot(onnx_paths: &[&str], brain_repetitions: usize, batch_size: usize) {
-    let non_threaded_time = run_one_shot(&onnx_paths, brain_repetitions, batch_size, false);
-    let threaded_time = run_one_shot(&onnx_paths, brain_repetitions, batch_size, true);
-    let ratio: f32 = non_threaded_time.as_nanos() as f32 / threaded_time.as_nanos() as f32;
-    println!("Batch size is {}", batch_size);
-    println!(
-        "For {} brain_repetitions, threaded is {} times faster than non threaded",
-        brain_repetitions, ratio
-    );
-    println!("Threaded time: {:?}", threaded_time.as_secs_f64());
-    println!("Non Threaded time: {:?}", non_threaded_time.as_secs_f64());
-    println!("----")
-}
-
-/// Compare the number of runs obtained in `duration` seconds for `brain_repetitions` times the brains in
-/// `onnx_paths` for `batch_size` observations.
-/// Outputs the speedup obtained by using threading by comparing the number of runs of the
-/// non-threaded version to the threaded version.
-fn compare_run_for(onnx_paths: &[&str], duration: Duration, batch_size: usize) {
-    let non_threaded_runs = run_for(false, &onnx_paths, duration, batch_size);
-    let threaded_runs = run_for(true, &onnx_paths, duration, batch_size);
-    let ratio: f32 = threaded_runs as f32 / non_threaded_runs as f32;
-    println!(
-        "For {} seconds, threaded is {} times more efficient than non threaded",
-        duration.as_secs_f32(),
-        ratio
-    );
-    println!("Threaded runs: {:?}", threaded_runs);
-    println!("Non Threaded runs: {:?}", non_threaded_runs);
-    println!("----")
-}
-
-/// Measures the speedup obtained by using threading for the runtime.
-pub(crate) fn compare_threading() {
-    println!("Current number of threads is {}", rayon::current_num_threads());
-    rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
-    println!("Current number of threads is now {}", rayon::current_num_threads());
-
-
-    let brain_repetition_values = [1, 10, 20, 50, 100];
-    let batch_sizes = [2, 4, 8, 16, 32, 64];
-    println!("One-shot run tests (running through all models once)");
-    println!(" ");
-    for brain_repetitions in brain_repetition_values {
-        for batch_size in batch_sizes {
-            println!("-------------------------------");
-            println!("Homogenous (same model n times)");
-            let onnx_paths = vec!["../../brains/test.onnx"];
-            compare_one_shot(&onnx_paths, brain_repetitions, batch_size);
-
-            println!("-------------------------------");
-            println!("Heterogeneous (different models once)");
-            let onnx_paths = vec![
-                "../../brains/test.onnx",
-                "../../brains/test-large.onnx",
-                "../../brains/test-complex.onnx",
-            ];
-            compare_one_shot(&onnx_paths, brain_repetitions, batch_size);
+        for brain_id in self.state.brain_ids.iter() {
+            if let Some(input_shapes) = self.state.runtime.input_shapes(*brain_id).ok() {
+                let input_shapes = input_shapes.clone().to_vec();
+                let observations = crate::helpers::build_inputs_from_desc(
+                    self.state.batch_size as u64,
+                    &input_shapes,
+                );
+                for (key, val) in observations.iter() {
+                    self.state
+                        .runtime
+                        .push(*brain_id, *key, val.clone())
+                        .expect(&format!(
+                            "Could not push to runtime key: {}, val: {:?}",
+                            key, val
+                        ));
+                }
+            }
         }
-    }
-
-    println!("Run for tests (running as many times as possible in a given time)");
-    println!(" ");
-    for batch_size in batch_sizes {
-        println!("Batch size is {}", batch_size);
-        println!("-------------------------------");
-        println!("Homogenous (same model n times)");
-        let onnx_paths = vec!["../../brains/test.onnx"];
-        let duration = Duration::from_millis(5);
-        compare_run_for(&onnx_paths, duration, batch_size);
-
-        println!("-------------------------------");
-        println!("Heterogeneous (different models once)");
-        let onnx_paths = vec![
-            "../../brains/test.onnx",
-            "../../brains/test-large.onnx",
-            "../../brains/test-complex.onnx",
-        ];
-        compare_run_for(&onnx_paths, duration, batch_size);
-        break;
     }
 }
