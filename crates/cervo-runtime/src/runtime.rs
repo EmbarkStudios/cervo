@@ -147,7 +147,8 @@ impl Runtime {
             Ticket(gen, *b)
         });
 
-        self.queue.extend(unselected_jobs.into_iter().chain(new_tickets));
+        self.queue
+            .extend(unselected_jobs.into_iter().chain(new_tickets));
 
         // transpose Iter<(B, Res<V, E>)> into Iter<Res<(B, Val)>> before collecting
         results
