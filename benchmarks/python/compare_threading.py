@@ -1,7 +1,7 @@
 # Read temp.csv and plot the data
 import numpy as np
 
-data = np.genfromtxt("benchmarks/perf-test/temp.csv", delimiter=',')
+data = np.genfromtxt("benchmarks/perf-test/temp.csv", delimiter=','
 print(data)
 # Data is a list of tuples, with the first element being the number of threads, and the second element being the time taken for one shot, the third element being the time taken for a given period of time
 # Plot this data as a graph

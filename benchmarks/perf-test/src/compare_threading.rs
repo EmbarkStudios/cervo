@@ -2,46 +2,52 @@ use anyhow::Result;
 use cervo_core::prelude::Inferer;
 use cervo_runtime::BrainId;
 use cervo_runtime::Runtime;
-use std::time::Duration;
+use std::collections::HashMap;
 use std::fs::OpenOptions;
+use std::thread;
+use std::time::Duration;
+use std::time::Instant;
 
-use std::{
-    io::Write,
-};
+use std::io::Write;
+// TODO: Luc: Average it
+// Test: Is the speedup consistent with batch size change?
+
+// statistical significance comes from _ repetitions
+
+// Add 5 warmup runs where no data is recorded
+
+// Show grid in the plot (pp.grid)
+
+const RUN_COUNT: usize = 100;
+
+type BatchSize = usize;
 
 /// Measures the speedup obtained by using threading for the runtime.
 pub(crate) fn compare_threading() -> Result<()> {
     let max_threads = rayon::current_num_threads();
-    for i in 0..max_threads {
-        // let i = 0;
-        rayon::ThreadPoolBuilder::new().num_threads(i + 1).build()?
-        .install(|| {
-            let brain_repetition_values = vec![60];
-            let batch_sizes = vec![32];
-            let onnx_paths = vec![
-                "../../brains/test.onnx",
-                // "../../brains/test-large.onnx",
-                // "../../brains/test-complex.onnx",
-            ];
-            // Create file if it doesn't exist yet: 
-            let mut file = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create(true)
-                .open("temp.csv")
-                .unwrap();
+    for i in 10..max_threads {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(i + 1)
+            .build()?
+            .install(|| {
+                println!("Thread count is now {}", rayon::current_num_threads());
 
-            println!("Thread count is now {}", rayon::current_num_threads());
-            let mut tester = Tester::new(brain_repetition_values, batch_sizes, onnx_paths);
-            tester.run(i);
+                // let brain_repetition_values = vec![2];
+                let brain_repetition_values = vec![1, 2, 5, 10];
+                // let batch_sizes = vec![2];
+                let batch_sizes = vec![1, 2, 3, 6, 8, 12, 16, 18];
+                // TODO: Luc: Duration should be a parameter.
+                let onnx_paths = vec![
+                    "../../brains/test.onnx",
+                    "../../brains/test-large.onnx",
+                    "../../brains/test-complex.onnx",
+                ];
 
-            let a = writeln!(file, "{},{},{}", i+1, tester.metrics.average_run_speedup, tester.metrics.average_run_for_speedup);
-        });
+                let mut tester =
+                    Tester::new(brain_repetition_values, batch_sizes, onnx_paths, i + 1);
+                tester.run(i);
+            });
     }
-
-    // writeln!(file, "test2")?;
-
-
 
     Ok(())
 
@@ -61,7 +67,7 @@ impl Default for TesterState {
             runtime: Runtime::new(),
             batch_size: 32,
             brain_repetitions: 100,
-            duration: Duration::from_millis(16),
+            duration: Duration::from_millis(33), //TODO: Luc: Prepare duration
             brain_ids: Vec::new(),
         }
     }
@@ -72,13 +78,17 @@ enum Threaded {
     SingleThreaded,
 }
 
+#[derive(Copy, Clone, Debug)]
+enum Mode {
+    OneShot,
+    For,
+}
+
 #[derive(Default)]
 struct TesterMetrics {
     // Needs to be averaged
-    run_speedup: Vec<f64>,
-    pub average_run_speedup: f64,
-    run_for_speedup: Vec<f64>,
-    pub average_run_for_speedup: f64,
+    pub average_run_speedup: HashMap<BatchSize, f64>,
+    pub average_run_for_speedup: HashMap<BatchSize, f64>,
 }
 
 #[derive(Default)]
@@ -87,6 +97,7 @@ struct Tester {
     batch_sizes: Vec<usize>,
     onnx_paths: Vec<&'static str>,
     state: TesterState,
+    num_cores: usize,
     pub metrics: TesterMetrics,
 }
 
@@ -95,86 +106,156 @@ impl Tester {
         brain_repetition_values: Vec<usize>,
         batch_sizes: Vec<usize>,
         onnx_paths: Vec<&'static str>,
+        num_cores: usize,
     ) -> Self {
         let state = TesterState::default();
-        let metrics = TesterMetrics {
-            run_speedup: Vec::new(),
-            run_for_speedup: Vec::new(),
-            average_run_for_speedup: 0.0,
-            average_run_speedup: 0.0,
-        };
         Self {
             brain_repetition_values,
             batch_sizes,
             onnx_paths,
             state,
-            metrics,
+            num_cores,
+            metrics: Default::default(),
         }
     }
 
-    fn run(&mut self, thread_count: usize) -> Option<()> {
+    fn run(&mut self, thread_count: usize) {
+        // self.run_timed_tests(Mode::OneShot);
+        self.run_timed_tests(Mode::For);
+    }
+
+    // TODO: Luc: Remove
+    // fn run_one_shot_tests(&mut self) {
+    //     for batch_size in self.batch_sizes.clone() {
+    //         self.state.batch_size = batch_size;
+    //         self.state.runtime.clear();
+    //         self.add_inferers_to_runtime();
+
+    //         let mut speedups = Vec::new();
+    //         for i in 0..RUN_COUNT {
+    //             self.push_tickets();
+    //             let threaded_duration = self.run_one_shot(Threaded::Threaded);
+    //             self.push_tickets();
+    //             let single_duration = self.run_one_shot(Threaded::SingleThreaded);
+    //             if i > 5 {
+    //                 let speedup = single_duration.as_secs_f64() / threaded_duration.as_secs_f64();
+    //                 speedups.push(speedup);
+    //             }
+    //         }
+
+    //         // get average speedup
+    //         let mut speedup_sum = 0.0;
+    //         let speedup_len = speedups.len();
+    //         for speedup in speedups {
+    //             speedup_sum += speedup;
+    //         }
+    //         let speedup = speedup_sum / speedup_len as f64;
+    //         println!(
+    //             "Average Speed up for {} repetitions, {} batch size: {}",
+    //             self.state.brain_repetitions, self.state.batch_size, speedup
+    //         );
+
+    //         self.metrics
+    //             .average_run_speedup
+    //             .entry(self.state.batch_size)
+    //             .or_insert_with(|| speedup);
+    //     }
+    // }
+
+    fn run_timed_tests(&mut self, mode: Mode) {
         self.state = TesterState::default();
-        // Set rayon threads to i + 1
-        self.run_one_shot_tests();
-        self.run_for_tests();
-
-        // Compute the average in metrics
-        let mut run_speedup_sum = 0.0;
-        let mut run_for_speedup_sum = 0.0;
-        for i in 0..self.metrics.run_speedup.len() {
-            run_speedup_sum += self.metrics.run_speedup[i];
-            run_for_speedup_sum += self.metrics.run_for_speedup[i];
-        }
-        self.metrics.average_run_speedup = run_speedup_sum / self.metrics.run_speedup.len() as f64;
-        self.metrics.average_run_for_speedup = run_for_speedup_sum / self.metrics.run_for_speedup.len() as f64;
-
-        Some(())
-    }
-
-    fn run_one_shot_tests(&mut self) {
         for brain_repetitions in self.brain_repetition_values.clone() {
+            self.state.brain_repetitions = brain_repetitions;
+            let name = match mode {
+                Mode::OneShot => format!("run_tests_{}.csv", brain_repetitions),
+                Mode::For => format!("run_for_tests_{}.csv", brain_repetitions),
+            };
+            let mut file = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create(true)
+                .open(name)
+                .unwrap();
+
+            self.run_test(mode);
+
+            let mut row = format!("{},", self.num_cores);
             for batch_size in self.batch_sizes.clone() {
-                println!(
-                    "Running oneshot for {} repetitions, {} batch size",
-                    brain_repetitions, batch_size
-                );
-                self.state.brain_repetitions = brain_repetitions;
-                self.state.batch_size = batch_size;
-                println!("Running threaded");
-                let threaded_duration = self.run_one_shot(Threaded::Threaded);
-                println!("Running single threaded");
-                let single_duration = self.run_one_shot(Threaded::SingleThreaded);
-                let speedup = single_duration.as_secs_f64() / threaded_duration.as_secs_f64();
-                println!("Speed up is {}", speedup);
-                self.metrics.run_speedup.push(speedup);
+                let val = match mode {
+                    Mode::OneShot => self.metrics.average_run_speedup.get(&batch_size),
+                    Mode::For => self.metrics.average_run_for_speedup.get(&batch_size),
+                };
+
+                if let Some(val) = val {
+                    row += &format!("{},", val);
+                }
             }
+
+            let _ = writeln!(file, "{}", row);
         }
     }
 
-    fn run_for_tests(&mut self) {
-        for brain_repetitions in self.brain_repetition_values.clone() {
-            for batch_size in self.batch_sizes.clone() {
-                println!(
-                    "Running dur for {} repetitions, {} batch size",
-                    brain_repetitions, batch_size
-                );
-                self.state.brain_repetitions = brain_repetitions;
-                self.state.batch_size = batch_size;
-                println!("Running threaded");
-                let threaded_count = self.run_for(Threaded::Threaded);
-                println!("Running single threaded");
-                let unthreaded_count = self.run_for(Threaded::SingleThreaded);
+    fn run_test(&mut self, mode: Mode) {
+        for batch_size in self.batch_sizes.clone() {
+            self.state.batch_size = batch_size;
+            self.add_inferers_to_runtime();
 
-                let speedup = threaded_count as f64 / unthreaded_count as f64;
-                println!("Speed up is {} because {} / {}", speedup, threaded_count, unthreaded_count);
-                self.metrics.run_for_speedup.push(speedup);
+            let mut speedups = Vec::new();
+
+            for i in 0..RUN_COUNT {
+                self.push_tickets();
+                let threaded = match mode {
+                    Mode::OneShot => self.run_one_shot(Threaded::Threaded).as_secs_f64(),
+                    Mode::For => self.run_for(Threaded::Threaded) as f64,
+                };
+                self.push_tickets();
+                let single = match mode {
+                    Mode::OneShot => self.run_one_shot(Threaded::SingleThreaded).as_secs_f64(),
+                    Mode::For => self.run_for(Threaded::SingleThreaded) as f64,
+                };
+
+                if i > 5 {
+                    // This is because one shot measures time and for measures iterations
+                    let speedup = match mode {
+                        Mode::OneShot => single / threaded,
+                        Mode::For => threaded / single,
+                    };
+                    speedups.push(speedup);
+                }
+            }
+
+            // get average speedup
+            let mut speedup_sum = 0.0;
+            let speedup_len = speedups.len();
+            for speedup in speedups {
+                speedup_sum += speedup;
+            }
+            let speedup = speedup_sum / speedup_len as f64;
+            println!(
+                "For {} cores and Mode {:?}, Average Speed up for {} repetitions, {} batch size: {}",
+                self.num_cores, mode, self.state.brain_repetitions, self.state.batch_size, speedup
+            );
+
+            match mode {
+                Mode::OneShot => {
+                    self.metrics
+                        .average_run_speedup
+                        .entry(self.state.batch_size)
+                        .or_insert_with(|| speedup);
+
+                },
+                Mode::For => {
+                    self.metrics
+                        .average_run_for_speedup
+                        .entry(self.state.batch_size)
+                        .or_insert_with(|| speedup);
+                },
             }
         }
     }
 
     fn run_for(&mut self, threaded: Threaded) -> usize {
         self.state.runtime.clear();
-        self.add_inferers_to_runtime();
         // Do a cold run
         self.state.runtime.run_threaded();
 
@@ -189,8 +270,6 @@ impl Tester {
     }
 
     fn run_one_shot(&mut self, threaded: Threaded) -> Duration {
-        self.state.runtime.clear();
-        self.add_inferers_to_runtime();
         let start_time = Instant::now();
         match threaded {
             Threaded::Threaded => {
