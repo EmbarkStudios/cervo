@@ -3,7 +3,6 @@ use cervo_core::prelude::Inferer;
 use cervo_runtime::BrainId;
 use cervo_runtime::Runtime;
 use std::time::Duration;
-use std::time::Instant;
 use std::fs::OpenOptions;
 
 use std::{
