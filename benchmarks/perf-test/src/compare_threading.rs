@@ -25,16 +25,14 @@ type BatchSize = usize;
 /// Measures the speedup obtained by using threading for the runtime.
 pub(crate) fn compare_threading() -> Result<()> {
     let max_threads = rayon::current_num_threads();
-    for i in 10..max_threads {
+    for i in 0..max_threads {
         rayon::ThreadPoolBuilder::new()
             .num_threads(i + 1)
             .build()?
             .install(|| {
                 println!("Thread count is now {}", rayon::current_num_threads());
 
-                // let brain_repetition_values = vec![2];
                 let brain_repetition_values = vec![1, 2, 5, 10];
-                // let batch_sizes = vec![2];
                 let batch_sizes = vec![1, 2, 3, 6, 8, 12, 16, 18];
                 // TODO: Luc: Duration should be a parameter.
                 let onnx_paths = vec![
@@ -67,7 +65,7 @@ impl Default for TesterState {
             runtime: Runtime::new(),
             batch_size: 32,
             brain_repetitions: 100,
-            duration: Duration::from_millis(33), //TODO: Luc: Prepare duration
+            duration: Duration::from_millis(500), //TODO: Luc: Prepare duration
             brain_ids: Vec::new(),
         }
     }
@@ -120,7 +118,7 @@ impl Tester {
     }
 
     fn run(&mut self, thread_count: usize) {
-        // self.run_timed_tests(Mode::OneShot);
+        self.run_timed_tests(Mode::OneShot);
         self.run_timed_tests(Mode::For);
     }
 
@@ -177,7 +175,16 @@ impl Tester {
                 .open(name)
                 .unwrap();
 
+            // Write header row with batch sizes
+            let mut header = "num_cores,".to_string();
+            for batch_size in self.batch_sizes.clone() {
+                header += &format!("b_{},", batch_size);
+            }
+            header.pop();
+            let _ = writeln!(file, "{}", header);
+
             self.run_test(mode);
+            
 
             let mut row = format!("{},", self.num_cores);
             for batch_size in self.batch_sizes.clone() {
@@ -190,6 +197,7 @@ impl Tester {
                     row += &format!("{},", val);
                 }
             }
+            row.pop();
 
             let _ = writeln!(file, "{}", row);
         }
@@ -197,6 +205,7 @@ impl Tester {
 
     fn run_test(&mut self, mode: Mode) {
         for batch_size in self.batch_sizes.clone() {
+            self.state.runtime.clear();
             self.state.batch_size = batch_size;
             self.add_inferers_to_runtime();
 
@@ -218,7 +227,10 @@ impl Tester {
                     // This is because one shot measures time and for measures iterations
                     let speedup = match mode {
                         Mode::OneShot => single / threaded,
-                        Mode::For => threaded / single,
+                        Mode::For => {
+                            // println!("Threaded: {}, Single: {}", threaded, single);
+                            threaded / single
+                        }
                     };
                     speedups.push(speedup);
                 }
@@ -255,7 +267,6 @@ impl Tester {
     }
 
     fn run_for(&mut self, threaded: Threaded) -> usize {
-        self.state.runtime.clear();
         // Do a cold run
         self.state.runtime.run_threaded();
 
