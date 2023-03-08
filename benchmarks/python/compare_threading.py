@@ -20,18 +20,23 @@ for file in os.listdir(path):
         # data = np.genfromtxt(file_path, delimiter=',', dtype=None)
         # Read the file 
         data = pd.read_csv(file_path, delimiter=',')
-        break
 
-        # # Find the amount of columns in data
-        # columns = data.shape[1]
-        # for i in range(0, columns):
-        #     # read header row, which is the first row from data
-        #     header = data[0,:]
-        #     print(header)
+        # Find the amount of columns in data
+        plt.xlabel("Number of threads")
+        plt.ylabel("Relative speedup")
+        headers = data.columns.values
+        for i in range(1, len(data.columns)):
+            name = data.columns[i]
+            values = data[name].tolist()
+            print("name is ", name)
+            print("values are ", values)
+            plt.plot(data[:,0], data[:,i], label=name)
+        plt.legend()
+        plt.show()
+        break
             
             
-            # Plot the data
-            # plt.plot(data[:,0], data[:,i], label="Thread " + str(i+1))
+            
             # plt.xlabel("Number of threads")
             # plt.ylabel("Relative speedup")
             # plt.legend()
