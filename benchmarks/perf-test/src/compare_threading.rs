@@ -4,6 +4,7 @@ use cervo_runtime::BrainId;
 use cervo_runtime::Runtime;
 use std::time::Duration;
 use std::time::Instant;
+use std::fs::OpenOptions;
 
 use std::{
     io::Write,
@@ -11,55 +12,60 @@ use std::{
 
 /// Measures the speedup obtained by using threading for the runtime.
 pub(crate) fn compare_threading() -> Result<()> {
-    let brain_repetition_values = vec![100];
-    // let brain_repetition_values = vec![1, 10, 20, 50, 100];
-    let batch_sizes = vec![32];
-    // let batch_sizes = vec![2, 4, 8, 16, 32, 64];
-    let onnx_paths = vec![
-        "../../brains/test.onnx",
-        "../../brains/test-large.onnx",
-        "../../brains/test-complex.onnx",
-    ];
-    // TODO: Luc: Test this
-    // println!("Current number of threads is {}", rayon::current_num_threads());
-    // rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
-    // println!("Current number of threads is now {}", rayon::current_num_threads());
-    let mut tester = Tester::new(brain_repetition_values, batch_sizes, onnx_paths);
-    tester.run();
+    let max_threads = rayon::current_num_threads();
+    for i in 0..max_threads {
+        // let i = 0;
+        rayon::ThreadPoolBuilder::new().num_threads(i + 1).build()?
+        .install(|| {
+            let brain_repetition_values = vec![60];
+            let batch_sizes = vec![32];
+            let onnx_paths = vec![
+                "../../brains/test.onnx",
+                // "../../brains/test-large.onnx",
+                // "../../brains/test-complex.onnx",
+            ];
+            // Create file if it doesn't exist yet: 
+            let mut file = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create(true)
+                .open("temp.csv")
+                .unwrap();
 
-    // Get averaged values from tester.metrics
+            println!("Thread count is now {}", rayon::current_num_threads());
+            let mut tester = Tester::new(brain_repetition_values, batch_sizes, onnx_paths);
+            tester.run(i);
 
-    let mut file = std::fs::File::create("temp.csv")?;
-
-    for (avg_run, avg_run_for) in tester
-        .metrics
-        .average_run_speedup_per_core
-        .iter()
-        .zip(tester.metrics.average_run_for_speedup_per_core.iter())
-    {
-        writeln!(file, "{},{}", avg_run, avg_run_for)?;
+            let a = writeln!(file, "{},{},{}", i+1, tester.metrics.average_run_speedup, tester.metrics.average_run_for_speedup);
+        });
     }
-    // writeln!(
-    //     file,
-    //     "{:?},{},{}",
-    //     row.kind,
-    //     row.step,
-    //     row.time.as_secs_f64() * 1e6 / denom
-    // )?;
+
+    // writeln!(file, "test2")?;
+
+
 
     Ok(())
 
     // TODO: Luc: Gather the results and plot them.
 }
 
-#[derive(Default)]
 struct TesterState {
     runtime: Runtime,
     batch_size: usize,
     brain_repetitions: usize,
     duration: Duration,
     brain_ids: Vec<BrainId>,
-    thread_count: usize,
+}
+impl Default for TesterState {
+    fn default() -> Self {
+        Self {
+            runtime: Runtime::new(),
+            batch_size: 32,
+            brain_repetitions: 100,
+            duration: Duration::from_millis(16),
+            brain_ids: Vec::new(),
+        }
+    }
 }
 
 enum Threaded {
@@ -70,10 +76,10 @@ enum Threaded {
 #[derive(Default)]
 struct TesterMetrics {
     // Needs to be averaged
-    run_speedup_per_core: Vec<Vec<f64>>,
-    pub average_run_speedup_per_core: Vec<f64>,
-    run_for_speedup_per_core: Vec<Vec<f64>>,
-    pub average_run_for_speedup_per_core: Vec<f64>,
+    run_speedup: Vec<f64>,
+    pub average_run_speedup: f64,
+    run_for_speedup: Vec<f64>,
+    pub average_run_for_speedup: f64,
 }
 
 #[derive(Default)]
@@ -91,17 +97,12 @@ impl Tester {
         batch_sizes: Vec<usize>,
         onnx_paths: Vec<&'static str>,
     ) -> Self {
-        let runtime = Runtime::new();
-        let state = TesterState {
-            runtime,
-            duration: Duration::from_millis(5),
-            ..Default::default()
-        };
+        let state = TesterState::default();
         let metrics = TesterMetrics {
-            run_speedup_per_core: vec![Vec::new(); rayon::current_num_threads()],
-            run_for_speedup_per_core: vec![Vec::new(); rayon::current_num_threads()],
-            average_run_for_speedup_per_core: vec![0.0; rayon::current_num_threads()],
-            average_run_speedup_per_core: vec![0.0; rayon::current_num_threads()],
+            run_speedup: Vec::new(),
+            run_for_speedup: Vec::new(),
+            average_run_for_speedup: 0.0,
+            average_run_speedup: 0.0,
         };
         Self {
             brain_repetition_values,
@@ -112,33 +113,22 @@ impl Tester {
         }
     }
 
-    fn run(&mut self) -> Option<()> {
-        let max_threads = rayon::current_num_threads();
-        for i in 10..max_threads {
-            match rayon::ThreadPoolBuilder::new().num_threads(i + 1).build() {
-                Err(_e) => None,
-                Ok(pool) => Some(pool),
-            }?
-            .install(|| {
-                // Set rayon threads to i + 1
-                println!("Thread count is now {}", rayon::current_num_threads());
-                self.state.thread_count = i;
-                self.run_one_shot_tests();
-                self.run_for_tests();
-            });
+    fn run(&mut self, thread_count: usize) -> Option<()> {
+        self.state = TesterState::default();
+        // Set rayon threads to i + 1
+        self.run_one_shot_tests();
+        self.run_for_tests();
+
+        // Compute the average in metrics
+        let mut run_speedup_sum = 0.0;
+        let mut run_for_speedup_sum = 0.0;
+        for i in 0..self.metrics.run_speedup.len() {
+            run_speedup_sum += self.metrics.run_speedup[i];
+            run_for_speedup_sum += self.metrics.run_for_speedup[i];
         }
-        self.metrics.average_run_speedup_per_core = self
-            .metrics
-            .run_speedup_per_core
-            .iter()
-            .map(|v| v.iter().sum::<f64>() / v.len() as f64)
-            .collect();
-        self.metrics.average_run_for_speedup_per_core = self
-            .metrics
-            .run_for_speedup_per_core
-            .iter()
-            .map(|v| v.iter().sum::<f64>() / v.len() as f64)
-            .collect();
+        self.metrics.average_run_speedup = run_speedup_sum / self.metrics.run_speedup.len() as f64;
+        self.metrics.average_run_for_speedup = run_for_speedup_sum / self.metrics.run_for_speedup.len() as f64;
+
         Some(())
     }
 
@@ -146,8 +136,8 @@ impl Tester {
         for brain_repetitions in self.brain_repetition_values.clone() {
             for batch_size in self.batch_sizes.clone() {
                 println!(
-                    "Running oneshot for {} threads, {} repetitions, {} batch size",
-                    self.state.thread_count, brain_repetitions, batch_size
+                    "Running oneshot for {} repetitions, {} batch size",
+                    brain_repetitions, batch_size
                 );
                 self.state.brain_repetitions = brain_repetitions;
                 self.state.batch_size = batch_size;
@@ -157,7 +147,7 @@ impl Tester {
                 let single_duration = self.run_one_shot(Threaded::SingleThreaded);
                 let speedup = single_duration.as_secs_f64() / threaded_duration.as_secs_f64();
                 println!("Speed up is {}", speedup);
-                self.metrics.run_speedup_per_core[self.state.thread_count].push(speedup);
+                self.metrics.run_speedup.push(speedup);
             }
         }
     }
@@ -166,8 +156,8 @@ impl Tester {
         for brain_repetitions in self.brain_repetition_values.clone() {
             for batch_size in self.batch_sizes.clone() {
                 println!(
-                    "Running dur for {} threads, {} repetitions, {} batch size",
-                    self.state.thread_count, brain_repetitions, batch_size
+                    "Running dur for {} repetitions, {} batch size",
+                    brain_repetitions, batch_size
                 );
                 self.state.brain_repetitions = brain_repetitions;
                 self.state.batch_size = batch_size;
@@ -175,15 +165,16 @@ impl Tester {
                 let threaded_count = self.run_for(Threaded::Threaded);
                 println!("Running single threaded");
                 let unthreaded_count = self.run_for(Threaded::SingleThreaded);
+
                 let speedup = threaded_count as f64 / unthreaded_count as f64;
-                println!("Speed up is {}", speedup);
-                self.metrics.run_for_speedup_per_core[self.state.thread_count].push(speedup);
+                println!("Speed up is {} because {} / {}", speedup, threaded_count, unthreaded_count);
+                self.metrics.run_for_speedup.push(speedup);
             }
         }
     }
 
     fn run_for(&mut self, threaded: Threaded) -> usize {
-        self.state.runtime = Runtime::new();
+        self.state.runtime.clear();
         self.add_inferers_to_runtime();
         // Do a cold run
         self.state.runtime.run_threaded();
@@ -199,7 +190,7 @@ impl Tester {
     }
 
     fn run_one_shot(&mut self, threaded: Threaded) -> Duration {
-        self.state.runtime = Runtime::new();
+        self.state.runtime.clear();
         self.add_inferers_to_runtime();
         let start_time = Instant::now();
         match threaded {
@@ -250,14 +241,11 @@ impl Tester {
                     self.state.batch_size as u64,
                     &input_shapes,
                 );
-                for (key, val) in observations.iter() {
+                for (key, val) in observations {
                     self.state
                         .runtime
-                        .push(*brain_id, *key, val.clone())
-                        .expect(&format!(
-                            "Could not push to runtime key: {}, val: {:?}",
-                            key, val
-                        ));
+                        .push(*brain_id, key, val)
+                        .expect("Could not push to runtime");
                 }
             }
         }
