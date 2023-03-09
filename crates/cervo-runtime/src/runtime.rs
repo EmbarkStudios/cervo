@@ -89,6 +89,7 @@ impl Runtime {
         }
     }
 
+    /// Executes all models with queued data in parallel.
     #[cfg(feature = "threaded")]
     pub fn run_threaded(&mut self) -> HashMap<BrainId, HashMap<AgentId, Response<'_>>> {
         // Use the iterator method from rayon
@@ -114,6 +115,9 @@ impl Runtime {
         Ok(result)
     }
 
+    /// Executes all models with queued data in parallel. Will attempt to keep
+    /// total time below the provided duration, but due to noise or lack
+    /// of samples might miss the deadline. See the note in [the root](./index.html).
     #[cfg(feature = "threaded")]
     pub fn run_for_threaded(
         &mut self,

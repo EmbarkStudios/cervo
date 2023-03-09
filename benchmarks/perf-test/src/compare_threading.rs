@@ -10,7 +10,7 @@ use std::time::Instant;
 
 use std::io::Write;
 // TODO: Luc:
-// Test: Is the speedup consistent with batch size change?
+// Why does a batch size of 16 seem optimal? Is it because of the observation size of the inferrers? Investigate.
 // To estimate a good duration, always run single first and estimate duration by seeing how much it takes to have 10 results
 
 const RUN_COUNT: usize = 100;
@@ -20,7 +20,7 @@ type BatchSize = usize;
 /// Measures the speedup obtained by using threading for the runtime.
 pub(crate) fn compare_threading() -> Result<()> {
     let max_threads = rayon::current_num_threads();
-    for i in 14..max_threads {
+    for i in 0..max_threads {
         rayon::ThreadPoolBuilder::new()
             .num_threads(i + 1)
             .build()?
@@ -110,9 +110,8 @@ impl Tester {
     }
 
     fn run(&mut self, thread_count: usize) {
-        self.run_timed_tests(Mode::OneShot);
-        // TODO: Later: Uncomment and run
-        // self.run_timed_tests(Mode::For);
+        // self.run_timed_tests(Mode::OneShot);
+        self.run_timed_tests(Mode::For);
     }
 
     fn run_timed_tests(&mut self, mode: Mode) {
@@ -159,6 +158,34 @@ impl Tester {
         }
     }
 
+    fn set_duration(&mut self) {
+        let mut results: usize = 0;
+        let mut start_duration = Duration::from_millis(10);
+
+        let goal_len = 3;
+
+        while results < goal_len {
+            start_duration *= 2;
+            if let Ok(result) = self.state.runtime.run_for(start_duration) {
+                // Run remaining models
+                results = result.len();
+                self.run_one_shot(Threaded::Threaded);
+                self.push_tickets();
+            }
+        }
+        // Small padding at end
+        self.state.duration = start_duration * 2;
+        println!(
+            "Determined duration is now {}ms",
+            self.state.duration.as_millis()
+        );
+    }
+
+    fn average(values: Vec<f64>) -> f64 {
+        let sum: f64 = values.iter().sum();
+        sum / values.len() as f64
+    }
+
     fn run_test(&mut self, mode: Mode) {
         for batch_size in self.batch_sizes.clone() {
             self.state.runtime.clear();
@@ -166,17 +193,25 @@ impl Tester {
             self.add_inferers_to_runtime();
 
             let mut speedups = Vec::new();
+            let mut threaded_num = Vec::new();
+            let mut single_num = Vec::new();
+
+            // Determine the duration required to obtain a solid denominator
+            if let Mode::For = mode {
+                self.set_duration();
+            }
 
             for i in 0..RUN_COUNT {
+                self.push_tickets();
+
+                let single = match mode {
+                    Mode::OneShot => self.run_one_shot(Threaded::SingleThreaded).as_secs_f64(),
+                    Mode::For => self.run_for(Threaded::SingleThreaded) as f64,
+                };
                 self.push_tickets();
                 let threaded = match mode {
                     Mode::OneShot => self.run_one_shot(Threaded::Threaded).as_secs_f64(),
                     Mode::For => self.run_for(Threaded::Threaded) as f64,
-                };
-                self.push_tickets();
-                let single = match mode {
-                    Mode::OneShot => self.run_one_shot(Threaded::SingleThreaded).as_secs_f64(),
-                    Mode::For => self.run_for(Threaded::SingleThreaded) as f64,
                 };
 
                 if i > 5 {
@@ -184,37 +219,33 @@ impl Tester {
                     let speedup = match mode {
                         Mode::OneShot => single / threaded,
                         Mode::For => {
-                            println!("Threaded: {}, Single: {}", threaded, single);
+                            // println!("Threaded: {}, Single: {}", threaded, single);
                             threaded / single
                         }
                     };
+                    threaded_num.push(threaded);
+                    single_num.push(single);
                     speedups.push(speedup);
                 }
             }
 
-            // get average speedup
-            let mut speedup_sum = 0.0;
-            let speedup_len = speedups.len();
-            for speedup in speedups {
-                speedup_sum += speedup;
-            }
-            let speedup = speedup_sum / speedup_len as f64;
+            let speedup = Self::average(speedups);
+            let single_num = Self::average(single_num);
+            let threaded_num = Self::average(threaded_num);
             println!(
-                "For {} cores and Mode {:?}, Average Speed up for {} repetitions, {} batch size: {}",
-                self.num_cores, mode, self.state.brain_repetitions, self.state.batch_size, speedup
+                "For {} cores and Mode {:?}, Average Speed up for {} repetitions, {} batch size: {} (with single: {}, threaded: {})",
+                self.num_cores, mode, self.state.brain_repetitions, self.state.batch_size, speedup, single_num, threaded_num
             );
 
-
-            let _  = match mode {
+            let _ = match mode {
                 Mode::OneShot => self
                     .metrics
                     .average_run_speedup
                     .insert(self.state.batch_size, speedup),
-                Mode::For => {
-                    self.metrics
-                        .average_run_for_speedup
-                        .insert(self.state.batch_size, speedup)
-                }
+                Mode::For => self
+                    .metrics
+                    .average_run_for_speedup
+                    .insert(self.state.batch_size, speedup),
             };
         }
     }
