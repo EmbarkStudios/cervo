@@ -17,7 +17,6 @@ default-run = "cervo"
 [dependencies]
 anyhow = "1.0.57"
 clap = { version = "4", features = ["derive"] }
-number_range = "0.1.4"
 log = "0.4"
 tempfile = "3.4"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
