@@ -2,13 +2,37 @@ use anyhow::{bail, Result};
 use cervo_asset::AssetData;
 use cervo_core::prelude::{Batcher, Inferer, InfererExt, State};
 use clap::Parser;
-use number_range::NumberRangeOptions;
 use std::{collections::HashMap, fs::File, path::PathBuf, time::Instant};
 
 fn number_range_parser(num: &str) -> Result<Vec<usize>, String> {
-    let rng_parser = NumberRangeOptions::default();
-    let rng = rng_parser.with_range_sep('-').parse::<usize>(num)?;
-    Ok(rng.collect())
+    let mut nums = vec![];
+
+    for segment in num.split(',') {
+        if segment.contains('-') {
+            let mut parts = segment.split('-');
+            let lower: usize = parts
+                .next()
+                .ok_or_else(|| "no lower end".to_owned())?
+                .parse()
+                .map_err(|e| format!("failed parsing number: {e:?}"))?;
+            let upper: usize = parts
+                .next()
+                .ok_or_else(|| "no lower end".to_owned())?
+                .parse()
+                .map_err(|e| format!("failed parsing number: {e:?}"))?;
+
+            for i in lower..=upper {
+                nums.push(i);
+            }
+        } else {
+            let value: usize = segment
+                .parse()
+                .map_err(|e| format!("failed parsing number: {e:?}"))?;
+            nums.push(value);
+        }
+    }
+
+    Ok(nums)
 }
 
 /// Run a model with different batch sizes to estimate performance.
