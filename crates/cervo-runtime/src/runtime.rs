@@ -20,7 +20,7 @@ use rayon::iter::IntoParallelRefMutIterator;
 use rayon::iter::ParallelIterator;
 use std::{
     collections::{BinaryHeap, HashMap},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 /// The runtime wraps a multitude of inference models with batching support, and support for time-limited execution.
