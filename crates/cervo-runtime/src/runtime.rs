@@ -18,6 +18,7 @@ use rayon::iter::IntoParallelIterator;
 use rayon::iter::IntoParallelRefMutIterator;
 #[cfg(feature = "threaded")]
 use rayon::iter::ParallelIterator;
+use std::time::Instant;
 use std::{
     collections::{BinaryHeap, HashMap},
     time::Duration,
@@ -293,7 +294,6 @@ mod tests {
     use crate::{BrainId, CervoError};
     use cervo_core::prelude::{Inferer, State};
     use std::time::Duration;
-    use std::time::Instant;
 
     struct DummyInferer {
         sleep_duration: Duration,
