@@ -1,12 +1,10 @@
 use anyhow::Result;
-use cervo_core::prelude::Inferer;
 use cervo_runtime::BrainId;
 use cervo_runtime::Runtime;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Seek;
 use std::io::SeekFrom;
-use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -42,7 +40,7 @@ pub(crate) fn compare_threading() -> Result<()> {
 
                 let mut tester =
                     Tester::new(brain_repetition_values, batch_sizes, onnx_paths, i + 1);
-                tester.run(i);
+                tester.run();
             });
     }
 
@@ -114,7 +112,7 @@ impl Tester {
         }
     }
 
-    fn run(&mut self, thread_count: usize) {
+    fn run(&mut self) {
         self.run_timed_tests(Mode::OneShot);
         self.run_timed_tests(Mode::For);
     }
@@ -168,12 +166,12 @@ impl Tester {
         let previous_brain_repetitions = self.state.brain_repetitions;
 
         self.state.brain_repetitions = 1;
-        self.state.runtime.clear();
+        let _ = self.state.runtime.clear();
         self.add_inferers_to_runtime();
 
         let mut durations = Vec::new();
 
-        for i in 0..10 {
+        for _ in 0..10 {
             self.push_tickets();
             let duration = self.run_one_shot(Threaded::SingleThreaded);
             durations.push(duration.as_nanos() as f64);
@@ -203,7 +201,7 @@ impl Tester {
                 self.set_duration();
             }
 
-            self.state.runtime.clear();
+            let _ = self.state.runtime.clear();
             self.add_inferers_to_runtime();
 
             for i in 0..RUN_COUNT {
