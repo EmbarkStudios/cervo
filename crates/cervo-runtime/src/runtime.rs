@@ -255,6 +255,12 @@ impl Runtime {
             Ok(())
         }
     }
+    
+    /// Clear all queued items. This will not clear any models or
+    /// related data.
+    pub fn clear_ticket_queue(&mut self) {
+        self.queue.clear();
+    }
 
     /// Clear a model and related data. Will error (after clearing
     /// *all* data) if there was queued items that are now orphaned.
