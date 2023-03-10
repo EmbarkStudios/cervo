@@ -316,7 +316,7 @@ impl Tester {
             batch_size,
             ..
         } = &mut self.state;
-
+        self.state.runtime.clear_ticket_queue();
         for brain_id in brain_ids.iter() {
             if let Some(input_shapes) = runtime.input_shapes(*brain_id).ok() {
                 let input_shapes = input_shapes.to_vec();
