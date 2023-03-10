@@ -255,7 +255,7 @@ impl Runtime {
             Ok(())
         }
     }
-    
+
     /// Clear a model and related data. Will error (after clearing
     /// *all* data) if there was queued items that are now orphaned.
     pub fn remove_inferer(&mut self, brain: BrainId) -> Result<(), CervoError> {
