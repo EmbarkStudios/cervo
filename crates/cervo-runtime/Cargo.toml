@@ -17,6 +17,11 @@ readme = "../../README.md"
 cervo-core = { version = "0.4.1-alpha.0", path = "../cervo-core"}
 thiserror = "1.0"
 anyhow = "1.0.41"
+rayon = { version = "1.5", optional = true }
 
 [dev-dependencies]
 cervo-asset = { version = "0.4.1-alpha.0", path = "../cervo-asset"}
+
+[features]
+threaded = ["rayon"]
+default = [] 

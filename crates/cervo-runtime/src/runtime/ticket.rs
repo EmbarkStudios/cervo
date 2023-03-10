@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use crate::BrainId;
 
 /// A ticket for the ML in the queue for execution.
+#[derive(Debug)]
 pub(super) struct Ticket(pub(super) u64, pub(super) BrainId);
 
 impl PartialEq for Ticket {

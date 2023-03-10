@@ -16,12 +16,16 @@ use std::{
 
 use crate::{error::CervoError, BrainId};
 
-pub(crate) struct ModelState {
+pub struct ModelState {
     pub(crate) id: BrainId,
     pub(crate) inferer: Box<dyn Inferer + 'static + Send>,
     batcher: RefCell<Batcher>,
     timings: RefCell<Vec<TimingBucket>>,
 }
+
+// SAFETY: ModelState is only ever accessed from a single thread, and is never shared between threads
+#[allow(unsafe_code)]
+unsafe impl Sync for ModelState {}
 
 impl ModelState {
     pub(crate) fn new(id: BrainId, inferer: impl Inferer + 'static + Send) -> Self {
@@ -43,9 +47,9 @@ impl ModelState {
         !self.batcher.borrow().is_empty()
     }
 
-    pub(crate) fn can_run_in_time(&self, duration: Duration) -> bool {
+    pub(crate) fn estimated_time(&self) -> Duration {
         if self.timings.borrow().is_empty() {
-            return true;
+            return Duration::ZERO;
         }
 
         let size = self.batcher.borrow().len();
@@ -54,19 +58,23 @@ impl ModelState {
 
         if partition == timings.len() {
             let last = timings.last().unwrap();
-            last.scaled_mean(size) <= duration
+            last.scaled_mean(size)
         } else {
             let elem = &timings[partition];
             if elem.size == size {
-                elem.mean() <= duration
+                elem.mean()
             } else if partition == 0 {
                 let elem = &timings[partition];
-                elem.scaled_mean(size) <= duration
+                elem.scaled_mean(size)
             } else {
                 let elem = &timings[partition - 1];
-                elem.scaled_mean(size) <= duration
+                elem.scaled_mean(size)
             }
         }
+    }
+
+    pub(crate) fn can_run_in_time(&self, duration: Duration) -> bool {
+        self.estimated_time() <= duration
     }
 
     pub(crate) fn infer_single<'a>(

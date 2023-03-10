@@ -12,9 +12,16 @@ use crate::{error::CervoError, state::ModelState, AgentId, BrainId};
 use ticket::Ticket;
 
 use cervo_core::prelude::{Inferer, Response, State};
+#[cfg(feature = "threaded")]
+use rayon::iter::IntoParallelIterator;
+#[cfg(feature = "threaded")]
+use rayon::iter::IntoParallelRefMutIterator;
+#[cfg(feature = "threaded")]
+use rayon::iter::ParallelIterator;
+use std::time::Instant;
 use std::{
     collections::{BinaryHeap, HashMap},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 /// The runtime wraps a multitude of inference models with batching support, and support for time-limited execution.
@@ -83,6 +90,17 @@ impl Runtime {
         }
     }
 
+    /// Executes all models with queued data in parallel.
+    #[cfg(feature = "threaded")]
+    pub fn run_threaded(&mut self) -> HashMap<BrainId, HashMap<AgentId, Response<'_>>> {
+        // Use the iterator method from rayon
+        self.models
+            .par_iter_mut()
+            .filter(|model| model.needs_to_execute())
+            .map(|model| (model.id, model.run().unwrap()))
+            .collect::<HashMap<BrainId, HashMap<AgentId, Response<'_>>>>()
+    }
+
     /// Executes all models with queued data.
     pub fn run(&mut self) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
         let mut result = HashMap::default();
@@ -96,6 +114,52 @@ impl Runtime {
         }
 
         Ok(result)
+    }
+
+    /// Executes all models with queued data in parallel. Will attempt to keep
+    /// total time below the provided duration, but due to noise or lack
+    /// of samples might miss the deadline. See the note in [the root](./index.html).
+    #[cfg(feature = "threaded")]
+    pub fn run_for_threaded(
+        &mut self,
+        duration: Duration,
+    ) -> Result<HashMap<BrainId, HashMap<AgentId, Response<'_>>>, CervoError> {
+        let mut available_cpu_time = duration * rayon::current_num_threads() as u32;
+        let mut selected_jobs = Vec::new();
+        let mut unselected_jobs = Vec::new();
+
+        while let Some(ticket) = self.queue.pop() {
+            let Some(model) = self.models.iter().find(|m| m.id == ticket.1) else {continue};
+
+            if model.needs_to_execute()
+                && (selected_jobs.is_empty() || model.can_run_in_time(available_cpu_time))
+            {
+                available_cpu_time = available_cpu_time.saturating_sub(model.estimated_time());
+                selected_jobs.push((ticket, model));
+            } else {
+                unselected_jobs.push(ticket);
+            }
+        }
+
+        let results = selected_jobs
+            .into_par_iter()
+            .map(|(ticket, model)| (ticket.1, model.run()))
+            .collect::<Vec<(_, _)>>(); // collect necessary to conserve ordering
+
+        let new_tickets = results.iter().map(|(b, _)| {
+            let gen = self.ticket_generation;
+            self.ticket_generation += 1;
+            Ticket(gen, *b)
+        });
+
+        self.queue
+            .extend(unselected_jobs.into_iter().chain(new_tickets));
+
+        // transpose Iter<(B, Res<V, E>)> into Iter<Res<(B, Val)>> before collecting
+        results
+            .into_iter()
+            .map(|(b, res)| res.map(|val| (b, val)))
+            .collect::<Result<_, _>>()
     }
 
     /// Executes all models with queued data. Will attempt to keep
