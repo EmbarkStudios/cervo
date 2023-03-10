@@ -116,7 +116,7 @@ impl Tester {
 
     fn run(&mut self, thread_count: usize) {
         self.run_timed_tests(Mode::OneShot);
-        // self.run_timed_tests(Mode::For);
+        self.run_timed_tests(Mode::For);
     }
 
     fn run_timed_tests(&mut self, mode: Mode) {
