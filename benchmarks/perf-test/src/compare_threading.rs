@@ -12,14 +12,14 @@ use std::io::Write;
 // TODO: Luc:
 // Why does a batch size of 16 seem optimal? Is it because of the observation size of the inferrers? Investigate.
 
-const RUN_COUNT: usize = 100;
+const RUN_COUNT: usize = 30;
 
 type BatchSize = usize;
 
 /// Measures the speedup obtained by using threading for the runtime.
 pub(crate) fn compare_threading() -> Result<()> {
     let max_threads = rayon::current_num_threads();
-    for i in 10..max_threads {
+    for i in 0..max_threads {
         rayon::ThreadPoolBuilder::new()
             .num_threads(i + 1)
             .build()?
@@ -27,11 +27,11 @@ pub(crate) fn compare_threading() -> Result<()> {
                 println!("Thread count is now {}", rayon::current_num_threads());
 
                 // let brain_repetition_values = vec![5, 10];
-                let brain_repetition_values = vec![10];
-                // let brain_repetition_values = vec![5, 10, 15];
+                // let brain_repetition_values = vec![10];
+                let brain_repetition_values = vec![5, 10, 15];
                 // let brain_repetition_values = vec![1, 2, 5, 10];
-                let batch_sizes = vec![8];
-                // let batch_sizes = vec![1, 2, 3, 6, 8, 12, 16, 18];
+                // let batch_sizes = vec![8];
+                let batch_sizes = vec![1, 2, 3, 6, 8, 12, 16, 18];
                 let onnx_paths = vec![
                     "../../brains/test.onnx",
                     "../../brains/test-large.onnx",
@@ -162,8 +162,22 @@ impl Tester {
     }
 
     fn set_duration(&mut self) {
-        self.state.duration = self.run_one_shot(Threaded::SingleThreaded);
-        self.state.duration *= 2;
+        let previous_brain_repetitions = self.state.brain_repetitions;
+
+        self.state.brain_repetitions = 1;
+        self.state.runtime.clear();
+        self.add_inferers_to_runtime();
+
+        let mut durations = Vec::new();
+
+        for i in 0..10 {
+            let duration = self.run_one_shot(Threaded::SingleThreaded);
+            self.push_tickets();
+            durations.push(duration.as_nanos() as f64);
+        }
+        let average = Self::average(durations);
+        self.state.duration = Duration::from_nanos(average as u64);
+        self.state.brain_repetitions = previous_brain_repetitions;
         println!("Duration is now {:?}", self.state.duration);
     }
 
@@ -174,9 +188,7 @@ impl Tester {
 
     fn run_test(&mut self, mode: Mode) {
         for batch_size in self.batch_sizes.clone() {
-            self.state.runtime.clear();
             self.state.batch_size = batch_size;
-            self.add_inferers_to_runtime();
 
             let mut speedups = Vec::new();
             let mut threaded_num = Vec::new();
@@ -186,6 +198,9 @@ impl Tester {
             if let Mode::For = mode {
                 self.set_duration();
             }
+
+            self.state.runtime.clear();
+            self.add_inferers_to_runtime();
 
             for i in 0..RUN_COUNT {
                 self.push_tickets();
