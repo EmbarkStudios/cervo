@@ -4,13 +4,13 @@ use cervo_runtime::BrainId;
 use cervo_runtime::Runtime;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
+use std::io::Seek;
+use std::io::SeekFrom;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
 use std::io::Write;
-// TODO: Luc:
-// Why does a batch size of 16 seem optimal? Is it because of the observation size of the inferrers? Investigate.
 
 const RUN_COUNT: usize = 30;
 
@@ -296,9 +296,8 @@ impl Tester {
             let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
 
             for _ in 0..self.state.brain_repetitions {
-                reader
-                    .seek(std::io::SeekFrom::Start(0))
-                    .expect("seeking to start of file");
+                // Go to start of reader again
+                reader.seek(SeekFrom::Start(0)).unwrap();
                 let inferer = cervo_onnx::builder(&mut reader)
                     .build_fixed(&[self.state.batch_size])
                     .unwrap();
@@ -317,6 +316,7 @@ impl Tester {
             batch_size,
             ..
         } = &mut self.state;
+
         for brain_id in brain_ids.iter() {
             if let Some(input_shapes) = runtime.input_shapes(*brain_id).ok() {
                 let input_shapes = input_shapes.to_vec();
