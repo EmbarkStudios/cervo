@@ -19,7 +19,7 @@ type BatchSize = usize;
 /// Measures the speedup obtained by using threading for the runtime.
 pub(crate) fn compare_threading() -> Result<()> {
     let max_threads = rayon::current_num_threads();
-    for i in 0..max_threads {
+    for i in 10..max_threads {
         rayon::ThreadPoolBuilder::new()
             .num_threads(i + 1)
             .build()?
@@ -27,8 +27,11 @@ pub(crate) fn compare_threading() -> Result<()> {
                 println!("Thread count is now {}", rayon::current_num_threads());
 
                 // let brain_repetition_values = vec![5, 10];
-                let brain_repetition_values = vec![1, 2, 5, 10];
-                let batch_sizes = vec![1, 2, 3, 6, 8, 12, 16, 18];
+                let brain_repetition_values = vec![10];
+                // let brain_repetition_values = vec![5, 10, 15];
+                // let brain_repetition_values = vec![1, 2, 5, 10];
+                let batch_sizes = vec![8];
+                // let batch_sizes = vec![1, 2, 3, 6, 8, 12, 16, 18];
                 let onnx_paths = vec![
                     "../../brains/test.onnx",
                     "../../brains/test-large.onnx",
@@ -110,7 +113,7 @@ impl Tester {
     }
 
     fn run(&mut self, thread_count: usize) {
-        self.run_timed_tests(Mode::OneShot);
+        // self.run_timed_tests(Mode::OneShot);
         self.run_timed_tests(Mode::For);
     }
 
@@ -159,31 +162,9 @@ impl Tester {
     }
 
     fn set_duration(&mut self) {
-        let mut results: usize = 0;
-        let mut start_duration = Duration::from_millis(2);
-
-        let goal_len = 3;
-        // Do a cold run first 
-        self.run_one_shot(Threaded::Threaded);
-        self.push_tickets();
-
-        while results < goal_len {
-            if let Ok(result) = self.state.runtime.run_for(start_duration) {
-                // Run remaining models
-                results = result.len();
-                self.run_one_shot(Threaded::Threaded);
-                self.push_tickets();
-            }
-            if results < goal_len {
-                start_duration *= 2;
-            }
-        }
-        // Small padding at end
-        self.state.duration = start_duration;
-        println!(
-            "Determined duration is now {}ms",
-            self.state.duration.as_millis()
-        );
+        self.state.duration = self.run_one_shot(Threaded::SingleThreaded);
+        self.state.duration *= 2;
+        println!("Duration is now {:?}", self.state.duration);
     }
 
     fn average(values: Vec<f64>) -> f64 {
@@ -211,12 +192,22 @@ impl Tester {
 
                 let single = match mode {
                     Mode::OneShot => self.run_one_shot(Threaded::SingleThreaded).as_secs_f64(),
-                    Mode::For => self.run_for(Threaded::SingleThreaded) as f64,
+                    Mode::For => {
+                        let results = self.run_for(Threaded::SingleThreaded) as f64;
+                        // Clear remaining tickets
+                        self.run_one_shot(Threaded::Threaded);
+                        results
+                    }
                 };
                 self.push_tickets();
                 let threaded = match mode {
                     Mode::OneShot => self.run_one_shot(Threaded::Threaded).as_secs_f64(),
-                    Mode::For => self.run_for(Threaded::Threaded) as f64,
+                    Mode::For => {
+                        let results = self.run_for(Threaded::Threaded) as f64;
+                        // Clear remaining tickets
+                        self.run_one_shot(Threaded::Threaded);
+                        results
+                    }
                 };
 
                 if i > 5 {
