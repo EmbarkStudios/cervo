@@ -32,5 +32,3 @@ for file in os.listdir(path):
         plt.minorticks_on()
 
         plt.show()
-        file_path_without_suffix = os.path.splitext(file_path)[0]
-        plt.savefig(file_path_without_suffix + ".png")

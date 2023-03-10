@@ -28,12 +28,14 @@ pub(crate) fn compare_threading() -> Result<()> {
 
                 // let brain_repetition_values = vec![5, 10];
                 // let brain_repetition_values = vec![10];
-                let brain_repetition_values = vec![5, 10, 15];
-                // let brain_repetition_values = vec![1, 2, 5, 10];
+                // let brain_repetition_values = vec![5, 10, 15];
+                let brain_repetition_values = vec![1, 2, 5, 10];
                 // let batch_sizes = vec![8];
                 let batch_sizes = vec![1, 2, 3, 6, 8, 12, 16, 18];
                 let onnx_paths = vec![
                     "../../brains/test.onnx",
+                    // "../../brains/test.onnx",
+                    // "../../brains/test.onnx",
                     "../../brains/test-large.onnx",
                     "../../brains/test-complex.onnx",
                 ];
@@ -113,8 +115,8 @@ impl Tester {
     }
 
     fn run(&mut self, thread_count: usize) {
-        // self.run_timed_tests(Mode::OneShot);
-        self.run_timed_tests(Mode::For);
+        self.run_timed_tests(Mode::OneShot);
+        // self.run_timed_tests(Mode::For);
     }
 
     fn run_timed_tests(&mut self, mode: Mode) {
