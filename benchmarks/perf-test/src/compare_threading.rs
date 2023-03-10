@@ -127,7 +127,8 @@ impl Tester {
             };
             let mut file = OpenOptions::new()
                 .write(true)
-                .append(true)
+                .append(self.num_cores > 1)
+                .truncate(self.num_cores == 1)
                 .create(true)
                 .open(name)
                 .unwrap();
@@ -171,10 +172,11 @@ impl Tester {
         let mut durations = Vec::new();
 
         for i in 0..10 {
-            let duration = self.run_one_shot(Threaded::SingleThreaded);
             self.push_tickets();
+            let duration = self.run_one_shot(Threaded::SingleThreaded);
             durations.push(duration.as_nanos() as f64);
         }
+
         let average = Self::average(durations);
         self.state.duration = Duration::from_nanos(average as u64);
         self.state.brain_repetitions = previous_brain_repetitions;
@@ -290,44 +292,38 @@ impl Tester {
     }
 
     fn add_inferers_to_runtime(&mut self) {
-        for _ in 0..self.state.brain_repetitions {
-            for onnx_path in self.onnx_paths.iter() {
-                let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
+        for onnx_path in self.onnx_paths.iter() {
+            let mut reader = crate::helpers::get_file(onnx_path).expect("Could not open file");
+
+            for _ in 0..self.state.brain_repetitions {
+                reader
+                    .seek(std::io::SeekFrom::Start(0))
+                    .expect("seeking to start of file");
                 let inferer = cervo_onnx::builder(&mut reader)
                     .build_fixed(&[self.state.batch_size])
                     .unwrap();
 
-                let inputs = inferer.input_shapes().to_vec();
-                let observations =
-                    crate::helpers::build_inputs_from_desc(self.state.batch_size as u64, &inputs);
                 let brain_id = self.state.runtime.add_inferer(inferer);
-
-                for (key, val) in observations.iter() {
-                    self.state
-                        .runtime
-                        .push(brain_id, *key, val.clone())
-                        .expect(&format!(
-                            "Could not push to runtime key: {}, val: {:?}",
-                            key, val
-                        ));
-                    self.state.brain_ids.push(brain_id);
-                }
+                self.state.brain_ids.push(brain_id);
             }
         }
     }
 
     /// Given an existing runtime with brains, push new tickets based on inputs.
     fn push_tickets(&mut self) {
-        for brain_id in self.state.brain_ids.iter() {
-            if let Some(input_shapes) = self.state.runtime.input_shapes(*brain_id).ok() {
-                let input_shapes = input_shapes.clone().to_vec();
-                let observations = crate::helpers::build_inputs_from_desc(
-                    self.state.batch_size as u64,
-                    &input_shapes,
-                );
+        let TesterState {
+            runtime,
+            brain_ids,
+            batch_size,
+            ..
+        } = &mut self.state;
+        for brain_id in brain_ids.iter() {
+            if let Some(input_shapes) = runtime.input_shapes(*brain_id).ok() {
+                let input_shapes = input_shapes.to_vec();
+                let observations =
+                    crate::helpers::build_inputs_from_desc(*batch_size as u64, &input_shapes);
                 for (key, val) in observations {
-                    self.state
-                        .runtime
+                    runtime
                         .push(*brain_id, key, val)
                         .expect("Could not push to runtime");
                 }
