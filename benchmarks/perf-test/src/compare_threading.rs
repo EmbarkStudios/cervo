@@ -11,7 +11,6 @@ use std::time::Instant;
 use std::io::Write;
 // TODO: Luc:
 // Why does a batch size of 16 seem optimal? Is it because of the observation size of the inferrers? Investigate.
-// To estimate a good duration, always run single first and estimate duration by seeing how much it takes to have 10 results
 
 const RUN_COUNT: usize = 100;
 
@@ -27,6 +26,7 @@ pub(crate) fn compare_threading() -> Result<()> {
             .install(|| {
                 println!("Thread count is now {}", rayon::current_num_threads());
 
+                // let brain_repetition_values = vec![5, 10];
                 let brain_repetition_values = vec![1, 2, 5, 10];
                 let batch_sizes = vec![1, 2, 3, 6, 8, 12, 16, 18];
                 let onnx_paths = vec![
@@ -160,21 +160,26 @@ impl Tester {
 
     fn set_duration(&mut self) {
         let mut results: usize = 0;
-        let mut start_duration = Duration::from_millis(10);
+        let mut start_duration = Duration::from_millis(2);
 
         let goal_len = 3;
+        // Do a cold run first 
+        self.run_one_shot(Threaded::Threaded);
+        self.push_tickets();
 
         while results < goal_len {
-            start_duration *= 2;
             if let Ok(result) = self.state.runtime.run_for(start_duration) {
                 // Run remaining models
                 results = result.len();
                 self.run_one_shot(Threaded::Threaded);
                 self.push_tickets();
             }
+            if results < goal_len {
+                start_duration *= 2;
+            }
         }
         // Small padding at end
-        self.state.duration = start_duration * 2;
+        self.state.duration = start_duration;
         println!(
             "Determined duration is now {}ms",
             self.state.duration.as_millis()
