@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+
+- Mark cervo_runtime::BrainId as #[must_use]
+
 ## [0.4.0] - 2022-11-23
 
 - Upgrade to `perchance` v0.4.0, which removes dependency on `macaw` and `glam`
