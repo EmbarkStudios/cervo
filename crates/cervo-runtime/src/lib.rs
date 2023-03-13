@@ -84,7 +84,7 @@ pub use runtime::Runtime;
 
 /// Identifier for a specific brain.
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[must_use]
+#[must_use = "the BrainId is required when you submit data to the runtime"]
 pub struct BrainId(pub u16);
 
 /// Identifier for a specific agent.
