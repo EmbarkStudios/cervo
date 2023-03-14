@@ -17,6 +17,7 @@ pub(super) fn build_symbolic_model(
     mut model: InferenceModel,
     inputs: &[(String, Vec<usize>)],
 ) -> TractResult<(Symbol, TypedModel)> {
+    model.set_output_fact(0, Default::default())?;
     let symbol = model.symbol_table.sym("N");
     for (idx, (_name, shape)) in inputs.iter().enumerate() {
         let mut full_shape = tvec!(symbol.to_dim());
@@ -34,15 +35,19 @@ pub(super) fn build_model<D: ToDim>(
     inputs: &[(String, Vec<usize>)],
     batch_dim: D,
 ) -> TractResult<TypedSimplePlan<TypedModel>> {
-    let symbol = model.symbol_table.sym("N");
-    dbg!(&model.symbol_table.);
-    let model = model.into_typed()?;
-    dbg!(&model.symbol_table);
-    let model = model.concretize_dims(
-        &SymbolValues::default().with(&symbol, batch_dim.to_dim().to_i64().unwrap()),
-    )?;
+    model.set_output_fact(0, Default::default())?;
+    for (idx, (_name, shape)) in inputs.iter().enumerate() {
+        let mut full_shape = tvec!(batch_dim.to_dim());
 
-    model.into_decluttered()?.into_optimized()?.into_runnable()
+        full_shape.extend(shape.iter().map(|v| (*v as i32).into()));
+        model.set_input_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
+    }
+
+    model
+        .into_typed()?
+        .into_decluttered()?
+        .into_optimized()?
+        .into_runnable()
 }
 
 pub(super) fn build_symbolic_typed(model: &mut TypedModel) -> TractResult<Symbol> {

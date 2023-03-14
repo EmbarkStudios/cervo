@@ -17,7 +17,7 @@ if ! python3 ../python/check_deps.py ; then
 	exit 1
 fi
 
-FLAGS=
+FLAGS=--release
 
 cargo build $FLAGS || exit 1
 
@@ -30,4 +30,4 @@ mkdir -p ../out
 
 cargo run $FLAGS batch-scaling $count "../out/batchsize-$suffix.csv" -o ../../brains/test-large.onnx -b `seq -s, 1 24`
 #python3 ../python/batchsize.py "../out/batchsize-$suffix.csv" $count "../out/batchsize-$suffix.png"
-#python3 ../python/compare_batchsize.py "../out/batchsize-before.csv" "../out/batchsize-$suffix.csv" $count "../out/batchsize-compare.png"
+#python3 ../python/compare_batchsize.py "../out/batchsize-avx256.csv" "../out/batchsize-$suffix.csv" $count "../out/batchsize-compare.png"

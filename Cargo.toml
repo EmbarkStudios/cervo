@@ -11,7 +11,7 @@ members = [
 exclude = [ "benchmarks/perf-test" ]
 
 [patch.crates-io]
-tract-onnx = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "ac9773dec4e98ab8d70da48cb486c638646ace1e" }
-tract-nnef = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "ac9773dec4e98ab8d70da48cb486c638646ace1e" }
-tract-hir = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "ac9773dec4e98ab8d70da48cb486c638646ace1e" }
-tract-core = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "ac9773dec4e98ab8d70da48cb486c638646ace1e" }
+tract-onnx = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "e8f82bcfe250e0786ea4cd0df049c3d4faf064b4" }
+tract-nnef = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "e8f82bcfe250e0786ea4cd0df049c3d4faf064b4" }
+tract-hir = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "e8f82bcfe250e0786ea4cd0df049c3d4faf064b4" }
+tract-core = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "e8f82bcfe250e0786ea4cd0df049c3d4faf064b4" }

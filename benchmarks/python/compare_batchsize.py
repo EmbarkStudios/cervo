@@ -4,27 +4,41 @@ import matplotlib.pyplot as plt
 import pandas
 import seaborn
 
-KIND = "fixed"
+KIND = "dynamic"
 
 
 def parse_stats_file(statsfile) -> pandas.DataFrame:
     return pandas.read_csv(statsfile, names=["kind", "batchsize", "ms", "stddev"])
 
 
-def main(statsfile1, statsfile2, iterations, outfile=None):
-    df1 = parse_stats_file(statsfile1)
-    df2 = parse_stats_file(statsfile2)
+def main(fs, suffixes, iterations, outfile=None):
+    dfs = [parse_stats_file(f) for f in fs]
 
-    df = pandas.DataFrame.merge(
-        df1, df2, on=["kind", "batchsize"], how="outer", suffixes=["_before", "_after"]
+    base_suffix = suffixes[0]
+    base = dfs[0]
+    base = dfs[0].rename(
+        columns={"ms": f"ms_{base_suffix}", "stddev": f"stddev_{base_suffix}"}
     )
-    df["ratio"] = df["ms_after"] / df["ms_before"]
+    for df, suffix in zip(dfs[1:], suffixes[1:]):
+        df = df.rename(columns={"ms": f"ms_{suffix}", "stddev": f"stddev_{suffix}"})
+        base = pandas.DataFrame.merge(
+            base, df, on=["kind", "batchsize"], how="outer", suffixes=[""]
+        )
+
+    df = base
+    print(df)
+    base_suffix = suffixes[0]
+    for suffix in suffixes[1:]:
+        df[f"ratio_{suffix}"] = df[f"ms_{suffix}"] / df[f"ms_{base_suffix}"]
 
     df_melted = pandas.melt(
-        df, id_vars=["kind", "batchsize"], value_vars=["ms_before", "ms_after"]
+        df,
+        id_vars=["kind", "batchsize"],
+        value_vars=[f"ms_{suffix}" for suffix in suffixes],
     )
 
-    fig, ax = plt.subplots(nrows=3, figsize=(16, 16))
+    nrows = 1 + len(dfs)
+    fig, ax = plt.subplots(nrows=nrows, figsize=(16, 16 * nrows / 3))
 
     seaborn.lineplot(
         x="batchsize",
@@ -38,11 +52,13 @@ def main(statsfile1, statsfile2, iterations, outfile=None):
         ylim=(0, 1),
     )
 
-    df["ms_before"] = df["ms_before"] * df["batchsize"]
-    df["ms_after"] = df["ms_after"] * df["batchsize"]
+    for suffix in suffixes:
+        df[f"ms_{suffix}"] = df[f"ms_{suffix}"] * df["batchsize"]
 
     df_melted = pandas.melt(
-        df, id_vars=["kind", "batchsize"], value_vars=["ms_before", "ms_after"]
+        df,
+        id_vars=["kind", "batchsize"],
+        value_vars=[f"ms_{suffix}" for suffix in suffixes],
     )
 
     seaborn.lineplot(
@@ -57,30 +73,22 @@ def main(statsfile1, statsfile2, iterations, outfile=None):
         ylim=(0, 10),
     )
 
-    df_melted = pandas.melt(df, id_vars=["kind", "batchsize"], value_vars=["ratio"])
-    seaborn.barplot(
-        x="batchsize",
-        y="value",
-        hue="variable",
-        data=df_melted.where(df_melted["kind"] == KIND),
-        ax=ax[2],
-    ).set(
-        title=f"Relative improvement",
-        ylabel="Relative speed",
-        ylim=(0.6, 1.4),
-    )
-
-    # print(df.where(df["partition"] == "before")["ms"])
-    # r = (
-    #     df.where(df["partition"] == "before")["ms"]
-    #     / df.where(df["partition"] == "after")["ms"]
-    # )
-    # print(r)
-    # seaborn.lineplot(x=list(range(1, 25)), y=r, data=df, ax=ax[2],).set(
-    #     title=f"Total execution time by batch size (concretized), its={iterations}",
-    #     ylabel="milliseconds",
-    #     ylim=(0, 10),
-    # )
+    for idx, suffix in enumerate(suffixes[1:]):
+        df_melted = pandas.melt(
+            df, id_vars=["kind", "batchsize"], value_vars=[f"ratio_{suffix}"]
+        )
+        seaborn.barplot(
+            x="batchsize",
+            y="value",
+            hue="variable",
+            data=df_melted.where(df_melted["kind"] == KIND),
+            ax=ax[2 + idx],
+        ).set(
+            title=f"Speed ratio (<1 = faster), compared to {base_suffix}",
+            ylabel="Relative speed",
+            ylim=(0.5, 2.0),
+        )
+        seaborn.lineplot(x=[0, 24], y=[1, 1], color="red", ax=ax[2 + idx])
 
     if outfile:
         plt.savefig(outfile)
@@ -97,8 +105,8 @@ def get_or_none(lst, idx):
 
 
 if __name__ == "__main__":
-    filename = sys.argv[1]
-    filename2 = sys.argv[2]
+    filename = sys.argv[1].split(",")
+    suffixes = sys.argv[2].split(",")
     bs = sys.argv[3]
 
-    main(filename, filename2, bs, get_or_none(sys.argv, 4))
+    main(filename, suffixes, bs, get_or_none(sys.argv, 4))
