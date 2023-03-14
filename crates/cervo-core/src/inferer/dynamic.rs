@@ -1,7 +1,10 @@
 use super::{helpers, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
-use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_core::{
+    prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan},
+    value::TValue,
+};
 use tract_hir::prelude::InferenceModel;
 
 /// The dynamic inferer hits a spot between the raw simplicity of a [`crate::prelude::BasicInferer`] and the spikiness
@@ -58,7 +61,7 @@ impl DynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<Tensor>> {
+    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<TValue>> {
         let size = batch.len();
 
         let mut inputs = TVec::default();
@@ -76,7 +79,7 @@ impl DynamicInferer {
 
             let tensor = Tensor::from_shape(&shape, batch.input_slot(idx))?;
 
-            inputs.push(tensor);
+            inputs.push(tensor.into());
         }
 
         Ok(inputs)

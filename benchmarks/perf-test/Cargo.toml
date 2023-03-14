@@ -15,4 +15,10 @@ cervo-core = { path = "../../crates/cervo-core" }
 cervo-runtime = { path = "../../crates/cervo-runtime", features = ["threaded"] }
 perchance = { version = "0.4", default-features = false }
 rayon = { version = "1.5"}
+liquid-core = "=0.26.0"
 
+[patch.crates-io]
+tract-onnx = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "ac9773dec4e98ab8d70da48cb486c638646ace1e" }
+tract-nnef = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "ac9773dec4e98ab8d70da48cb486c638646ace1e" }
+tract-hir = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "ac9773dec4e98ab8d70da48cb486c638646ace1e" }
+tract-core = { version="0.19.3-pre", git = "https://github.com/sonos/tract", rev = "ac9773dec4e98ab8d70da48cb486c638646ace1e" }

@@ -96,7 +96,7 @@ impl MemoizingDynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<Tensor>> {
+    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<TValue>> {
         let size = batch.len();
 
         let mut inputs = TVec::default();
@@ -112,7 +112,7 @@ impl MemoizingDynamicInferer {
 
             let shape = full_shape;
 
-            let tensor = Tensor::from_shape(&shape, batch.input_slot(idx))?;
+            let tensor = TValue::from(Tensor::from_shape(&shape, batch.input_slot(idx))?);
 
             inputs.push(tensor);
         }
@@ -131,7 +131,7 @@ impl MemoizingDynamicInferer {
                 if let Entry::Vacant(e) = content.entry(size) {
                     let p = self
                         .model
-                        .concretize_dims(&SymbolValues::default().with(self.symbol, size as i64))?
+                        .concretize_dims(&SymbolValues::default().with(&self.symbol, size as i64))?
                         .into_optimized()?
                         .into_decluttered()?
                         .into_runnable()?;

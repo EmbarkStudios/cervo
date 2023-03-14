@@ -1,7 +1,10 @@
 use super::{helpers, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::{Context, Result};
-use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_core::{
+    prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan},
+    value::TValue,
+};
 use tract_hir::prelude::InferenceModel;
 
 /// A reliable batched inferer that is a good fit if you know how much data you'll have and want stable performance.
@@ -122,7 +125,7 @@ impl BatchedModel {
         &self,
         batch: &ScratchPadView<'_>,
         model_api: &ModelApi,
-    ) -> Result<TVec<Tensor>> {
+    ) -> Result<TVec<TValue>> {
         assert_eq!(batch.len(), self.size);
         let size = self.size;
 
@@ -148,7 +151,7 @@ impl BatchedModel {
 
             let tensor = Tensor::from_shape(&shape, batch.input_slot(idx))?;
 
-            inputs.push(tensor);
+            inputs.push(tensor.into());
         }
 
         Ok(inputs)

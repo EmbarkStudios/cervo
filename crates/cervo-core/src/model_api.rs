@@ -31,7 +31,8 @@ impl ModelApi {
                 name,
                 input_shape
                     .dims()
-                    .filter_map(|value| value.concretize().map(|v| v.to_i64().unwrap() as usize))
+                    .filter_map(|value| value.concretize().and_then(|v| v.to_i64().ok()))
+                    .map(|val| val as usize)
                     .collect(),
             ));
         }
@@ -51,7 +52,8 @@ impl ModelApi {
                 name,
                 output_shape
                     .dims()
-                    .filter_map(|value| value.concretize().map(|v| v.to_i64().unwrap() as usize))
+                    .filter_map(|value| value.concretize().and_then(|v| v.to_i64().ok()))
+                    .map(|val| val as usize)
                     .collect(),
             ));
         }
