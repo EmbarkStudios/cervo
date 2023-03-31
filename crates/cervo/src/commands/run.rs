@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use cervo_asset::AssetData;
-use cervo_core::prelude::{Inferer, InfererExt, State};
+use cervo_core::prelude::{Inferer, InfererExt, Response, State};
 use clap::Parser;
 
 use std::{collections::HashMap, fs::File, path::PathBuf, time::Instant};
@@ -19,6 +19,12 @@ pub(crate) struct Args {
     /// An epsilon key to randomize noise.
     #[clap(short, long)]
     with_epsilon: Option<String>,
+
+    #[clap(long)]
+    print_output: bool,
+
+    #[clap(long)]
+    print_input: bool,
 }
 
 fn build_inputs_from_desc(count: u64, inputs: &[(String, Vec<usize>)]) -> HashMap<u64, State<'_>> {
@@ -37,6 +43,28 @@ fn build_inputs_from_desc(count: u64, inputs: &[(String, Vec<usize>)]) -> HashMa
             )
         })
         .collect()
+}
+
+fn indent_by(target: String, prefix_len: usize) -> String {
+    let prefix = " ".repeat(prefix_len);
+
+    target
+        .lines()
+        .map(|line| format!("{}{}", prefix, line))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn print_input(obs: &HashMap<u64, State<'_>>) {
+    let formatted = format!("{:#?}", obs);
+    let indented = indent_by(formatted, 4);
+    println!("Inputs:\n{}", indented);
+}
+
+fn print_output(obs: &HashMap<u64, Response<'_>>) {
+    let formatted = format!("{:#?}", obs);
+    let indented = indent_by(formatted, 4);
+    println!("Outputs:\n{}", indented);
 }
 
 pub(super) fn run(config: Args) -> Result<()> {
@@ -65,19 +93,36 @@ pub(super) fn run(config: Args) -> Result<()> {
             .collect::<Vec<_>>();
 
         let observations = build_inputs_from_desc(config.batch_size as u64, &shapes);
+
+        if config.print_input {
+            print_input(&observations);
+        }
+
         inferer.infer_batch(observations.clone())?;
 
         let start = Instant::now();
-        inferer.infer_batch(observations)?;
-        start.elapsed()
+        let res = inferer.infer_batch(observations)?;
+
+        let dur = start.elapsed();
+        if config.print_output {
+            print_output(&res);
+        }
+
+        dur
     } else {
         let shapes = inferer.input_shapes().to_vec();
         let observations = build_inputs_from_desc(config.batch_size as u64, &shapes);
         inferer.infer_batch(observations.clone())?;
 
         let start = Instant::now();
-        inferer.infer_batch(observations)?;
-        start.elapsed()
+        let res = inferer.infer_batch(observations)?;
+
+        let dur = start.elapsed();
+        if config.print_output {
+            print_output(&res);
+        }
+
+        dur
     };
 
     println!(
