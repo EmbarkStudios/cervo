@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - ReleaseDate
 
 - Mark cervo_runtime::BrainId as #[must_use]
+- Move the CLI tool to a separate crate `cervo-cli`. The installed name is unchanged. This avoids some dependencies.
+- Upgrade tract to 0.20.0
 
 ## [0.4.0] - 2022-11-23
 
