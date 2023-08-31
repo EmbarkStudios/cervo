@@ -93,7 +93,6 @@ dependencies = [
  "cervo-nnef",
  "cervo-onnx",
  "cervo-runtime",
- "clap",
  "log",
  "tempfile",
  "tracing-subscriber",
@@ -107,6 +106,14 @@ dependencies = [
  "cervo-core",
  "cervo-nnef",
  "cervo-onnx",
+]
+
+[[package]]
+name = "cervo-cli"
+version = "0.4.1-alpha.0"
+dependencies = [
+ "cervo",
+ "clap",
 ]
 
 [[package]]

@@ -10,13 +10,8 @@ keywords = [ "machinelearning", "inference" ]
 categories = [ "science" ]
 readme = "../../README.md"
 
-# this ensures cargo run in the workspace root uses cervo-cli
-default-run = "cervo"
-
-
 [dependencies]
 anyhow = "1.0.57"
-clap = { version = "4", features = ["derive"] }
 log = "0.4"
 tempfile = "3.4"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
@@ -25,11 +20,3 @@ cervo-nnef = { version = "0.4.1-alpha.0", path = "../cervo-nnef" }
 cervo-asset = { version = "0.4.1-alpha.0", path = "../cervo-asset" }
 cervo-core = { version = "0.4.1-alpha.0", path = "../cervo-core" }
 cervo-runtime = { version = "0.4.1-alpha.0", path = "../cervo-runtime" }
-
-[lib]
-name = "cervo"
-path = "src/lib.rs"
-
-[[bin]]
-name = "cervo"
-path = "src/main.rs"
