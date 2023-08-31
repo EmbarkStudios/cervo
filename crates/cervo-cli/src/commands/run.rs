@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
-use cervo_asset::AssetData;
-use cervo_core::prelude::{Inferer, InfererExt, Response, State};
+use cervo::asset::AssetData;
+use cervo::core::prelude::{Inferer, InfererExt, Response, State};
 use clap::Parser;
 
 use std::{collections::HashMap, fs::File, path::PathBuf, time::Instant};
@@ -69,11 +69,11 @@ fn print_output(obs: &HashMap<u64, Response<'_>>) {
 
 pub(super) fn run(config: Args) -> Result<()> {
     let mut reader = File::open(&config.file)?;
-    let inferer = if cervo_nnef::is_nnef_tar(&config.file) {
-        cervo_nnef::builder(&mut reader).build_fixed(&[config.batch_size])?
+    let inferer = if cervo::nnef::is_nnef_tar(&config.file) {
+        cervo::nnef::builder(&mut reader).build_fixed(&[config.batch_size])?
     } else {
         match config.file.extension().and_then(|ext| ext.to_str()) {
-            Some("onnx") => cervo_onnx::builder(&mut reader).build_fixed(&[config.batch_size])?,
+            Some("onnx") => cervo::onnx::builder(&mut reader).build_fixed(&[config.batch_size])?,
             Some("crvo") => {
                 AssetData::deserialize(&mut reader)?.load_fixed(&[config.batch_size])?
             }

@@ -7,7 +7,7 @@
 */
 
 use anyhow::{bail, Result};
-use cervo_asset::{AssetData, AssetKind};
+use cervo::asset::{AssetData, AssetKind};
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -30,7 +30,7 @@ pub(crate) struct PackageArgs {
 }
 
 pub(super) fn package(config: PackageArgs) -> Result<()> {
-    let kind = if cervo_nnef::is_nnef_tar(&config.infile) {
+    let kind = if cervo::nnef::is_nnef_tar(&config.infile) {
         AssetKind::Nnef
     } else {
         match config.infile.extension().and_then(|ext| ext.to_str()) {

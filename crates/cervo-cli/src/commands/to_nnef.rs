@@ -51,13 +51,13 @@ pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
         None => bail!("file without extension: {:?}", in_file),
     }
 
-    match cervo_nnef::is_nnef_tar(&out_file) {
+    match cervo::nnef::is_nnef_tar(&out_file) {
         true => {}
         false => bail!("unexpected extension: {:?}", out_file),
     }
 
     let mut reader = File::open(in_file)?;
-    let mut bytes = cervo_onnx::to_nnef(&mut reader, batch_size)?;
+    let mut bytes = cervo::onnx::to_nnef(&mut reader, batch_size)?;
     bytes.shrink_to_fit();
 
     let mut out = tempfile::NamedTempFile::new()?;

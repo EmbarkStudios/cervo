@@ -87,16 +87,11 @@ checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
 name = "cervo"
 version = "0.4.1-alpha.0"
 dependencies = [
- "anyhow",
  "cervo-asset",
  "cervo-core",
  "cervo-nnef",
  "cervo-onnx",
  "cervo-runtime",
- "clap",
- "log",
- "tempfile",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -107,6 +102,18 @@ dependencies = [
  "cervo-core",
  "cervo-nnef",
  "cervo-onnx",
+]
+
+[[package]]
+name = "cervo-cli"
+version = "0.4.1-alpha.0"
+dependencies = [
+ "anyhow",
+ "cervo",
+ "clap",
+ "log",
+ "tempfile",
+ "tracing-subscriber",
 ]
 
 [[package]]

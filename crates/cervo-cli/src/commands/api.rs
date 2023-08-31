@@ -7,8 +7,8 @@
 */
 
 use anyhow::{bail, Result};
-use cervo_asset::AssetData;
-use cervo_core::prelude::Inferer;
+use cervo::asset::AssetData;
+use cervo::core::prelude::Inferer;
 use clap::Parser;
 use std::{fs::File, path::PathBuf};
 
@@ -22,11 +22,11 @@ pub(crate) struct ApiArgs {
 pub(super) fn describe_api(config: ApiArgs) -> Result<()> {
     let mut reader = File::open(&config.file)?;
 
-    let model = if cervo_nnef::is_nnef_tar(&config.file) {
-        cervo_nnef::builder(&mut reader).build_basic()?
+    let model = if cervo::nnef::is_nnef_tar(&config.file) {
+        cervo::nnef::builder(&mut reader).build_basic()?
     } else {
         match config.file.extension().and_then(|ext| ext.to_str()) {
-            Some("onnx") => cervo_onnx::builder(&mut reader).build_basic()?,
+            Some("onnx") => cervo::onnx::builder(&mut reader).build_basic()?,
             Some("crvo") => AssetData::deserialize(&mut reader)?.load_basic()?,
             Some(other) => bail!("unknown file type {:?}", other),
             None => bail!("missing file extension {:?}", config.file),

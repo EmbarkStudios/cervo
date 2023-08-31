@@ -7,30 +7,33 @@
 */
 
 use anyhow::{bail, Result};
+use cervo::asset::AssetData;
 use clap::Parser;
 use std::{fs::File, path::PathBuf};
-use cervo::Inferer;
 
-/// Print API for a model
+/// Shortly describe the model file.
 #[derive(Parser, Debug)]
 #[clap()]
-pub(crate) struct ImportArgs {
-    infile: PathBuf,
-    outfile: PathBuf,
+pub(crate) struct DescribeArgs {
+    file: PathBuf,
 }
 
-pub(super) fn describe_api(config: ApiArgs) -> Result<()> {
+pub(super) fn describe(config: DescribeArgs) -> Result<()> {
     let mut reader = File::open(&config.file)?;
 
-    let model = if cervo_nnef::is_nnef_tar(&config.infile) {
-		cervo_asset::
+    if cervo::nnef::is_nnef_tar(&config.file) {
+        println!("a NNEF file");
     } else {
         match config.file.extension().and_then(|ext| ext.to_str()) {
-            Some("onnx") => cervo_onnx::simple_inferer_from_stream(&mut reader)?,
+            Some("onnx") => println!("an ONNX file"),
+            Some("crvo") => {
+                let asset = AssetData::deserialize(&mut reader)?;
+                println!("a native cervo file containing {} data", asset.kind());
+            }
             Some(other) => bail!("unknown file type {:?}", other),
             None => bail!("missing file extension {:?}", config.file),
         }
-    };
+    }
 
     Ok(())
 }
