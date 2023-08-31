@@ -22,11 +22,11 @@ pub(crate) struct ImportArgs {
 pub(super) fn describe_api(config: ApiArgs) -> Result<()> {
     let mut reader = File::open(&config.file)?;
 
-    let model = if cervo_nnef::is_nnef_tar(&config.infile) {
-		cervo_asset::
+    let model = if cervo::nnef::is_nnef_tar(&config.infile) {
+		cervo::asset::
     } else {
         match config.file.extension().and_then(|ext| ext.to_str()) {
-            Some("onnx") => cervo_onnx::simple_inferer_from_stream(&mut reader)?,
+            Some("onnx") => cervo::onnx::simple_inferer_from_stream(&mut reader)?,
             Some(other) => bail!("unknown file type {:?}", other),
             None => bail!("missing file extension {:?}", config.file),
         }

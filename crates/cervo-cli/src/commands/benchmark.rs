@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
-use cervo_asset::AssetData;
-use cervo_core::prelude::{Batcher, Inferer, InfererExt, State};
+use cervo::asset::AssetData;
+use cervo::core::prelude::{Batcher, Inferer, InfererExt, State};
 use clap::Parser;
 use std::{collections::HashMap, fs::File, path::PathBuf, time::Instant};
 
@@ -156,11 +156,11 @@ pub fn build_inputs_from_desc(
 pub(super) fn run(config: Args) -> Result<()> {
     for batch_size in config.batch_sizes {
         let mut reader = File::open(&config.file)?;
-        let mut inferer = if cervo_nnef::is_nnef_tar(&config.file) {
-            cervo_nnef::builder(&mut reader).build_fixed(&[batch_size])?
+        let mut inferer = if cervo::nnef::is_nnef_tar(&config.file) {
+            cervo::nnef::builder(&mut reader).build_fixed(&[batch_size])?
         } else {
             match config.file.extension().and_then(|ext| ext.to_str()) {
-                Some("onnx") => cervo_onnx::builder(&mut reader).build_fixed(&[batch_size])?,
+                Some("onnx") => cervo::onnx::builder(&mut reader).build_fixed(&[batch_size])?,
                 Some("crvo") => AssetData::deserialize(&mut reader)?.load_fixed(&[batch_size])?,
                 Some(other) => bail!("unknown file type {:?}", other),
                 None => bail!("missing file extension {:?}", config.file),
