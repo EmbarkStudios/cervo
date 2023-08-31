@@ -129,7 +129,9 @@ impl Runtime {
         let mut unselected_jobs = Vec::new();
 
         while let Some(ticket) = self.queue.pop() {
-            let Some(model) = self.models.iter().find(|m| m.id == ticket.1) else {continue};
+            let Some(model) = self.models.iter().find(|m| m.id == ticket.1) else {
+                continue;
+            };
 
             if model.needs_to_execute()
                 && (selected_jobs.is_empty() || model.can_run_in_time(available_cpu_time))

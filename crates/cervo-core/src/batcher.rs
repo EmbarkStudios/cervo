@@ -117,12 +117,7 @@ impl Batcher {
             }
         }
 
-        Ok(self
-            .scratch
-            .ids
-            .drain(..)
-            .zip(outputs.into_iter())
-            .collect::<_>())
+        Ok(self.scratch.ids.drain(..).zip(outputs).collect::<_>())
     }
 
     /// Check if there is any data to run on here.
