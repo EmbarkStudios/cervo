@@ -40,7 +40,7 @@ use tract_hir::prelude::*;
 /// # Cons
 ///
 /// * For small amounts of data and large models the spikes can offset
-/// amortized gains signifcantly
+/// amortized gains significantly
 
 pub struct MemoizingDynamicInferer {
     symbol: Symbol,
@@ -96,7 +96,7 @@ impl MemoizingDynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<Tensor>> {
+    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<TValue>> {
         let size = batch.len();
 
         let mut inputs = TVec::default();
@@ -114,7 +114,7 @@ impl MemoizingDynamicInferer {
 
             let tensor = Tensor::from_shape(&shape, batch.input_slot(idx))?;
 
-            inputs.push(tensor);
+            inputs.push(tensor.into());
         }
 
         Ok(inputs)
@@ -131,7 +131,7 @@ impl MemoizingDynamicInferer {
                 if let Entry::Vacant(e) = content.entry(size) {
                     let p = self
                         .model
-                        .concretize_dims(&SymbolValues::default().with(self.symbol, size as i64))?
+                        .concretize_dims(&SymbolValues::default().with(&self.symbol, size as i64))?
                         .into_optimized()?
                         .into_decluttered()?
                         .into_runnable()?;

@@ -11,3 +11,9 @@ members = [
 
 exclude = [ "benchmarks/perf-test" ]
 resolver = "2"
+
+[workspace.dependencies]
+tract-core = { version = "0.20" }
+tract-hir = { version = "0.20" }
+tract-nnef = { version = "0.20" }
+tract-onnx =  { version = "0.20" }

@@ -4,7 +4,7 @@ A basic unbatched inferer that doesn't require a lot of custom setup or manageme
 use super::Inferer;
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
-use tract_core::prelude::{tvec, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_core::prelude::{tvec, TValue, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
 use tract_hir::prelude::InferenceModel;
 
 use super::helpers;
@@ -46,7 +46,7 @@ impl BasicInferer {
         Ok(Self { model, model_api })
     }
 
-    fn build_inputs(&self, obs: &ScratchPadView<'_>) -> Result<TVec<Tensor>> {
+    fn build_inputs(&self, obs: &ScratchPadView<'_>) -> Result<TVec<TValue>> {
         let mut inputs = TVec::default();
 
         for (idx, (name, shape)) in self.model_api.inputs.iter().enumerate() {
@@ -60,7 +60,7 @@ impl BasicInferer {
 
             let tensor = Tensor::from_shape(&full_shape, obs.input_slot(idx))?;
 
-            inputs.push(tensor);
+            inputs.push(tensor.into());
         }
 
         Ok(inputs)

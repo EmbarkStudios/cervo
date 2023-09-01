@@ -64,7 +64,7 @@ fn test_infer_once_complex_batched_not_loaded() {
     let shapes = instance.input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(10, &shapes);
     let result = instance.infer_batch(observations);
-    eprintln!("result {:?}", result);
+
     assert!(result.is_ok());
 
     let result = result.unwrap();
