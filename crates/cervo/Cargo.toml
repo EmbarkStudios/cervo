@@ -1,6 +1,6 @@
 [package]
 name = "cervo"
-version = "0.5.0-rc.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["Tom Solberg <tom.solberg@emark-studios.com"]
 license = "MIT OR Apache-2.0"
@@ -11,8 +11,8 @@ categories = [ "science" ]
 readme = "../../README.md"
 
 [dependencies]
-cervo-onnx = { version = "0.5.0-rc.0", path = "../cervo-onnx" }
-cervo-nnef = { version = "0.5.0-rc.0", path = "../cervo-nnef" }
-cervo-asset = { version = "0.5.0-rc.0", path = "../cervo-asset" }
-cervo-core = { version = "0.5.0-rc.0", path = "../cervo-core" }
-cervo-runtime = { version = "0.5.0-rc.0", path = "../cervo-runtime" }
+cervo-onnx = { version = "0.5.0", path = "../cervo-onnx" }
+cervo-nnef = { version = "0.5.0", path = "../cervo-nnef" }
+cervo-asset = { version = "0.5.0", path = "../cervo-asset" }
+cervo-core = { version = "0.5.0", path = "../cervo-core" }
+cervo-runtime = { version = "0.5.0", path = "../cervo-runtime" }

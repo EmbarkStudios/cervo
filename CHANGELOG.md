@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+## [0.5.0] - 2023-10-09
 
 - Mark cervo_runtime::BrainId as #[must_use]
 - Move the CLI tool to a separate crate `cervo-cli`. The installed name is unchanged. This avoids some dependencies.
@@ -82,7 +83,8 @@ an ECS.
 Initial release.
 
 <!-- next-url -->
-[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.4.0...HEAD
+[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.5.0...HEAD
+[0.5.0]: https://github.com/EmbarkStudios/cervo/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/EmbarkStudios/cervo/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/EmbarkStudios/cervo/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/EmbarkStudios/cervo/compare/0.1.1...0.2.0
