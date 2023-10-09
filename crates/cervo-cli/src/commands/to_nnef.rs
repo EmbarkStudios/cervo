@@ -46,7 +46,7 @@ pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
     } = config;
 
     match in_file.extension().and_then(|ext| ext.to_str()) {
-        Some(ext) if ext == "onnx" => {}
+        Some("onnx") => {}
         Some(ext) => bail!("unexpected extension: {:?}", ext),
         None => bail!("file without extension: {:?}", in_file),
     }
@@ -71,7 +71,7 @@ pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
 pub(super) fn batch_onnx_to_nnef(config: BatchToNnefArgs) -> Result<()> {
     for file in &config.in_files {
         match file.extension().and_then(|ext| ext.to_str()) {
-            Some(ext) if ext == "onnx" => {}
+            Some("onnx") => {}
             Some(ext) => bail!("unexpected extension: {:?}", ext),
             None => bail!("file without extension: {:?}", file),
         }
