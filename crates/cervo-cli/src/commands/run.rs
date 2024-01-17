@@ -88,8 +88,8 @@ pub(super) fn run(config: Args) -> Result<()> {
         let shapes = inferer
             .input_shapes()
             .iter()
-            .cloned()
             .filter(|(k, _)| k.as_str() != epsilon)
+            .cloned()
             .collect::<Vec<_>>();
 
         let observations = build_inputs_from_desc(config.batch_size as u64, &shapes);
