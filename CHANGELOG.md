@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+- Do not ignore output shapes when constructing `onnx`-based inference models.
+
 ## [0.5.0] - 2023-10-09
 
 - Mark cervo_runtime::BrainId as #[must_use]
