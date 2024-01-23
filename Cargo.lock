@@ -797,9 +797,9 @@ checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
 name = "perchance"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "262ea49a93cf5c8d911d320b56967a64aec6fc403d35d915959e6d72e5bbace9"
+checksum = "7150912aa69e961f55a2648901f14e07c864c78908f78e12cf8ec7a18a211c0c"
 dependencies = [
  "once_cell",
  "ordered-float",

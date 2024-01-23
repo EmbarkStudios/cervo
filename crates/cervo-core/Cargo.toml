@@ -20,5 +20,5 @@ tract-core =  { workspace = true }
 tract-hir =  { workspace = true }
 rand = { version = "0.8.2" }
 rand_distr = { version = "0.4" }
-perchance = { version = "0.4", default-features = false }
+perchance = { version = "0.5", default-features = false }
 parking_lot = "0.12"

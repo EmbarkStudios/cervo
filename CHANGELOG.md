@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+- Upgrade to `perchance` v0.5
+
 ## [0.5.1] - 2024-01-18
 - Do not ignore output shapes when constructing `onnx`-based inference models.
 
