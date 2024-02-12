@@ -1,6 +1,6 @@
 [package]
 name = "cervo-cli"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2021"
 authors = ["Tom Solberg <tom.solberg@emark-studios.com"]
 license = "MIT OR Apache-2.0"
@@ -20,7 +20,7 @@ log = "0.4"
 tempfile = "3.4"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 
-cervo = { version = "0.5.1", path = "../cervo" }
+cervo = { version = "0.6.0", path = "../cervo" }
 
 [[bin]]
 name = "cervo"

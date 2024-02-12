@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+## [0.6.0] - 2024-02-12
 - Upgrade to `perchance` v0.5
 - Upgrade `tract` to 0.21.0
 
@@ -89,7 +90,8 @@ an ECS.
 Initial release.
 
 <!-- next-url -->
-[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.5.1...HEAD
+[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/EmbarkStudios/cervo/compare/0.5.1...0.6.0
 [0.5.1]: https://github.com/EmbarkStudios/cervo/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/EmbarkStudios/cervo/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/EmbarkStudios/cervo/compare/0.3.0...0.4.0
