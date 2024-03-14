@@ -21,7 +21,12 @@ tempfile = "3.4"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 
 cervo = { version = "0.6.0", path = "../cervo" }
+tiny_http = { version = "0.12.0", optional = true }
 
 [[bin]]
 name = "cervo"
 path = "src/main.rs"
+
+[features]
+default = ["serve"]
+serve = ["tiny_http"]

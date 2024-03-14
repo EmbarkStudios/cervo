@@ -2,6 +2,7 @@
 Command line tools for cervo.
 */
 
+#![allow(unsafe_code)]
 mod commands;
 
 use anyhow::Result;
