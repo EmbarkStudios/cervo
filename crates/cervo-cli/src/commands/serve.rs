@@ -1,17 +1,13 @@
 use anyhow::{bail, Result};
 use cervo::asset::AssetData;
 use cervo::core::inferer::{InfererBuilder, InfererProvider};
-use cervo::core::prelude::{Inferer, InfererExt, Response, State};
+use cervo::core::prelude::{Inferer, State};
 use clap::Parser;
-use std::io::Read;
 use std::str::FromStr;
 use std::sync::{Arc, Condvar, Mutex};
-use std::{collections::HashMap, fs::File, path::PathBuf, time::Instant};
+use std::{fs::File, path::PathBuf};
 
-use std::collections::VecDeque;
-mod request_generated;
-mod response_generated;
-mod types_generated;
+mod request_capnp;
 
 pub struct Semaphore {
     condvar: Condvar,
@@ -152,6 +148,9 @@ pub(crate) struct Args {
     #[clap(short, long, default_value = "11223")]
     port: u16,
 
+    #[clap(short, long, default_value = "8")]
+    threads: u16,
+
     #[clap(long, default_value = "0.0.0.0")]
     host: String,
 }
@@ -176,33 +175,22 @@ pub(super) fn serve(config: Args) -> Result<()> {
         }
     };
 
-    serve_inner(inferer, config.host, config.port)
+    serve_inner(inferer, config.host, config.port, config.threads)
 }
 
-fn serve_inner(model: Box<dyn Inferer>, host: String, port: u16) -> Result<()> {
+fn serve_inner(model: Box<dyn Inferer>, host: String, port: u16, threads: u16) -> Result<()> {
     use tiny_http::{Response, Server};
-
-    // The requests are expected to be in the form of a POST request with the body containing the input data.
-    // The encoding of the input data is expected to be in the following format:
-    // 1. The first byte is the batch size.
-    // For each batch item:
-    //   2. The first byte is the number of inputs
-    //   For each input:
-    //     3. The first byte is the length of the input key
-    //     4. The next `length` bytes are the input key as utf-8
-    //     5. The next 4 bytes is the byte-length of the input value as LE unsigned
-    //     6. The next `length` bytes are the input value as float in LE
 
     fn run_server(
         server: Arc<Server>,
-        tx: std::sync::mpsc::Sender<(tiny_http::Request, Vec<u8>)>,
+        _tx: std::sync::mpsc::Sender<(tiny_http::Request, Vec<u8>)>,
         model: Arc<Box<dyn Inferer>>,
         semaphore: Arc<Semaphore>,
     ) -> Result<()> {
         let mut batch = cervo::core::batcher::Batcher::new(model.as_ref());
         let mut responders: Vec<(tiny_http::Request, Vec<u64>)> = vec![];
         loop {
-            match server.recv_timeout(std::time::Duration::from_millis(5)) {
+            match server.try_recv() {
                 Err(e) => {
                     eprintln!("Error: {:?}", e);
                 }
@@ -227,19 +215,45 @@ fn serve_inner(model: Box<dyn Inferer>, host: String, port: u16) -> Result<()> {
                         let mut result = batch.execute(model.as_ref()).unwrap();
 
                         for (request, ids) in responders {
+                            let mut message = capnp::message::Builder::new_default();
+                            {
+                                let response =
+                                    message.init_root::<request_capnp::response::Builder<'_>>();
+
+                                let mut data_instances = response.init_data(ids.len() as _);
+                                for (idx, id) in ids.into_iter().enumerate() {
+                                    let mut instance = data_instances.reborrow().get(idx as _);
+                                    instance.set_identity(id as _);
+                                    let response = result.remove(&(id as u64)).unwrap();
+
+                                    let mut dls =
+                                        instance.init_data_lists(response.data.len() as _);
+
+                                    for (index, (key, value)) in
+                                        response.data.into_iter().enumerate()
+                                    {
+                                        let mut data_list = dls.reborrow().get(index as _);
+                                        data_list.set_name(key);
+                                        data_list.set_values(&value[..])?;
+                                    }
+                                }
+                            };
+                            let data = message.get_segments_for_output();
                             let mut buf = vec![];
-                            buf.push(ids.len() as u8);
-                            for id in ids {
-                                let response = result.remove(&(id as u64)).unwrap();
-                                buf.push(response.data.len() as u8);
-                                for (key, value) in response.data {
-                                    buf.push(key.len() as u8);
-                                    buf.extend(key.as_bytes());
-                                    buf.extend(&(value.len() as u32 * 4).to_le_bytes());
-                                    buf.extend(value.iter().flat_map(|f| f.to_le_bytes()));
+
+                            match data {
+                                capnp::OutputSegments::SingleSegment(d) => {
+                                    buf.extend(d[0]);
+                                }
+                                capnp::OutputSegments::MultiSegment(s) => {
+                                    for d in s {
+                                        buf.extend(d);
+                                    }
                                 }
                             }
-                            request.respond(Response::from_data(buf.clone()))?;
+
+                            let response = Response::from_data(buf);
+                            request.respond(response)?;
                         }
 
                         drop(permit);
@@ -247,48 +261,28 @@ fn serve_inner(model: Box<dyn Inferer>, host: String, port: u16) -> Result<()> {
                     });
                 }
                 Ok(Some(mut request)) => {
-                    let mut buf = vec![];
-                    request.as_reader().read_to_end(&mut buf)?;
-                    let mut offset = 0;
-                    let batch_size = buf[offset];
-                    offset += 1;
+                    use capnp::serialize_packed;
 
-                    let mut copy_data = Vec::<f32>::new();
+                    let mut buf = vec![];
+
+                    request.as_reader().read_to_end(&mut buf)?;
+                    let reader =
+                        serialize_packed::read_message(&buf[..], Default::default()).unwrap();
+                    let data = reader
+                        .get_root::<'_, request_capnp::request::Reader<'_>>()
+                        .unwrap();
 
                     let mut responder_ids = vec![];
-                    for id in 0..batch_size {
-                        let input_count = buf[offset];
-                        offset += 1;
 
+                    for instance in data.get_data().unwrap() {
                         let mut state = State::empty();
-                        for _ in 0..input_count {
-                            let key_length = buf[offset] as usize;
-                            offset += 1;
+                        for datalist in instance.get_data_lists().unwrap() {
+                            let input = datalist.get_values()?;
+                            let key = datalist.get_name()?;
 
-                            let key = std::str::from_utf8(&buf[offset..offset + key_length])?;
-
-                            offset += key_length;
-
-                            let value_length = u32::from_le_bytes([
-                                buf[offset],
-                                buf[offset + 1],
-                                buf[offset + 2],
-                                buf[offset + 3],
-                            ]) as usize
-                                / 4;
-
-                            offset += 4;
-
-                            let values_part = unsafe {
-                                let ptr = buf.as_ptr().offset(offset as isize);
-                                ptr as *const f32
-                            };
-
-                            let values =
-                                unsafe { std::slice::from_raw_parts(values_part, value_length) };
-                            copy_data.extend_from_slice(values);
-                            state.data.insert(key, values.to_vec());
-                            offset += value_length * 4;
+                            state
+                                .data
+                                .insert(key.to_str()?, input.as_slice().unwrap().to_vec());
                         }
 
                         let id = batch.len() as u64;
@@ -297,33 +291,58 @@ fn serve_inner(model: Box<dyn Inferer>, host: String, port: u16) -> Result<()> {
                     }
                     responders.push((request, responder_ids));
 
-                    if batch.len() >= 40 {
+                    if batch.len() >= 12 {
                         let mut result = batch.execute(model.as_ref()).unwrap();
 
                         for (request, ids) in responders.drain(..) {
-                            let mut buf = vec![];
-                            buf.push(ids.len() as u8);
-                            for id in ids {
-                                let response = result.remove(&(id as u64)).unwrap();
-                                buf.push(response.data.len() as u8);
-                                for (key, value) in response.data {
-                                    buf.push(key.len() as u8);
-                                    buf.extend(key.as_bytes());
-                                    buf.extend(&(value.len() as u32 * 4).to_le_bytes());
-                                    buf.extend(value.iter().flat_map(|f| f.to_le_bytes()));
+                            let mut message = capnp::message::Builder::new_default();
+                            {
+                                let response =
+                                    message.init_root::<request_capnp::response::Builder<'_>>();
+
+                                let mut data_instances = response.init_data(ids.len() as _);
+                                for (idx, id) in ids.into_iter().enumerate() {
+                                    let mut instance = data_instances.reborrow().get(idx as _);
+                                    instance.set_identity(id as _);
+                                    let response = result.remove(&(id as u64)).unwrap();
+
+                                    let mut dls =
+                                        instance.init_data_lists(response.data.len() as _);
+
+                                    for (index, (key, value)) in
+                                        response.data.into_iter().enumerate()
+                                    {
+                                        let mut data_list = dls.reborrow().get(index as _);
+                                        data_list.set_name(key);
+                                        data_list.set_values(&value[..])?;
+                                    }
+                                }
+                            };
+                            let data = message.get_segments_for_output();
+                            buf.clear();
+
+                            match data {
+                                capnp::OutputSegments::SingleSegment(d) => {
+                                    buf.extend(d[0]);
+                                }
+                                capnp::OutputSegments::MultiSegment(s) => {
+                                    for d in s {
+                                        buf.extend(d);
+                                    }
                                 }
                             }
-                            request.respond(Response::from_data(buf.clone()))?;
+
+                            let response = Response::from_data(&buf[..]);
+                            request.respond(response)?;
                         }
                     }
                 }
             }
         }
-        Ok::<_, anyhow::Error>(())
     }
 
-    let (tx, rx) = std::sync::mpsc::channel();
-    let mut model = Arc::new(model);
+    let (tx, _rx) = std::sync::mpsc::channel();
+    let model = Arc::new(model);
     let addr = format!("{}:{}", host, port);
     let server = Server::http(addr).unwrap();
 
@@ -331,7 +350,7 @@ fn serve_inner(model: Box<dyn Inferer>, host: String, port: u16) -> Result<()> {
 
     let server = Arc::new(server);
 
-    for _ in 0..6 {
+    for _ in 0..threads {
         let server = server.clone();
         let tx = tx.clone();
         let model = model.clone();
