@@ -53,8 +53,13 @@ impl FixedBatchInferer {
         let models = sizes
             .into_iter()
             .map(|size| {
-                helpers::build_model(model.clone(), &model_api.inputs, size as i32)
-                    .map(|m| BatchedModel { size, plan: m })
+                helpers::build_model(
+                    model.clone(),
+                    &model_api.inputs,
+                    &model_api.outputs,
+                    size as i32,
+                )
+                .map(|m| BatchedModel { size, plan: m })
             })
             .collect::<Result<Vec<_>>>()?;
 

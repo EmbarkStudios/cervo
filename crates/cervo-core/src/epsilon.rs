@@ -193,3 +193,18 @@ where
         self.inner.output_shapes()
     }
 }
+
+#[allow(unsafe_code)]
+unsafe impl<T, NG> Send for EpsilonInjector<T, NG>
+where
+    T: Inferer,
+    NG: NoiseGenerator,
+{
+}
+#[allow(unsafe_code)]
+unsafe impl<T, NG> Sync for EpsilonInjector<T, NG>
+where
+    T: Inferer,
+    NG: NoiseGenerator,
+{
+}

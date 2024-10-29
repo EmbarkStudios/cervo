@@ -18,7 +18,7 @@ pub(super) fn build_symbolic_model(
     inputs: &[(String, Vec<usize>)],
 ) -> TractResult<(Symbol, TypedModel)> {
     model.set_output_fact(0, Default::default())?;
-    let symbol = model.symbol_table.sym("N");
+    let symbol = model.symbol_table.sym("batch_size");
     for (idx, (_name, shape)) in inputs.iter().enumerate() {
         let mut full_shape = tvec!(symbol.to_dim());
 
@@ -33,14 +33,22 @@ pub(super) fn build_symbolic_model(
 pub(super) fn build_model<D: ToDim>(
     mut model: InferenceModel,
     inputs: &[(String, Vec<usize>)],
+    outputs: &[(String, Vec<usize>)],
     batch_dim: D,
 ) -> TractResult<TypedSimplePlan<TypedModel>> {
-    model.set_output_fact(0, Default::default())?;
+    //model.set_output_fact(0, Default::default())?;
     for (idx, (_name, shape)) in inputs.iter().enumerate() {
         let mut full_shape = tvec!(batch_dim.to_dim());
 
         full_shape.extend(shape.iter().map(|v| (*v as i32).into()));
         model.set_input_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
+    }
+
+    for (idx, (_name, shape)) in outputs.iter().enumerate() {
+        let mut full_shape = tvec!(batch_dim.to_dim());
+
+        full_shape.extend(shape.iter().map(|v| (*v as i32).into()));
+        model.set_output_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
     }
 
     model
