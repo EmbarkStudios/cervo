@@ -13,7 +13,7 @@ exclude = [ "benchmarks/perf-test" ]
 resolver = "2"
 
 [workspace.dependencies]
-tract-core = { version = "0.21" }
+tract-core = { version = "=0.21.1,<0.21.4" }
 tract-hir = { version = "0.21" }
 tract-nnef = { version = "0.21" }
 tract-onnx =  { version = "0.21" }

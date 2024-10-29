@@ -9,6 +9,9 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::{collections::HashMap, fs::File, path::PathBuf, time::Instant};
 
 use std::collections::VecDeque;
+mod request_generated;
+mod response_generated;
+mod types_generated;
 
 pub struct Semaphore {
     condvar: Condvar,
