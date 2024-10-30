@@ -5,3 +5,7 @@ Cargo.lock
 benchmarks/out
 /benchmarks/perf-test/target/
 /benchmarks/perf-test/*.png
+.venv
+__pycache__
+*.so
+/crates/cervo-cli/python/pycapnp/

@@ -85,7 +85,7 @@ impl<'a> Response<'a> {
 }
 
 /// The main workhorse shared by all components in Cervo.
-pub trait Inferer {
+pub trait Inferer: Sync + Send {
     /// Query the inferer for how many elements it can deal with in a single batch.
     fn select_batch_size(&self, max_count: usize) -> usize;
 

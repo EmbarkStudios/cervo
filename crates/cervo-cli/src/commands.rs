@@ -15,6 +15,8 @@ mod benchmark;
 mod describe;
 mod package;
 mod run;
+#[cfg(feature = "serve")]
+mod serve;
 mod to_nnef;
 
 /// The command to run.
@@ -27,6 +29,8 @@ pub(crate) enum Command {
     Describe(describe::DescribeArgs),
     Benchmark(benchmark::Args),
     Run(run::Args),
+    #[cfg(feature = "serve")]
+    Serve(serve::Args),
 }
 
 pub(crate) fn run(command: Command) -> Result<()> {
@@ -38,5 +42,7 @@ pub(crate) fn run(command: Command) -> Result<()> {
         Command::Package(config) => package::package(config),
         Command::Benchmark(config) => benchmark::run(config),
         Command::Run(config) => run::run(config),
+        #[cfg(feature = "serve")]
+        Command::Serve(config) => serve::serve(config),
     }
 }

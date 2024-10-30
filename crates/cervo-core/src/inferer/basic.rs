@@ -34,7 +34,7 @@ impl BasicInferer {
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel) -> TractResult<Self> {
         let model_api = ModelApi::for_model(&model)?;
-        let model = helpers::build_model(model, &model_api.inputs, 1i32)?;
+        let model = helpers::build_model(model, &model_api.inputs, &model_api.outputs, 1i32)?;
 
         Ok(Self { model, model_api })
     }
