@@ -2,9 +2,6 @@
 // Copyright © 2022, Tom Solberg, all rights reserved.
 // Created: 29 July 2022
 
-/*!
-
-*/
 use crate::BrainId;
 use thiserror::Error;
 

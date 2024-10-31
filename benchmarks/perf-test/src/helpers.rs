@@ -2,10 +2,6 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 11 May 2022
 
-/*!
-
-*/
-
 use std::{collections::HashMap, fs::File, path::Path};
 
 use cervo_core::prelude::State;

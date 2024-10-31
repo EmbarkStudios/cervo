@@ -2,10 +2,6 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 11 May 2022
 
-/*!
-
-*/
-
 use tract_core::{model::TypedModel, tract_data::TractResult};
 use tract_hir::{infer::Factoid, prelude::InferenceModel};
 

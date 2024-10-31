@@ -1,11 +1,6 @@
 // Author: Tom Solberg <tom.solberg@embark-studios.com>
 // Copyright © 2022, Embark Studios, all rights reserved.
 // Created: 29 July 2022
-
-/*!
-
-*/
-
 use std::time::Duration;
 
 pub(crate) struct TimingBucket {

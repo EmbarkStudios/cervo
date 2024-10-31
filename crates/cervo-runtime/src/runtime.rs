@@ -2,10 +2,6 @@
 // Copyright © 2022, Tom Solberg, all rights reserved.
 // Created: 22 September 2022
 
-/*!
-
-*/
-
 mod ticket;
 
 use crate::{error::CervoError, state::ModelState, AgentId, BrainId};
