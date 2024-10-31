@@ -14,7 +14,7 @@ pub(super) fn build_symbolic_model(
     inputs: &[(String, Vec<usize>)],
 ) -> TractResult<(Symbol, TypedModel)> {
     model.set_output_fact(0, Default::default())?;
-    let symbol = model.symbol_table.sym("N");
+    let symbol = model.symbols.sym("N");
     for (idx, (_name, shape)) in inputs.iter().enumerate() {
         let mut full_shape = tvec!(symbol.to_dim());
 
@@ -48,14 +48,14 @@ pub(super) fn build_model<D: ToDim>(
 
 pub(super) fn build_symbolic_typed(model: &mut TypedModel) -> TractResult<Symbol> {
     model.declutter()?;
-    Ok(model.symbol_table.sym("N"))
+    Ok(model.symbols.sym("N"))
 }
 
 pub(super) fn build_typed<D: ToDim>(
     model: TypedModel,
     batch_dim: D,
 ) -> TractResult<TypedSimplePlan<TypedModel>> {
-    let symbol = model.symbol_table.sym("N");
+    let symbol = model.symbols.sym("N");
     let model = model.concretize_dims(
         &SymbolValues::default().with(&symbol, batch_dim.to_dim().to_i64().unwrap()),
     )?;
