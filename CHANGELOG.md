@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+- Upgrade `time` to solve incompatibility with Rust 1.80.0
+- Add upper bound for tract at 0.21.6 due to breaking upstream change
+
 ## [0.6.0] - 2024-02-12
 - Upgrade to `perchance` v0.5
 - Upgrade `tract` to 0.21.0

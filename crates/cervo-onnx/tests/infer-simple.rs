@@ -2,10 +2,6 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 10 May 2022
 
-/*!
-
-*/
-
 use cervo_core::prelude::{EpsilonInjector, Inferer, InfererExt};
 
 #[path = "./helpers.rs"]
