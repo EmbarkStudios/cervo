@@ -91,7 +91,7 @@ pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u
     let mut model = model_for_reader(reader)?;
 
     model.set_output_fact(0, Default::default())?;
-    let symbol = model.symbol_table.sym("N");
+    let symbol = model.symbols.sym("N");
     let input_outlets = model.input_outlets()?.to_vec();
 
     let batch = batch_size
