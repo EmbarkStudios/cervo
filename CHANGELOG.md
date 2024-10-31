@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+## [0.6.1] - 2024-10-31
 - Upgrade `time` to solve incompatibility with Rust 1.80.0
 - Add upper bound for tract at 0.21.6 due to breaking upstream change
 
@@ -93,7 +94,8 @@ an ECS.
 Initial release.
 
 <!-- next-url -->
-[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.6.1...HEAD
+[0.6.1]: https://github.com/EmbarkStudios/cervo/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/EmbarkStudios/cervo/compare/0.5.1...0.6.0
 [0.5.1]: https://github.com/EmbarkStudios/cervo/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/EmbarkStudios/cervo/compare/0.4.0...0.5.0
