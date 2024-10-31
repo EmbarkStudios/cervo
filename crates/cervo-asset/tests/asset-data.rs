@@ -2,10 +2,6 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 16 May 2022
 
-/*!
-
-*/
-
 use std::io::Read;
 
 use cervo_asset::{AssetData, AssetKind};

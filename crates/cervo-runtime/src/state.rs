@@ -2,10 +2,6 @@
 // Copyright © 2022, Tom Solberg, all rights reserved.
 // Created: 29 July 2022
 
-/*!
-
-*/
-
 use crate::{timing::TimingBucket, AgentId};
 use cervo_core::prelude::{Batcher, Inferer, InfererExt, Response, State};
 use std::{

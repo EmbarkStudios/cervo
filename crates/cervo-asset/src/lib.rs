@@ -30,7 +30,7 @@ pub const MAGIC: [u8; 4] = [b'C', b'R', b'V', b'O'];
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum AssetKind {
-    /// Used for an asset containing ONNX ModelProto data.
+    /// Used for an asset containing ONNX `ModelProto` data.
     Onnx = 1,
 
     /// Used for an asset containing NNEF data.

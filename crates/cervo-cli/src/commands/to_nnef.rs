@@ -2,9 +2,6 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 13 May 2022
 
-/*!
-
-*/
 use anyhow::{bail, Result};
 use clap::Parser;
 use std::{fs::File, io::Write, path::PathBuf};

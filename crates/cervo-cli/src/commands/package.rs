@@ -2,10 +2,6 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 13 May 2022
 
-/*!
-
-*/
-
 use anyhow::{bail, Result};
 use cervo::asset::{AssetData, AssetKind};
 use clap::Parser;

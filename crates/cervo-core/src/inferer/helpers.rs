@@ -2,10 +2,6 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 12 May 2022
 
-/*!
-
-*/
-
 use tract_core::{
     model::{TypedModel, TypedSimplePlan},
     prelude::{Symbol, SymbolValues, ToDim},
