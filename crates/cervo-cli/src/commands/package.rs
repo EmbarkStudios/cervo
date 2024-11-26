@@ -20,6 +20,10 @@ pub(crate) struct PackageArgs {
     #[clap(short = 'O', long = "optimize")]
     optimize: bool,
 
+    /// If set, will fix the timestamps in the nnef tar (if relevant).
+    #[clap(long = "deterministic")]
+    deterministic: bool,
+
     /// If provided, specialize the model for the batch size.
     #[clap(short = 'N', long = "batch-size", requires = "optimize")]
     batch_size: Option<usize>,
@@ -42,7 +46,7 @@ pub(super) fn package(config: PackageArgs) -> Result<()> {
     let asset = match asset.kind() {
         AssetKind::Onnx => {
             if config.optimize {
-                asset.to_nnef(config.batch_size)?
+                asset.to_nnef(config.batch_size, config.deterministic)?
             } else {
                 asset
             }

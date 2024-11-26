@@ -1369,9 +1369,7 @@ dependencies = [
 
 [[package]]
 name = "tract-core"
-version = "0.21.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0f7f982e823b593bf3a238dfa25f0c83f7647b06ef483059eb39a21946ccd9b"
+version = "0.21.8-pre"
 dependencies = [
  "anyhow",
  "bit-set",
@@ -1394,9 +1392,7 @@ dependencies = [
 
 [[package]]
 name = "tract-data"
-version = "0.21.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebe5517c92e26086711180ab339a422224f5c2497cb399c1cda6dca6ed545140"
+version = "0.21.8-pre"
 dependencies = [
  "anyhow",
  "downcast-rs",
@@ -1418,9 +1414,7 @@ dependencies = [
 
 [[package]]
 name = "tract-hir"
-version = "0.21.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b51acfef8f5f8ce153ec9ade9a4c1061df80e2f589549926ba92f516d989f91f"
+version = "0.21.8-pre"
 dependencies = [
  "derive-new",
  "log",
@@ -1429,9 +1423,7 @@ dependencies = [
 
 [[package]]
 name = "tract-linalg"
-version = "0.21.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad0506e62347d2f3a6bb6a6ad647b4200a11e58be4ca5ba9622e9689bb8ec6c1"
+version = "0.21.8-pre"
 dependencies = [
  "byteorder",
  "cc",
@@ -1457,9 +1449,7 @@ dependencies = [
 
 [[package]]
 name = "tract-nnef"
-version = "0.21.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2827eed28481b2a7fd32131840af4b4937721ea514960223a9ae2767f3a57201"
+version = "0.21.8-pre"
 dependencies = [
  "byteorder",
  "flate2",
@@ -1472,9 +1462,7 @@ dependencies = [
 
 [[package]]
 name = "tract-onnx"
-version = "0.21.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25115886fba190b86c777f267b3f8d0122747b29360f15ea5bd8bbc0557c9680"
+version = "0.21.8-pre"
 dependencies = [
  "bytes",
  "derive-new",
@@ -1490,9 +1478,7 @@ dependencies = [
 
 [[package]]
 name = "tract-onnx-opl"
-version = "0.21.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9f5449dd4ccd3de145f0a219aaeb7c1bbe909a54eb1e3b4229c5499315a0615"
+version = "0.21.8-pre"
 dependencies = [
  "getrandom",
  "log",

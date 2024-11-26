@@ -18,6 +18,10 @@ pub(crate) struct BatchToNnefArgs {
     /// The desired batch size. Default: a symbolic batch size.
     #[clap(short = 'b', long = "batch-size")]
     batch_size: Option<usize>,
+
+    /// If set, will fix the timestamps in the nnef tar.
+    #[clap(long = "deterministic")]
+    deterministic: bool,
 }
 
 /// Convert an ONNX file to NNEF.
@@ -33,6 +37,10 @@ pub(crate) struct ToNnefArgs {
     /// The desired batch size. Default: a symbolic batch size.
     #[clap(short = 'b', long = "batch-size")]
     batch_size: Option<usize>,
+
+    /// If set, will fix the timestamps in the nnef tar.
+    #[clap(long = "deterministic")]
+    deterministic: bool,
 }
 
 pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
@@ -40,6 +48,7 @@ pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
         in_file,
         out_file,
         batch_size,
+        deterministic,
     } = config;
 
     match in_file.extension().and_then(|ext| ext.to_str()) {
@@ -54,7 +63,7 @@ pub(super) fn onnx_to_nnef(config: ToNnefArgs) -> Result<()> {
     }
 
     let mut reader = File::open(in_file)?;
-    let mut bytes = cervo::onnx::to_nnef(&mut reader, batch_size)?;
+    let mut bytes = cervo::onnx::to_nnef(&mut reader, batch_size, deterministic)?;
     bytes.shrink_to_fit();
 
     let mut out = tempfile::NamedTempFile::new()?;
@@ -81,6 +90,7 @@ pub(super) fn batch_onnx_to_nnef(config: BatchToNnefArgs) -> Result<()> {
             in_file,
             out_file,
             batch_size: config.batch_size,
+            deterministic: config.deterministic,
         };
 
         onnx_to_nnef(args)?;

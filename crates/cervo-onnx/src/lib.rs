@@ -18,7 +18,7 @@ let model = cervo_onnx::builder(model_data)
 use cervo_core::prelude::InfererExt;
 
 let mut onnx_data = load_bytes("model.onnx");
-let nnef_data = cervo_onnx::to_nnef(&mut onnx_data, None);
+let nnef_data = cervo_onnx::to_nnef(&mut onnx_data, None, false);
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
  */
@@ -87,7 +87,11 @@ pub fn builder<T: Read>(read: T) -> InfererBuilder<OnnxData<T>> {
 }
 
 /// Convert an ONNX model to a NNEF model.
-pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u8>> {
+pub fn to_nnef(
+    reader: &mut dyn Read,
+    batch_size: Option<usize>,
+    deterministic: bool,
+) -> Result<Vec<u8>> {
     let mut model = model_for_reader(reader)?;
 
     model.set_output_fact(0, Default::default())?;
@@ -120,6 +124,6 @@ pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u
     let mut output = vec![];
     let nnef = tract_nnef::nnef().with_tract_core().with_onnx();
 
-    nnef.write(&model, &mut output)?;
+    nnef.write_to_tar_with_config(&model, &mut output, false, deterministic)?;
     Ok(output)
 }

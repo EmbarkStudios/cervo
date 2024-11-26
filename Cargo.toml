@@ -13,7 +13,13 @@ exclude = [ "benchmarks/perf-test" ]
 resolver = "2"
 
 [workspace.dependencies]
-tract-core = { version = "0.21" }
-tract-hir = { version = "0.21" }
-tract-nnef = { version = "0.21" }
-tract-onnx =  { version = "0.21" }
+tract-core = { version = "0.21.8-pre" }
+tract-hir = { version = "0.21.8-pre" }
+tract-nnef = { version = "0.21.8-pre" }
+tract-onnx =  { version = "0.21.8-pre" }
+
+[patch.crates-io]
+tract-core = { path = "../tract/core" }
+tract-hir = { path = "../tract/hir" }
+tract-nnef = { path = "../tract/nnef" }
+tract-onnx =  { path = "../tract/onnx" }

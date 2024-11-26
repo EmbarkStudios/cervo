@@ -10,7 +10,7 @@ use cervo_asset::{AssetData, AssetKind};
 let model_data = load_bytes("model.onnx");
 let asset = AssetData::new(AssetKind::Onnx, model_data);
 
-let nnef_asset = asset.to_nnef(None)?;    // convert to a symbolic NNEF asset
+let nnef_asset = asset.to_nnef(None, false)?;    // convert to a symbolic NNEF asset
 
 let inferer = asset.load_basic();
 let nnef_inferer = nnef_asset.load_fixed(&[42]);
@@ -180,13 +180,13 @@ impl AssetData {
     /// Convert this to an NNEF asset.
     ///
     /// Will return an error if this is already an NNEF asset.
-    pub fn to_nnef(&self, batch_size: Option<usize>) -> Result<Self> {
+    pub fn to_nnef(&self, batch_size: Option<usize>, deterministic: bool) -> Result<Self> {
         if self.kind == AssetKind::Nnef {
             bail!("trying to convert from nnef to nnef");
         }
 
         let mut cursor = Cursor::new(&self.data);
-        let data = cervo_onnx::to_nnef(&mut cursor, batch_size)?;
+        let data = cervo_onnx::to_nnef(&mut cursor, batch_size, deterministic)?;
 
         Ok(Self {
             data,

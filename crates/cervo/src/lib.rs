@@ -38,7 +38,8 @@ use cervo_asset::{AssetData, AssetKind};
 let model_data = load_bytes("model.onnx");
 let asset = AssetData::new(AssetKind::Onnx, model_data);
 
-let nnef_asset = asset.to_nnef(None)?;    // convert to a symbolic NNEF asset
+// convert to a symbolic NNEF asset, with deterministic timestamps
+let nnef_asset = asset.to_nnef(None, true)?;
 
 let inferer = asset.load_basic();
 let nnef_inferer = nnef_asset.load_fixed(&[42]);
