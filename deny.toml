@@ -44,6 +44,7 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 
 ignore = [
     #"RUSTSEC-0000-0000",
+    "RUSTSEC-2024-0436",
 ]
 # Threshold for security vulnerabilities, any vulnerability with a CVSS score
 # lower than the range specified will be ignored. Note that ignored advisories
@@ -81,7 +82,6 @@ confidence-threshold = 0.8
 exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
-    { allow = ["BSD-3-Clause"], name = "instant", version = "0.1.12" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
