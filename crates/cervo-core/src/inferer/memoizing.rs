@@ -41,7 +41,6 @@ use tract_hir::prelude::*;
 ///
 /// * For small amounts of data and large models the spikes can offset
 ///   amortized gains significantly
-
 pub struct MemoizingDynamicInferer {
     symbol: Symbol,
     model: TypedModel,

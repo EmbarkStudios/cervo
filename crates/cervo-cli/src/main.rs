@@ -16,8 +16,10 @@ struct Cervo {
 }
 
 fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
-    let args = Cervo::parse();
+    let _ = tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .try_init();
 
+    let args = Cervo::parse();
     commands::run(args.command)
 }
