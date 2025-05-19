@@ -209,10 +209,7 @@ pub(super) fn run(config: Args) -> Result<()> {
         if matches!(config.output, OutputFormat::Text) {
             println!(
                 "Batch Size {}: {:.2} ms ± {:.2} per element, {:.2} ms total",
-                record.batch_size,
-                record.mean,
-                record.stddev,
-                record.total,
+                record.batch_size, record.mean, record.stddev, record.total,
             );
         }
     }
