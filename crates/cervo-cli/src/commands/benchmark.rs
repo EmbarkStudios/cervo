@@ -2,6 +2,8 @@ use anyhow::{bail, Result};
 use cervo::asset::AssetData;
 use cervo::core::prelude::{Batcher, Inferer, InfererExt, State};
 use clap::Parser;
+use clap::ValueEnum;
+use serde::Serialize;
 use std::{collections::HashMap, fs::File, path::PathBuf, time::Instant};
 
 fn number_range_parser(num: &str) -> Result<Vec<usize>, String> {
@@ -58,6 +60,16 @@ pub(crate) struct Args {
     /// An epsilon key to randomize noise.
     #[clap(short, long)]
     with_epsilon: Option<String>,
+
+    /// Output format: text or json.
+    #[clap(long, value_enum, default_value = "text")]
+    output: OutputFormat,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, ValueEnum, Debug)]
+enum OutputFormat {
+    Text,
+    Json,
 }
 
 fn mean(data: &[f64]) -> Option<f64> {
@@ -94,11 +106,14 @@ fn black_box<T>(dummy: T) -> T {
     }
 }
 
+#[derive(Serialize, Clone)]
 struct Record {
     batch_size: usize,
     mean: f64,
     stddev: f64,
+    total: f64,
 }
+
 fn execute_load_metrics<I: Inferer>(
     batch_size: usize,
     data: HashMap<u64, State<'_>>,
@@ -129,6 +144,7 @@ fn execute_load_metrics<I: Inferer>(
         batch_size,
         mean: m,
         stddev: s,
+        total: m * batch_size as f64,
     })
 }
 
@@ -154,6 +170,7 @@ pub fn build_inputs_from_desc(
 }
 
 pub(super) fn run(config: Args) -> Result<()> {
+    let mut records: Vec<Record> = Vec::new();
     for batch_size in config.batch_sizes {
         let mut reader = File::open(&config.file)?;
         let mut inferer = if cervo::nnef::is_nnef_tar(&config.file) {
@@ -186,14 +203,23 @@ pub(super) fn run(config: Args) -> Result<()> {
 
             execute_load_metrics(batch_size, observations, config.count, &mut inferer)?
         };
+        records.push(record.clone());
 
-        println!(
-            "Batch Size {}: {:.2} ms ± {:.2} per element, {:.2} ms total",
-            record.batch_size,
-            record.mean,
-            record.stddev,
-            record.mean * record.batch_size as f64,
-        );
+        // Print Text
+        if matches!(config.output, OutputFormat::Text) {
+            println!(
+                "Batch Size {}: {:.2} ms ± {:.2} per element, {:.2} ms total",
+                record.batch_size,
+                record.mean,
+                record.stddev,
+                record.total,
+            );
+        }
+    }
+    // Print JSON
+    if matches!(config.output, OutputFormat::Json) {
+        let json = serde_json::to_string_pretty(&records)?;
+        println!("{}", json);
     }
     Ok(())
 }
