@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+- Support JSON output for benchmark command
+
 ## [0.7.0] - 2024-10-31
 - Upgrade to compatibility with tract 0.21.7 and above.
 
