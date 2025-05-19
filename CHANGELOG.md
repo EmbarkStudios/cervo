@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+## [0.7.1] - 2025-05-19
+- Support JSON output for benchmark command
+
 ## [0.7.0] - 2024-10-31
 - Upgrade to compatibility with tract 0.21.7 and above.
 
@@ -97,7 +100,8 @@ an ECS.
 Initial release.
 
 <!-- next-url -->
-[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.7.1...HEAD
+[0.7.1]: https://github.com/EmbarkStudios/cervo/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/EmbarkStudios/cervo/compare/0.6.1...0.7.0
 [0.6.1]: https://github.com/EmbarkStudios/cervo/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/EmbarkStudios/cervo/compare/0.5.1...0.6.0
