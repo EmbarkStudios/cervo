@@ -84,7 +84,7 @@ impl FixedBatchInferer {
 }
 
 impl Inferer for FixedBatchInferer {
-    fn infer_raw(&self, batch: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error> {
         let plan = self
             .models
             .iter()
@@ -110,6 +110,9 @@ impl Inferer for FixedBatchInferer {
     fn output_shapes(&self) -> &[(String, Vec<usize>)] {
         &self.model_api.outputs
     }
+
+    fn begin_agent(&mut self, _id: u64) {}
+    fn end_agent(&mut self, _id: u64) {}
 }
 
 struct BatchedModel {
@@ -120,7 +123,7 @@ struct BatchedModel {
 impl BatchedModel {
     fn build_inputs(
         &self,
-        batch: &ScratchPadView<'_>,
+        batch: &mut ScratchPadView<'_>,
         model_api: &ModelApi,
     ) -> Result<TVec<TValue>> {
         assert_eq!(batch.len(), self.size);
@@ -154,8 +157,8 @@ impl BatchedModel {
         Ok(inputs)
     }
 
-    fn execute(&self, mut pad: ScratchPadView<'_>, model_api: &ModelApi) -> Result<()> {
-        let inputs = self.build_inputs(&pad, model_api)?;
+    fn execute(&self, pad: &mut ScratchPadView<'_>, model_api: &ModelApi) -> Result<()> {
+        let inputs = self.build_inputs(pad, model_api)?;
         let result = self.plan.run(inputs)?;
 
         for idx in 0..model_api.outputs.len() {

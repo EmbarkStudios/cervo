@@ -90,13 +90,16 @@ pub trait Inferer {
     fn select_batch_size(&self, max_count: usize) -> usize;
 
     /// Execute the model on the provided pre-batched data.
-    fn infer_raw(&self, batch: ScratchPadView<'_>) -> Result<(), anyhow::Error>;
+    fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error>;
 
     /// Retrieve the name and shapes of the model inputs.
     fn input_shapes(&self) -> &[(String, Vec<usize>)];
 
     /// Retrieve the name and shapes of the model outputs.
     fn output_shapes(&self) -> &[(String, Vec<usize>)];
+
+    fn begin_agent(&mut self, id: u64);
+    fn end_agent(&mut self, id: u64);
 }
 
 /// Helper trait to provide helper functions for loadable models.
@@ -213,7 +216,7 @@ impl Inferer for Box<dyn Inferer + Send> {
         self.as_ref().select_batch_size(max_count)
     }
 
-    fn infer_raw(&self, batch: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error> {
         self.as_ref().infer_raw(batch)
     }
 
@@ -223,6 +226,14 @@ impl Inferer for Box<dyn Inferer + Send> {
 
     fn output_shapes(&self) -> &[(String, Vec<usize>)] {
         self.as_ref().output_shapes()
+    }
+
+    fn begin_agent(&mut self, id: u64) {
+        self.as_mut().begin_agent(id);
+    }
+
+    fn end_agent(&mut self, id: u64) {
+        self.as_mut().end_agent(id);
     }
 }
 
@@ -231,7 +242,7 @@ impl Inferer for Box<dyn Inferer> {
         self.as_ref().select_batch_size(max_count)
     }
 
-    fn infer_raw(&self, batch: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error> {
         self.as_ref().infer_raw(batch)
     }
 
@@ -241,5 +252,13 @@ impl Inferer for Box<dyn Inferer> {
 
     fn output_shapes(&self) -> &[(String, Vec<usize>)] {
         self.as_ref().output_shapes()
+    }
+
+    fn begin_agent(&mut self, id: u64) {
+        self.as_mut().begin_agent(id);
+    }
+
+    fn end_agent(&mut self, id: u64) {
+        self.as_mut().end_agent(id);
     }
 }

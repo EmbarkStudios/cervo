@@ -46,7 +46,7 @@ impl BasicInferer {
         Ok(Self { model, model_api })
     }
 
-    fn build_inputs(&self, obs: &ScratchPadView<'_>) -> Result<TVec<TValue>> {
+    fn build_inputs(&self, obs: &mut ScratchPadView<'_>) -> Result<TVec<TValue>> {
         let mut inputs = TVec::default();
 
         for (idx, (name, shape)) in self.model_api.inputs.iter().enumerate() {
@@ -72,8 +72,8 @@ impl Inferer for BasicInferer {
         1
     }
 
-    fn infer_raw(&self, mut pad: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
-        let inputs = self.build_inputs(&pad)?;
+    fn infer_raw(&self, pad: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error> {
+        let inputs = self.build_inputs(pad)?;
 
         // Run the optimized plan to get actions back!
         let result = self.model.run(inputs)?;
@@ -93,4 +93,7 @@ impl Inferer for BasicInferer {
     fn output_shapes(&self) -> &[(String, Vec<usize>)] {
         &self.model_api.outputs
     }
+
+    fn begin_agent(&mut self, _id: u64) {}
+    fn end_agent(&mut self, _id: u64) {}
 }

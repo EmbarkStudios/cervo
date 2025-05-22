@@ -16,6 +16,7 @@ pub mod batcher;
 pub mod epsilon;
 pub mod inferer;
 mod model_api;
+pub mod recurrent;
 
 /// Most core utilities are re-exported here.
 pub mod prelude {
@@ -27,5 +28,7 @@ pub mod prelude {
         BasicInferer, DynamicInferer, FixedBatchInferer, Inferer, InfererBuilder, InfererExt,
         InfererProvider, MemoizingDynamicInferer, Response, State,
     };
+
     pub use super::model_api::ModelApi;
+    pub use super::recurrent::{RecurrentInfo, RecurrentTracker};
 }

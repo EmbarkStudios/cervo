@@ -177,7 +177,7 @@ where
         self.inner.select_batch_size(max_count)
     }
 
-    fn infer_raw(&self, mut batch: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
+    fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error> {
         let total_count = self.count * batch.len();
         let output = batch.input_slot_mut(self.index);
         self.generator.generate(total_count, output);
@@ -191,5 +191,13 @@ where
 
     fn output_shapes(&self) -> &[(String, Vec<usize>)] {
         self.inner.output_shapes()
+    }
+
+    fn begin_agent(&mut self, id: u64) {
+        self.inner.begin_agent(id);
+    }
+
+    fn end_agent(&mut self, id: u64) {
+        self.inner.end_agent(id);
     }
 }
