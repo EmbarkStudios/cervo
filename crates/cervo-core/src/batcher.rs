@@ -98,9 +98,9 @@ impl Batcher {
         while self.scratch.batch_size > 0 {
             let preferred_batch_size = inferer.select_batch_size(self.scratch.batch_size);
 
-            let view = self.scratch.chunk(total_offset, preferred_batch_size);
+            let mut view = self.scratch.chunk(total_offset, preferred_batch_size);
 
-            inferer.infer_raw(view)?;
+            inferer.infer_raw(&mut view)?;
             total_offset += preferred_batch_size;
         }
 

@@ -58,7 +58,7 @@ impl DynamicInferer {
         Ok(this)
     }
 
-    fn build_inputs(&self, batch: &ScratchPadView<'_>) -> Result<TVec<TValue>> {
+    fn build_inputs(&self, batch: &mut ScratchPadView<'_>) -> Result<TVec<TValue>> {
         let size = batch.len();
 
         let mut inputs = TVec::default();
@@ -88,8 +88,8 @@ impl Inferer for DynamicInferer {
         max_count
     }
 
-    fn infer_raw(&self, mut pad: ScratchPadView<'_>) -> Result<(), anyhow::Error> {
-        let inputs = self.build_inputs(&pad)?;
+    fn infer_raw(&self, pad: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error> {
+        let inputs = self.build_inputs(pad)?;
 
         // Run the optimized plan to get actions back!
         let result = self.model.run(inputs)?;
@@ -109,4 +109,7 @@ impl Inferer for DynamicInferer {
     fn output_shapes(&self) -> &[(String, Vec<usize>)] {
         &self.model_api.outputs
     }
+
+    fn begin_agent(&mut self, _id: u64) {}
+    fn end_agent(&mut self, _id: u64) {}
 }

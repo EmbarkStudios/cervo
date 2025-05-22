@@ -4,11 +4,14 @@
 
 use std::{cell::RefCell, collections::HashMap};
 
-use cervo_core::prelude::{Batcher, Inferer, InfererExt, State};
+use cervo_core::{
+    batcher::ScratchPadView,
+    prelude::{Batcher, Inferer, InfererExt, State},
+};
 
 struct TestInferer<
     B: Fn(usize) -> usize,
-    R: Fn(cervo_core::batcher::ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error>,
+    R: Fn(ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error>,
 > {
     batch_size: B,
     raw: R,
@@ -19,16 +22,13 @@ struct TestInferer<
 impl<B, R> Inferer for TestInferer<B, R>
 where
     B: Fn(usize) -> usize,
-    R: Fn(cervo_core::batcher::ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error>,
+    R: Fn(ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error>,
 {
     fn select_batch_size(&self, max_count: usize) -> usize {
         (self.batch_size)(max_count)
     }
 
-    fn infer_raw(
-        &self,
-        batch: cervo_core::batcher::ScratchPadView<'_>,
-    ) -> anyhow::Result<(), anyhow::Error> {
+    fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error> {
         (self.raw)(batch)
     }
 
@@ -39,6 +39,9 @@ where
     fn output_shapes(&self) -> &[(String, Vec<usize>)] {
         &self.out_shapes
     }
+
+    fn begin_agent(&mut self, _id: u64) {}
+    fn end_agent(&mut self, _id: u64) {}
 }
 
 #[test]

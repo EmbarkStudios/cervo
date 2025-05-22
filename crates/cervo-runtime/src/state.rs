@@ -141,7 +141,10 @@ impl ModelState {
 mod tests {
     use std::time::Duration;
 
-    use cervo_core::prelude::{Batcher, Inferer, State};
+    use cervo_core::{
+        batcher::ScratchPadView,
+        prelude::{Batcher, Inferer, State},
+    };
 
     use super::ModelState;
     use crate::{timing::TimingBucket, BrainId};
@@ -153,10 +156,7 @@ mod tests {
             0
         }
 
-        fn infer_raw(
-            &self,
-            _batch: cervo_core::batcher::ScratchPadView<'_>,
-        ) -> anyhow::Result<(), anyhow::Error> {
+        fn infer_raw(&self, _batch: &mut ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error> {
             Ok(())
         }
 
@@ -167,6 +167,9 @@ mod tests {
         fn output_shapes(&self) -> &[(String, Vec<usize>)] {
             &[]
         }
+
+        fn begin_agent(&mut self, _id: u64) {}
+        fn end_agent(&mut self, _id: u64) {}
     }
 
     #[test]

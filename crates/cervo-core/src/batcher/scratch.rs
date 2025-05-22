@@ -185,6 +185,30 @@ pub struct ScratchPadView<'a> {
 
 impl<'a> ScratchPadView<'a> {
     /// View of the input at location `slot`.
+    pub fn input_slot_with_id(&self, slot: usize) -> (&[u64], &[f32]) {
+        (
+            &self.pad.ids[self.batch_range.clone()],
+            self.pad.input_slot(slot, self.batch_range.clone()),
+        )
+    }
+
+    /// Mutable view of the input at location `slot`.
+    pub fn input_slot_mut_with_id(&mut self, slot: usize) -> (&[u64], &mut [f32]) {
+        (
+            &self.pad.ids[self.batch_range.clone()],
+            self.pad.inputs[slot].view_mut(self.batch_range.clone()),
+        )
+    }
+
+    /// Mutable view of the input at location `slot`.
+    pub fn output_slot_mut_with_id(&mut self, slot: usize) -> (&[u64], &mut [f32]) {
+        (
+            &self.pad.ids[self.batch_range.clone()],
+            self.pad.outputs[slot].view_mut(self.batch_range.clone()),
+        )
+    }
+
+    /// View of the input at location `slot`.
     pub fn input_slot(&self, slot: usize) -> &[f32] {
         self.pad.input_slot(slot, self.batch_range.clone())
     }
