@@ -305,19 +305,22 @@ mod tests {
 
         fn infer_raw(
             &self,
-            _batch: cervo_core::batcher::ScratchPadView<'_>,
+            _batch: &mut cervo_core::batcher::ScratchPadView<'_>,
         ) -> anyhow::Result<(), anyhow::Error> {
             std::thread::sleep(self.sleep_duration);
             Ok(())
         }
 
-        fn input_shapes(&self) -> &[(String, Vec<usize>)] {
+        fn raw_input_shapes(&self) -> &[(String, Vec<usize>)] {
             &[]
         }
 
-        fn output_shapes(&self) -> &[(String, Vec<usize>)] {
+        fn raw_output_shapes(&self) -> &[(String, Vec<usize>)] {
             &[]
         }
+
+        fn begin_agent(&mut self, _id: u64) {}
+        fn end_agent(&mut self, _id: u64) {}
     }
 
     #[test]

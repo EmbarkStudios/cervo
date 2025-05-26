@@ -167,11 +167,11 @@ impl Inferer for MemoizingDynamicInferer {
         Ok(())
     }
 
-    fn input_shapes(&self) -> &[(String, Vec<usize>)] {
+    fn raw_input_shapes(&self) -> &[(String, Vec<usize>)] {
         &self.model_api.inputs
     }
 
-    fn output_shapes(&self) -> &[(String, Vec<usize>)] {
+    fn raw_output_shapes(&self) -> &[(String, Vec<usize>)] {
         &self.model_api.outputs
     }
 

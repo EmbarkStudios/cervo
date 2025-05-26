@@ -123,6 +123,8 @@ pub struct EpsilonInjector<T: Inferer, NG: NoiseGenerator = HighQualityNoiseGene
     count: usize,
     index: usize,
     generator: NG,
+
+    inputs: Vec<(String, Vec<usize>)>,
 }
 
 impl<T> EpsilonInjector<T, HighQualityNoiseGenerator>
@@ -159,11 +161,19 @@ where
             None => bail!("model has no input key {:?}", key),
         };
 
+        let inputs = inputs
+            .into_iter()
+            .filter(|(k, _)| *k != key)
+            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+            .collect::<Vec<_>>();
+
         Ok(Self {
             inner: inferer,
             index,
             count,
             generator,
+
+            inputs,
         })
     }
 }
@@ -186,11 +196,15 @@ where
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.inner.input_shapes()
+        &self.inputs
     }
 
-    fn output_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.inner.output_shapes()
+    fn raw_input_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.inner.raw_input_shapes()
+    }
+
+    fn raw_output_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.inner.raw_output_shapes()
     }
 
     fn begin_agent(&mut self, id: u64) {

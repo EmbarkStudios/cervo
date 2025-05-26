@@ -31,7 +31,11 @@ pub(super) fn build_model<D: ToDim>(
     inputs: &[(String, Vec<usize>)],
     batch_dim: D,
 ) -> TractResult<TypedSimplePlan<TypedModel>> {
-    model.set_output_fact(0, Default::default())?;
+    let outlets = model.output_outlets().unwrap().len();
+    for output in 0..outlets {
+        model.set_output_fact(output, Default::default())?;
+    }
+
     for (idx, (_name, shape)) in inputs.iter().enumerate() {
         let mut full_shape = tvec!(batch_dim.to_dim());
 

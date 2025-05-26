@@ -92,11 +92,25 @@ pub trait Inferer {
     /// Execute the model on the provided pre-batched data.
     fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error>;
 
+    /// Retrieve the name and shapes of the model inputs. This API
+    /// only contains the external API, so code-based transforms
+    /// outside the model are hidden.
+    fn input_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.raw_input_shapes()
+    }
+
+    /// Retrieve the name and shapes of the model outputs. This API
+    /// only contains the external API, so code-based transforms
+    /// outside the model are hidden.
+    fn output_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.raw_output_shapes()
+    }
+
     /// Retrieve the name and shapes of the model inputs.
-    fn input_shapes(&self) -> &[(String, Vec<usize>)];
+    fn raw_input_shapes(&self) -> &[(String, Vec<usize>)];
 
     /// Retrieve the name and shapes of the model outputs.
-    fn output_shapes(&self) -> &[(String, Vec<usize>)];
+    fn raw_output_shapes(&self) -> &[(String, Vec<usize>)];
 
     fn begin_agent(&mut self, id: u64);
     fn end_agent(&mut self, id: u64);
@@ -220,12 +234,12 @@ impl Inferer for Box<dyn Inferer + Send> {
         self.as_ref().infer_raw(batch)
     }
 
-    fn input_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.as_ref().input_shapes()
+    fn raw_input_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.as_ref().raw_input_shapes()
     }
 
-    fn output_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.as_ref().output_shapes()
+    fn raw_output_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.as_ref().raw_output_shapes()
     }
 
     fn begin_agent(&mut self, id: u64) {
@@ -246,12 +260,12 @@ impl Inferer for Box<dyn Inferer> {
         self.as_ref().infer_raw(batch)
     }
 
-    fn input_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.as_ref().input_shapes()
+    fn raw_input_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.as_ref().raw_input_shapes()
     }
 
-    fn output_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.as_ref().output_shapes()
+    fn raw_output_shapes(&self) -> &[(String, Vec<usize>)] {
+        self.as_ref().raw_output_shapes()
     }
 
     fn begin_agent(&mut self, id: u64) {

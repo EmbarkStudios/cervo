@@ -6,6 +6,7 @@ use tract_core::{model::TypedModel, tract_data::TractResult};
 use tract_hir::{infer::Factoid, prelude::InferenceModel};
 
 /// The `ModelApi` describes the inputs and outputs for a model.
+#[derive(Debug)]
 pub struct ModelApi {
     /// The named model inputs.
     pub inputs: Vec<(String, Vec<usize>)>,
@@ -34,16 +35,14 @@ impl ModelApi {
         }
 
         let mut outputs: Vec<(String, Vec<usize>)> = Default::default();
-
-        for output_outlet in &model.outputs {
+        for (idx, output_outlet) in model.output_outlets().unwrap().iter().enumerate() {
             let name = model.outlet_labels[output_outlet]
                 .split(':')
                 .next()
                 .unwrap()
                 .to_owned();
 
-            let output_shape = &model.output_fact(output_outlet.slot)?.shape;
-
+            let output_shape = &model.output_fact(idx)?.shape;
             outputs.push((
                 name,
                 output_shape

@@ -160,11 +160,11 @@ mod tests {
             Ok(())
         }
 
-        fn input_shapes(&self) -> &[(String, Vec<usize>)] {
+        fn raw_input_shapes(&self) -> &[(String, Vec<usize>)] {
             &[]
         }
 
-        fn output_shapes(&self) -> &[(String, Vec<usize>)] {
+        fn raw_output_shapes(&self) -> &[(String, Vec<usize>)] {
             &[]
         }
 
