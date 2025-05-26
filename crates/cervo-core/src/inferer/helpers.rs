@@ -13,7 +13,11 @@ pub(super) fn build_symbolic_model(
     mut model: InferenceModel,
     inputs: &[(String, Vec<usize>)],
 ) -> TractResult<(Symbol, TypedModel)> {
-    model.set_output_fact(0, Default::default())?;
+    let outlets = model.output_outlets().unwrap().len();
+    for output in 0..outlets {
+        model.set_output_fact(output, Default::default())?;
+    }
+
     let symbol = model.symbols.sym("N");
     for (idx, (_name, shape)) in inputs.iter().enumerate() {
         let mut full_shape = tvec!(symbol.to_dim());

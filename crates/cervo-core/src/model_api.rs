@@ -78,7 +78,7 @@ impl ModelApi {
 
         let mut outputs: Vec<(String, Vec<usize>)> = Default::default();
 
-        for output_outlet in &model.outputs {
+        for (idx, output_outlet) in model.outputs.iter().enumerate() {
             let mut name = model.outlet_labels[output_outlet]
                 .split(':')
                 .next()
@@ -88,7 +88,7 @@ impl ModelApi {
                 name = name.strip_suffix("_0").unwrap().to_owned();
             }
 
-            let output_shape = &model.output_fact(output_outlet.slot)?.shape;
+            let output_shape = &model.output_fact(idx)?.shape;
             let clean_shape = output_shape
                 .iter()
                 .filter_map(|dim| dim.to_i64().map(|v| v as usize).ok())
