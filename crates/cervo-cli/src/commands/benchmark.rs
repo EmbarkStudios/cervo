@@ -259,7 +259,7 @@ fn run_apply_recurrent(inferer: impl Inferer, batch_size: usize, config: &Args) 
                 RecurrentConfig::Auto => RecurrentTracker::wrap(inferer),
                 RecurrentConfig::Mapped(map) => {
                     let infos = map
-                        .into_iter()
+                        .iter()
                         .cloned()
                         .map(|(inkey, outkey)| RecurrentInfo { inkey, outkey })
                         .collect::<Vec<_>>();

@@ -48,7 +48,7 @@ where
                     keys.push(RecurrentInfo {
                         inkey: inkey.clone(),
                         outkey: outkey.clone(),
-                    })
+                    });
                 }
             }
         }
@@ -137,7 +137,7 @@ where
                 // if None, leave as zeros and pray
                 if let Some(state) = states.get(id) {
                     indata[offset..offset + pair.numels]
-                        .copy_from_slice(&state[pair.offset..pair.offset + pair.numels])
+                        .copy_from_slice(&state[pair.offset..pair.offset + pair.numels]);
                 } else {
                     indata[offset..offset + pair.numels].fill(0.0);
                 }
@@ -156,7 +156,7 @@ where
                 // if None, leave as zeros and pray
                 if let Some(state) = states.get_mut(id) {
                     state[pair.offset..pair.offset + pair.numels]
-                        .copy_from_slice(&outdata[offset..offset + pair.numels])
+                        .copy_from_slice(&outdata[offset..offset + pair.numels]);
                 }
 
                 offset += pair.numels;

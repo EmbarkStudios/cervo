@@ -79,7 +79,6 @@ impl Inferer for BasicInferer {
         let result = self.model.run(inputs)?;
 
         for idx in 0..self.model_api.outputs.iter().len() {
-            dbg!(&self.model_api);
             let value = result[idx].as_slice::<f32>()?;
             pad.output_slot_mut(idx).copy_from_slice(value);
         }

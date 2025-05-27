@@ -162,7 +162,7 @@ where
         };
 
         let inputs = inputs
-            .into_iter()
+            .iter()
             .filter(|(k, _)| *k != key)
             .map(|(k, v)| (k.to_owned(), v.to_owned()))
             .collect::<Vec<_>>();
