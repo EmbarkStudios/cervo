@@ -1,6 +1,6 @@
 [package]
 name = "cervo-onnx"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2021"
 authors = [
     "Tom Solberg <tom.solberg@embark-studios.com"
@@ -16,4 +16,4 @@ readme = "../../README.md"
 anyhow = "1.0.57"
 tract-onnx =  { workspace = true }
 tract-nnef = { workspace = true }
-cervo-core = { version = "0.7.1", path = "../cervo-core" }
+cervo-core = { version = "0.8.0", path = "../cervo-core" }
