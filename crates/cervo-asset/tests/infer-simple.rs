@@ -18,7 +18,7 @@ fn test_infer_once_basic() {
         .with_default_epsilon("epsilon")
         .unwrap();
 
-    let shapes = instance.input_shapes().to_vec();
+    let shapes = instance.raw_input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(1, &shapes);
 
     let result = instance.infer_batch(observations);
@@ -39,7 +39,7 @@ fn test_infer_once_basic_nnef() {
         .with_default_epsilon("epsilon")
         .expect("a noise wrapper");
 
-    let shapes = instance.input_shapes().to_vec();
+    let shapes = instance.raw_input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(1, &shapes);
     let result = instance.infer_batch(observations);
     assert!(result.is_ok());

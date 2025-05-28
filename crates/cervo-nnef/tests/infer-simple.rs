@@ -13,7 +13,7 @@ fn test_infer_once_simple() {
     let instance = cervo_nnef::builder(&mut reader).build_basic().unwrap();
     let instance = EpsilonInjector::wrap(instance, "epsilon").unwrap();
 
-    let shapes = instance.input_shapes().to_vec();
+    let shapes = instance.raw_input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(1, &shapes);
     let result = instance.infer_batch(observations);
     assert!(result.is_ok());

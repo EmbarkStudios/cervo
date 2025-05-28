@@ -38,7 +38,10 @@ impl Batcher {
     /// Create a new batcher for the provided inferer.
     pub fn new(inferer: &dyn Inferer) -> Self {
         Self {
-            scratch: ScratchPad::new_for_shapes(inferer.input_shapes(), inferer.output_shapes()),
+            scratch: ScratchPad::new_for_shapes(
+                inferer.raw_input_shapes(),
+                inferer.raw_output_shapes(),
+            ),
         }
     }
 
@@ -46,8 +49,8 @@ impl Batcher {
     pub fn new_sized(inferer: &dyn Inferer, size: usize) -> Self {
         Self {
             scratch: ScratchPad::new_with_size(
-                inferer.input_shapes(),
-                inferer.output_shapes(),
+                inferer.raw_input_shapes(),
+                inferer.raw_output_shapes(),
                 size,
             ),
         }
@@ -98,9 +101,9 @@ impl Batcher {
         while self.scratch.batch_size > 0 {
             let preferred_batch_size = inferer.select_batch_size(self.scratch.batch_size);
 
-            let view = self.scratch.chunk(total_offset, preferred_batch_size);
+            let mut view = self.scratch.chunk(total_offset, preferred_batch_size);
 
-            inferer.infer_raw(view)?;
+            inferer.infer_raw(&mut view)?;
             total_offset += preferred_batch_size;
         }
 
@@ -108,11 +111,13 @@ impl Batcher {
 
         for slot in 0..inferer.output_shapes().len() {
             let slot_name = &inferer.output_shapes()[slot].0;
-
-            assert_eq!(self.scratch.output_name(slot), slot_name);
+            let scratch_slot = self
+                .scratch
+                .lookup_output_slot(slot_name)
+                .expect("invalid inferer passed to `Batcher::execute`");
 
             for (idx, o) in outputs.iter_mut().enumerate() {
-                let slot_response = self.scratch.output_slot(slot, idx..idx + 1);
+                let slot_response = self.scratch.output_slot(scratch_slot, idx..idx + 1);
                 o.data.insert(slot_name, slot_response.to_owned());
             }
         }

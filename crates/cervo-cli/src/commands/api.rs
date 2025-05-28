@@ -30,12 +30,12 @@ pub(super) fn describe_api(config: ApiArgs) -> Result<()> {
     };
 
     println!("Inputs:");
-    for (name, shape) in model.input_shapes() {
+    for (name, shape) in model.raw_input_shapes() {
         println!("\t{:40}: {:?}", name, shape);
     }
 
     println!("\nOutputs:");
-    for (name, shape) in model.output_shapes() {
+    for (name, shape) in model.raw_output_shapes() {
         println!("\t{:40}: {:?}", name, shape);
     }
     Ok(())

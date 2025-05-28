@@ -89,8 +89,11 @@ pub fn builder<T: Read>(read: T) -> InfererBuilder<OnnxData<T>> {
 /// Convert an ONNX model to a NNEF model.
 pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u8>> {
     let mut model = model_for_reader(reader)?;
+    let outlets = model.output_outlets().unwrap().len();
+    for output in 0..outlets {
+        model.set_output_fact(output, Default::default())?;
+    }
 
-    model.set_output_fact(0, Default::default())?;
     let symbol = model.symbols.sym("N");
     let input_outlets = model.input_outlets()?.to_vec();
 
@@ -116,10 +119,10 @@ pub fn to_nnef(reader: &mut dyn Read, batch_size: Option<usize>) -> Result<Vec<u
     }
 
     let model = model.into_typed()?.into_decluttered()?;
-
     let mut output = vec![];
     let nnef = tract_nnef::nnef().with_tract_core().with_onnx();
 
-    nnef.write(&model, &mut output)?;
+    // bools => compress, deterministic
+    nnef.write_to_tar_with_config(&model, &mut output, false, true)?;
     Ok(output)
 }

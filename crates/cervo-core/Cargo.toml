@@ -22,3 +22,4 @@ rand = { version = "0.8.2" }
 rand_distr = { version = "0.4" }
 perchance = { version = "0.5", default-features = false }
 parking_lot = "0.12"
+itertools = "0.14"

@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use cervo::asset::AssetData;
 use cervo::core::prelude::{Batcher, Inferer, InfererExt, State};
+use cervo::core::recurrent::{RecurrentInfo, RecurrentTracker};
 use clap::Parser;
 use clap::ValueEnum;
 use serde::Serialize;
@@ -37,6 +38,49 @@ fn number_range_parser(num: &str) -> Result<Vec<usize>, String> {
     Ok(nums)
 }
 
+#[derive(Debug, Clone)]
+enum RecurrentConfig {
+    None,
+    Auto,
+    Mapped(Vec<(String, String)>),
+}
+
+fn recurrent_map_parser(value: &str) -> Result<RecurrentConfig, String> {
+    let mut configs = RecurrentConfig::None;
+
+    for segment in value.split(',') {
+        if segment.to_lowercase() == "auto" {
+            configs = RecurrentConfig::Auto;
+            continue;
+        }
+
+        if !segment.contains(':') {
+            return Err(
+                "recurrent mapping must be `auto` or be a pair like `indata:output`".to_owned(),
+            );
+        }
+
+        let mut parts = segment.split(':');
+        let inkey = parts.next().unwrap();
+        let outkey = parts.next().unwrap();
+
+        configs = match configs {
+            RecurrentConfig::None => {
+                RecurrentConfig::Mapped(vec![(inkey.to_owned(), outkey.to_owned())])
+            }
+            RecurrentConfig::Auto => {
+                return Err(format!("cannot specify both `auto` and the pair `{inkey}:{outkey}` as recurrent configuration"));
+            }
+            RecurrentConfig::Mapped(mut maps) => {
+                maps.push((inkey.to_owned(), outkey.to_owned()));
+                RecurrentConfig::Mapped(maps)
+            }
+        };
+    }
+
+    Ok(configs)
+}
+
 /// Run a model with different batch sizes to estimate performance.
 #[derive(Parser, Debug)]
 #[clap()]
@@ -52,6 +96,15 @@ pub(crate) struct Args {
         value_parser(number_range_parser)
     )]
     batch_sizes: std::vec::Vec<usize>,
+
+    /// Configuration for recurrent networks. Either auto to infer from the model API, or comma-delimited pairs.
+    #[clap(
+        short,
+        long,
+        value_name = "[auto|x:y,a:b]",
+        value_parser(recurrent_map_parser)
+    )]
+    recurrent: Option<RecurrentConfig>,
 
     /// How many total elements to test per batch-size.
     #[clap(short, long, default_value = "1000")]
@@ -169,11 +222,63 @@ pub fn build_inputs_from_desc(
         .collect()
 }
 
+fn do_run(mut inferer: impl Inferer, batch_size: usize, config: &Args) -> Result<Record> {
+    let shapes = inferer.input_shapes().to_vec();
+    let observations = build_inputs_from_desc(batch_size as u64, &shapes);
+    for id in 0..batch_size {
+        inferer.begin_agent(id as u64);
+    }
+    let res = execute_load_metrics(batch_size, observations, config.count, &mut inferer)?;
+    for id in 0..batch_size {
+        inferer.end_agent(id as u64);
+    }
+
+    Ok(res)
+}
+
+fn run_apply_epsilon_config(
+    inferer: impl Inferer,
+    batch_size: usize,
+    config: &Args,
+) -> Result<Record> {
+    if let Some(epsilon) = config.with_epsilon.as_ref() {
+        let inferer = inferer.with_default_epsilon(epsilon)?;
+        do_run(inferer, batch_size, config)
+    } else {
+        do_run(inferer, batch_size, config)
+    }
+}
+
+fn run_apply_recurrent(inferer: impl Inferer, batch_size: usize, config: &Args) -> Result<Record> {
+    if let Some(recurrent) = config.recurrent.as_ref() {
+        if matches!(recurrent, RecurrentConfig::None) {
+            run_apply_epsilon_config(inferer, batch_size, config)
+        } else {
+            let inferer = match recurrent {
+                RecurrentConfig::None => unreachable!(),
+                RecurrentConfig::Auto => RecurrentTracker::wrap(inferer),
+                RecurrentConfig::Mapped(map) => {
+                    let infos = map
+                        .iter()
+                        .cloned()
+                        .map(|(inkey, outkey)| RecurrentInfo { inkey, outkey })
+                        .collect::<Vec<_>>();
+                    RecurrentTracker::new(inferer, infos)
+                }
+            }?;
+
+            run_apply_epsilon_config(inferer, batch_size, config)
+        }
+    } else {
+        run_apply_epsilon_config(inferer, batch_size, config)
+    }
+}
+
 pub(super) fn run(config: Args) -> Result<()> {
     let mut records: Vec<Record> = Vec::new();
-    for batch_size in config.batch_sizes {
+    for batch_size in config.batch_sizes.clone() {
         let mut reader = File::open(&config.file)?;
-        let mut inferer = if cervo::nnef::is_nnef_tar(&config.file) {
+        let inferer = if cervo::nnef::is_nnef_tar(&config.file) {
             cervo::nnef::builder(&mut reader).build_fixed(&[batch_size])?
         } else {
             match config.file.extension().and_then(|ext| ext.to_str()) {
@@ -184,26 +289,7 @@ pub(super) fn run(config: Args) -> Result<()> {
             }
         };
 
-        let record = if let Some(epsilon) = config.with_epsilon.as_ref() {
-            let mut inferer = inferer.with_default_epsilon(epsilon)?;
-            // TODO[TSolberg]: Issue #31.
-            let shapes = inferer
-                .input_shapes()
-                .iter()
-                .filter(|(k, _)| k.as_str() != epsilon)
-                .cloned()
-                .collect::<Vec<_>>();
-
-            let observations = build_inputs_from_desc(batch_size as u64, &shapes);
-
-            execute_load_metrics(batch_size, observations, config.count, &mut inferer)?
-        } else {
-            let shapes = inferer.input_shapes().to_vec();
-            let observations = build_inputs_from_desc(batch_size as u64, &shapes);
-
-            execute_load_metrics(batch_size, observations, config.count, &mut inferer)?
-        };
-        records.push(record.clone());
+        let record = run_apply_recurrent(inferer, batch_size, &config)?;
 
         // Print Text
         if matches!(config.output, OutputFormat::Text) {
@@ -212,6 +298,8 @@ pub(super) fn run(config: Args) -> Result<()> {
                 record.batch_size, record.mean, record.stddev, record.total,
             );
         }
+
+        records.push(record);
     }
     // Print JSON
     if matches!(config.output, OutputFormat::Json) {

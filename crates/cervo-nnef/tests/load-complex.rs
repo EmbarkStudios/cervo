@@ -23,37 +23,37 @@ fn test_load_input_shape_complex() {
         .expect("failed reading instance");
 
     assert_eq!(
-        instance.input_shapes()[0].0,
+        instance.raw_input_shapes()[0].0,
         "features",
         "mismatch in input names"
     );
 
     assert_eq!(
-        instance.input_shapes()[0].1,
+        instance.raw_input_shapes()[0].1,
         vec![228],
         "mismatch in input shapes"
     );
 
     assert_eq!(
-        instance.input_shapes()[1].0,
+        instance.raw_input_shapes()[1].0,
         "images",
         "mismatch in input names"
     );
 
     assert_eq!(
-        instance.input_shapes()[1].1,
+        instance.raw_input_shapes()[1].1,
         vec![30, 30, 2],
         "mismatch in input shapes"
     );
 
     assert_eq!(
-        instance.input_shapes()[2].0,
+        instance.raw_input_shapes()[2].0,
         "epsilon",
         "mismatch in input names"
     );
 
     assert_eq!(
-        instance.input_shapes()[2].1,
+        instance.raw_input_shapes()[2].1,
         vec![36],
         "mismatch in input shapes"
     );
@@ -65,7 +65,7 @@ fn test_load_output_shape_complex() {
     let instance = cervo_nnef::builder(&mut reader).build_basic().unwrap();
 
     assert_eq!(
-        instance.output_shapes()[0].1,
+        instance.raw_output_shapes()[0].1,
         [36],
         "mismatch in output shape",
     );

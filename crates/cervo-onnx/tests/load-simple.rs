@@ -22,7 +22,7 @@ fn test_load_input_shape_simple() {
         .build_basic()
         .expect("failed reading instance");
     assert_eq!(
-        instance.input_shapes()[0].1,
+        instance.raw_input_shapes()[0].1,
         [2],
         "mismatch in input shapes"
     );
@@ -34,7 +34,7 @@ fn test_load_output_shape_simple() {
     let instance = cervo_onnx::builder(&mut reader).build_basic().unwrap();
 
     assert_eq!(
-        instance.output_shapes()[0].1,
+        instance.raw_output_shapes()[0].1,
         &[1],
         "mismatch in output shapes",
     );

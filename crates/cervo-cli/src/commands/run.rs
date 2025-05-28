@@ -86,7 +86,7 @@ pub(super) fn run(config: Args) -> Result<()> {
         let inferer = inferer.with_default_epsilon(epsilon)?;
         // TODO[TSolberg]: Issue #31.
         let shapes = inferer
-            .input_shapes()
+            .raw_input_shapes()
             .iter()
             .filter(|(k, _)| k.as_str() != epsilon)
             .cloned()
@@ -110,7 +110,7 @@ pub(super) fn run(config: Args) -> Result<()> {
 
         dur
     } else {
-        let shapes = inferer.input_shapes().to_vec();
+        let shapes = inferer.raw_input_shapes().to_vec();
         let observations = build_inputs_from_desc(config.batch_size as u64, &shapes);
         inferer.infer_batch(observations.clone())?;
 

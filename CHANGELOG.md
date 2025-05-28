@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+- Added a new `RecurrentTracker` wrapper to handle recurrent
+  inputs/outputs if the recurrent data is only needed durign network
+  evaluation, f.ex. LSTM hidden states.
+- `Inferer::infer_raw` now takes `&mut ScratchPadView` instead of an owned value, so wrappers can capture/mutate output data.
+
 ## [0.7.1] - 2025-05-19
 - Support JSON output for benchmark command
 

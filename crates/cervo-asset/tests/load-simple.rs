@@ -17,7 +17,7 @@ fn test_load_input_shape_simple_onnx() {
         .expect("an inferer");
 
     assert_eq!(
-        instance.input_shapes()[0].1,
+        instance.raw_input_shapes()[0].1,
         [2],
         "mismatch in input shapes"
     );
@@ -32,7 +32,7 @@ fn test_load_input_shape_basic_nnef() {
         .expect("an inferer");
 
     assert_eq!(
-        instance.input_shapes()[0].1,
+        instance.raw_input_shapes()[0].1,
         [2],
         "mismatch in input shapes"
     );

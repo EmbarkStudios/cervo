@@ -17,7 +17,7 @@ fn test_infer_once_complex() {
     )
     .unwrap();
 
-    let shapes = instance.input_shapes().to_vec();
+    let shapes = instance.raw_input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(1, &shapes);
     let result = instance.infer_batch(observations);
 
@@ -39,7 +39,7 @@ fn test_infer_once_complex_batched() {
     )
     .unwrap();
 
-    let shapes = instance.input_shapes().to_vec();
+    let shapes = instance.raw_input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(10, &shapes);
     let result = instance.infer_batch(observations);
     assert!(result.is_ok());
@@ -61,7 +61,7 @@ fn test_infer_once_complex_batched_not_loaded() {
     )
     .unwrap();
 
-    let shapes = instance.input_shapes().to_vec();
+    let shapes = instance.raw_input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(10, &shapes);
     let result = instance.infer_batch(observations);
 
@@ -84,7 +84,7 @@ fn test_infer_once_complex_fixed_batch() {
     )
     .unwrap();
 
-    let shapes = instance.input_shapes().to_vec();
+    let shapes = instance.raw_input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(7, &shapes);
     let result = instance.infer_batch(observations);
     assert!(result.is_ok());

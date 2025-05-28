@@ -75,6 +75,7 @@ pub(super) fn batch_onnx_to_nnef(config: BatchToNnefArgs) -> Result<()> {
     }
 
     for in_file in config.in_files {
+        log::info!("Processing file: {in_file:?}");
         let out_file = in_file.with_extension("nnef.tar");
 
         let args = ToNnefArgs {
