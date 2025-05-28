@@ -62,12 +62,7 @@ where
         }
         Self::new(inferer, keys)
     }
-}
 
-impl<T> RecurrentTracker<T>
-where
-    T: Inferer,
-{
     /// Create a new recurrency tracker for the model.
     ///
     pub fn new(inferer: T, info: Vec<RecurrentInfo>) -> Result<Self> {
