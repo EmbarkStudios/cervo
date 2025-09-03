@@ -226,48 +226,74 @@ pub fn build_inputs_from_desc(
 
 fn do_run(
     wrapper: impl ModelWrapper,
-    inferer: impl Inferer,
-    batch_size: usize,
+    inferer: impl Inferer + 'static,
     config: &Args,
-) -> Result<Record> {
-    let mut model = Model::new(wrapper, inferer);
+) -> Result<Vec<Record>> {
+    let mut model = Model::new(wrapper, Box::new(inferer) as Box<dyn Inferer>);
 
-    let shapes = model.input_shapes().to_vec();
-    let observations = build_inputs_from_desc(batch_size as u64, &shapes);
-    for id in 0..batch_size {
-        model.begin_agent(id as u64);
-    }
-    let res = execute_load_metrics(batch_size, observations, config.count, &mut model)?;
-    for id in 0..batch_size {
-        model.end_agent(id as u64);
+    let mut records = Vec::with_capacity(config.batch_sizes.len());
+    for batch_size in config.batch_sizes.clone() {
+        let mut reader = File::open(&config.file)?;
+        let inferer = if cervo::nnef::is_nnef_tar(&config.file) {
+            cervo::nnef::builder(&mut reader).build_fixed(&[batch_size])?
+        } else {
+            match config.file.extension().and_then(|ext| ext.to_str()) {
+                Some("onnx") => cervo::onnx::builder(&mut reader).build_fixed(&[batch_size])?,
+                Some("crvo") => AssetData::deserialize(&mut reader)?.load_fixed(&[batch_size])?,
+                Some(other) => bail!("unknown file type {:?}", other),
+                None => bail!("missing file extension {:?}", config.file),
+            }
+        };
+
+        model = model
+            .with_new_policy(Box::new(inferer) as Box<dyn Inferer>)
+            .map_err(|(_, e)| e)?;
+
+        let shapes = model.input_shapes().to_vec();
+        let observations = build_inputs_from_desc(batch_size as u64, &shapes);
+        for id in 0..batch_size {
+            model.begin_agent(id as u64);
+        }
+        let res = execute_load_metrics(batch_size, observations, config.count, &mut model)?;
+
+        // Print Text
+        if matches!(config.output, OutputFormat::Text) {
+            println!(
+                "Batch Size {}: {:.2} ms ± {:.2} per element, {:.2} ms total",
+                res.batch_size, res.mean, res.stddev, res.total,
+            );
+        }
+
+        records.push(res);
+        for id in 0..batch_size {
+            model.end_agent(id as u64);
+        }
     }
 
-    Ok(res)
+    Ok(records)
 }
 
 fn run_apply_epsilon_config(
     wrapper: impl ModelWrapper,
-    inferer: impl Inferer,
-    batch_size: usize,
+    inferer: impl Inferer + 'static,
     config: &Args,
-) -> Result<Record> {
+) -> Result<Vec<Record>> {
     if let Some(epsilon) = config.with_epsilon.as_ref() {
         let wrapper = EpsilonInjectorWrapper::wrap(wrapper, &inferer, epsilon)?;
-        do_run(wrapper, inferer, batch_size, config)
+        do_run(wrapper, inferer, config)
     } else {
-        do_run(wrapper, inferer, batch_size, config)
+        do_run(wrapper, inferer, config)
     }
 }
 
 fn run_apply_recurrent(
     wrapper: impl ModelWrapper,
-    inferer: impl Inferer,
-    batch_size: usize,
+    inferer: impl Inferer + 'static,
     config: &Args,
-) -> Result<Record> {
+) -> Result<Vec<Record>> {
     if let Some(recurrent) = config.recurrent.as_ref() {
         if matches!(recurrent, RecurrentConfig::None) {
-            run_apply_epsilon_config(wrapper, inferer, batch_size, config)
+            run_apply_epsilon_config(wrapper, inferer, config)
         } else {
             let wrapper = match recurrent {
                 RecurrentConfig::None => unreachable!(),
@@ -282,40 +308,28 @@ fn run_apply_recurrent(
                 }
             }?;
 
-            run_apply_epsilon_config(wrapper, inferer, batch_size, config)
+            run_apply_epsilon_config(wrapper, inferer, config)
         }
     } else {
-        run_apply_epsilon_config(wrapper, inferer, batch_size, config)
+        run_apply_epsilon_config(wrapper, inferer, config)
     }
 }
 
 pub(super) fn run(config: Args) -> Result<()> {
-    let mut records: Vec<Record> = Vec::new();
-    for batch_size in config.batch_sizes.clone() {
-        let mut reader = File::open(&config.file)?;
-        let inferer = if cervo::nnef::is_nnef_tar(&config.file) {
-            cervo::nnef::builder(&mut reader).build_fixed(&[batch_size])?
-        } else {
-            match config.file.extension().and_then(|ext| ext.to_str()) {
-                Some("onnx") => cervo::onnx::builder(&mut reader).build_fixed(&[batch_size])?,
-                Some("crvo") => AssetData::deserialize(&mut reader)?.load_fixed(&[batch_size])?,
-                Some(other) => bail!("unknown file type {:?}", other),
-                None => bail!("missing file extension {:?}", config.file),
-            }
-        };
-
-        let record = run_apply_recurrent(BaseCase, inferer, batch_size, &config)?;
-
-        // Print Text
-        if matches!(config.output, OutputFormat::Text) {
-            println!(
-                "Batch Size {}: {:.2} ms ± {:.2} per element, {:.2} ms total",
-                record.batch_size, record.mean, record.stddev, record.total,
-            );
+    let mut reader = File::open(&config.file)?;
+    let inferer = if cervo::nnef::is_nnef_tar(&config.file) {
+        cervo::nnef::builder(&mut reader).build_basic()?
+    } else {
+        match config.file.extension().and_then(|ext| ext.to_str()) {
+            Some("onnx") => cervo::onnx::builder(&mut reader).build_basic()?,
+            Some("crvo") => AssetData::deserialize(&mut reader)?.load_basic()?,
+            Some(other) => bail!("unknown file type {:?}", other),
+            None => bail!("missing file extension {:?}", config.file),
         }
+    };
 
-        records.push(record);
-    }
+    let records = run_apply_recurrent(BaseCase, inferer, &config)?;
+
     // Print JSON
     if matches!(config.output, OutputFormat::Json) {
         let json = serde_json::to_string_pretty(&records)?;
