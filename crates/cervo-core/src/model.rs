@@ -23,8 +23,8 @@ impl ModelWrapper for BaseCase {
         inferer.infer_raw(batch)
     }
 
-    fn begin_agent(&self, id: u64) {}
-    fn end_agent(&self, id: u64) {}
+    fn begin_agent(&self, _id: u64) {}
+    fn end_agent(&self, _id: u64) {}
 }
 
 pub struct Model<WrapStack: ModelWrapper, Policy: Inferer> {
@@ -137,10 +137,10 @@ impl<WrapStack: ModelWrapper, Policy: Inferer> Inferer for Model<WrapStack, Poli
     }
 
     fn begin_agent(&mut self, id: u64) {
-        self.wrapper_stack.begin_agent(id)
+        self.wrapper_stack.begin_agent(id);
     }
 
     fn end_agent(&mut self, id: u64) {
-        self.wrapper_stack.end_agent(id)
+        self.wrapper_stack.end_agent(id);
     }
 }

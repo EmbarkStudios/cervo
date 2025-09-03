@@ -2,8 +2,8 @@ use anyhow::{bail, Result};
 use cervo::asset::AssetData;
 use cervo::core::epsilon::EpsilonInjectorWrapper;
 use cervo::core::model::{BaseCase, Model, ModelWrapper};
-use cervo::core::prelude::{Batcher, Inferer, InfererExt, State};
-use cervo::core::recurrent::{RecurrentInfo, RecurrentTracker, RecurrentTrackerWrapper};
+use cervo::core::prelude::{Batcher, Inferer, State};
+use cervo::core::recurrent::{RecurrentInfo, RecurrentTrackerWrapper};
 use clap::Parser;
 use clap::ValueEnum;
 use serde::Serialize;
@@ -226,7 +226,7 @@ pub fn build_inputs_from_desc(
 
 fn do_run(
     wrapper: impl ModelWrapper,
-    mut inferer: impl Inferer,
+    inferer: impl Inferer,
     batch_size: usize,
     config: &Args,
 ) -> Result<Record> {

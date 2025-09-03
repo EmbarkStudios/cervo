@@ -307,10 +307,10 @@ where
     }
 
     fn begin_agent(&self, id: u64) {
-        self.inner.begin_agent(id)
+        self.inner.begin_agent(id);
     }
 
     fn end_agent(&self, id: u64) {
-        self.inner.end_agent(id)
+        self.inner.end_agent(id);
     }
 }
