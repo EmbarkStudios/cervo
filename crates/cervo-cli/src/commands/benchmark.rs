@@ -1,7 +1,9 @@
 use anyhow::{bail, Result};
 use cervo::asset::AssetData;
+use cervo::core::epsilon::EpsilonInjectorWrapper;
+use cervo::core::model::{BaseCase, Model, ModelWrapper};
 use cervo::core::prelude::{Batcher, Inferer, InfererExt, State};
-use cervo::core::recurrent::{RecurrentInfo, RecurrentTracker};
+use cervo::core::recurrent::{RecurrentInfo, RecurrentTracker, RecurrentTrackerWrapper};
 use clap::Parser;
 use clap::ValueEnum;
 use serde::Serialize;
@@ -222,55 +224,68 @@ pub fn build_inputs_from_desc(
         .collect()
 }
 
-fn do_run(mut inferer: impl Inferer, batch_size: usize, config: &Args) -> Result<Record> {
-    let shapes = inferer.input_shapes().to_vec();
+fn do_run(
+    wrapper: impl ModelWrapper,
+    mut inferer: impl Inferer,
+    batch_size: usize,
+    config: &Args,
+) -> Result<Record> {
+    let mut model = Model::new(wrapper, inferer);
+
+    let shapes = model.input_shapes().to_vec();
     let observations = build_inputs_from_desc(batch_size as u64, &shapes);
     for id in 0..batch_size {
-        inferer.begin_agent(id as u64);
+        model.begin_agent(id as u64);
     }
-    let res = execute_load_metrics(batch_size, observations, config.count, &mut inferer)?;
+    let res = execute_load_metrics(batch_size, observations, config.count, &mut model)?;
     for id in 0..batch_size {
-        inferer.end_agent(id as u64);
+        model.end_agent(id as u64);
     }
 
     Ok(res)
 }
 
 fn run_apply_epsilon_config(
+    wrapper: impl ModelWrapper,
     inferer: impl Inferer,
     batch_size: usize,
     config: &Args,
 ) -> Result<Record> {
     if let Some(epsilon) = config.with_epsilon.as_ref() {
-        let inferer = inferer.with_default_epsilon(epsilon)?;
-        do_run(inferer, batch_size, config)
+        let wrapper = EpsilonInjectorWrapper::wrap(wrapper, &inferer, epsilon)?;
+        do_run(wrapper, inferer, batch_size, config)
     } else {
-        do_run(inferer, batch_size, config)
+        do_run(wrapper, inferer, batch_size, config)
     }
 }
 
-fn run_apply_recurrent(inferer: impl Inferer, batch_size: usize, config: &Args) -> Result<Record> {
+fn run_apply_recurrent(
+    wrapper: impl ModelWrapper,
+    inferer: impl Inferer,
+    batch_size: usize,
+    config: &Args,
+) -> Result<Record> {
     if let Some(recurrent) = config.recurrent.as_ref() {
         if matches!(recurrent, RecurrentConfig::None) {
-            run_apply_epsilon_config(inferer, batch_size, config)
+            run_apply_epsilon_config(wrapper, inferer, batch_size, config)
         } else {
-            let inferer = match recurrent {
+            let wrapper = match recurrent {
                 RecurrentConfig::None => unreachable!(),
-                RecurrentConfig::Auto => RecurrentTracker::wrap(inferer),
+                RecurrentConfig::Auto => RecurrentTrackerWrapper::wrap(wrapper, &inferer),
                 RecurrentConfig::Mapped(map) => {
                     let infos = map
                         .iter()
                         .cloned()
                         .map(|(inkey, outkey)| RecurrentInfo { inkey, outkey })
                         .collect::<Vec<_>>();
-                    RecurrentTracker::new(inferer, infos)
+                    RecurrentTrackerWrapper::new(wrapper, &inferer, infos)
                 }
             }?;
 
-            run_apply_epsilon_config(inferer, batch_size, config)
+            run_apply_epsilon_config(wrapper, inferer, batch_size, config)
         }
     } else {
-        run_apply_epsilon_config(inferer, batch_size, config)
+        run_apply_epsilon_config(wrapper, inferer, batch_size, config)
     }
 }
 
@@ -289,7 +304,7 @@ pub(super) fn run(config: Args) -> Result<()> {
             }
         };
 
-        let record = run_apply_recurrent(inferer, batch_size, &config)?;
+        let record = run_apply_recurrent(BaseCase, inferer, batch_size, &config)?;
 
         // Print Text
         if matches!(config.output, OutputFormat::Text) {
