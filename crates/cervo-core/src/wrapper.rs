@@ -106,14 +106,14 @@ impl InfererWrapper for Box<dyn InfererWrapper> {
 /// state in the wrappers.
 pub struct StatefulInferer<WrapStack: InfererWrapper, Inf: Inferer> {
     wrapper_stack: WrapStack,
-    policy: Inf,
+    inferer: Inf,
 }
 
 impl<WrapStack: InfererWrapper, Inf: Inferer> StatefulInferer<WrapStack, Inf> {
-    pub fn new(wrapper_stack: WrapStack, policy: Inf) -> Self {
+    pub fn new(wrapper_stack: WrapStack, inferer: Inf) -> Self {
         Self {
             wrapper_stack,
-            policy,
+            inferer,
         }
     }
 
@@ -125,14 +125,14 @@ impl<WrapStack: InfererWrapper, Inf: Inferer> StatefulInferer<WrapStack, Inf> {
     /// this check fails, will return self unchanged.
     pub fn with_new_inferer<NewInf: Inferer>(
         self,
-        new_policy: NewInf,
+        new_inferer: NewInf,
     ) -> Result<StatefulInferer<WrapStack, NewInf>, (Self, anyhow::Error)> {
-        if let Err(e) = Self::check_compatible_shapes(&self.policy, &new_policy) {
+        if let Err(e) = Self::check_compatible_shapes(&self.inferer, &new_inferer) {
             return Err((self, e));
         }
         Ok(StatefulInferer {
             wrapper_stack: self.wrapper_stack,
-            policy: new_policy,
+            inferer: new_inferer,
         })
     }
 
@@ -191,39 +191,39 @@ impl<WrapStack: InfererWrapper, Inf: Inferer> StatefulInferer<WrapStack, Inf> {
 
     /// Returns the input shapes after all wrappers have been applied.
     pub fn input_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.wrapper_stack.input_shapes(&self.policy)
+        self.wrapper_stack.input_shapes(&self.inferer)
     }
 
     /// Returns the output shapes after all wrappers have been applied.
     pub fn output_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.wrapper_stack.output_shapes(&self.policy)
+        self.wrapper_stack.output_shapes(&self.inferer)
     }
 }
 
 /// See [`Inferer`] for documentation.
 impl<WrapStack: InfererWrapper, Inf: Inferer> Inferer for StatefulInferer<WrapStack, Inf> {
     fn select_batch_size(&self, max_count: usize) -> usize {
-        self.policy.select_batch_size(max_count)
+        self.inferer.select_batch_size(max_count)
     }
 
     fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> anyhow::Result<(), anyhow::Error> {
-        self.wrapper_stack.invoke(&self.policy, batch)
+        self.wrapper_stack.invoke(&self.inferer, batch)
     }
 
     fn raw_input_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.policy.raw_input_shapes()
+        self.inferer.raw_input_shapes()
     }
 
     fn raw_output_shapes(&self) -> &[(String, Vec<usize>)] {
-        self.policy.raw_output_shapes()
+        self.inferer.raw_output_shapes()
     }
 
     fn begin_agent(&self, id: u64) {
-        self.wrapper_stack.begin_agent(&self.policy, id);
+        self.wrapper_stack.begin_agent(&self.inferer, id);
     }
 
     fn end_agent(&self, id: u64) {
-        self.wrapper_stack.end_agent(&self.policy, id);
+        self.wrapper_stack.end_agent(&self.inferer, id);
     }
 }
 
@@ -247,8 +247,8 @@ impl IntoStateful for FixedBatchInferer {}
 /// Extension trait to allow easy wrapping of an inferer with a wrapper stack.
 pub trait InfererWrapperExt: InfererWrapper + Sized {
     /// Construct a [`StatefulInferer`] by wrapping an inner inferer with this wrapper.
-    fn wrap<Inf: Inferer>(self, policy: Inf) -> StatefulInferer<Self, Inf> {
-        StatefulInferer::new(self, policy)
+    fn wrap<Inf: Inferer>(self, inferer: Inf) -> StatefulInferer<Self, Inf> {
+        StatefulInferer::new(self, inferer)
     }
 }
 
