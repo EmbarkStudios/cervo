@@ -20,7 +20,7 @@ fn test_infer_once_recurrent() {
     )
     .unwrap();
 
-    let mut instance = RecurrentTracker::new(
+    let instance = RecurrentTracker::new(
         instance,
         vec![
             RecurrentInfo {
@@ -61,7 +61,7 @@ fn test_infer_once_recurrent_batched() {
     )
     .unwrap();
 
-    let mut instance = RecurrentTracker::new(
+    let instance = RecurrentTracker::new(
         instance,
         vec![
             RecurrentInfo {
@@ -101,7 +101,7 @@ fn test_infer_once_recurrent_batched_not_loaded() {
     )
     .unwrap();
 
-    let mut instance = RecurrentTracker::new(
+    let instance = RecurrentTracker::new(
         instance,
         vec![
             RecurrentInfo {
@@ -140,7 +140,7 @@ fn test_infer_once_recurrent_fixed_batch() {
     )
     .unwrap();
 
-    let mut instance = RecurrentTracker::new(
+    let instance = RecurrentTracker::new(
         instance,
         vec![
             RecurrentInfo {

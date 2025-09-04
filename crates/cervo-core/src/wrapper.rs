@@ -1,14 +1,14 @@
 /*!
-    Inferer wrappers with state separated from the inferer.
+Inferer wrappers with state separated from the inferer.
 
-    This allows separation of stateful logic from the inner inferer,
-    allowing the inner inferer to be swapped out while maintaining
+This allows separation of stateful logic from the inner inferer,
+allowing the inner inferer to be swapped out while maintaining
 state in the wrappers.
 
-    This is an alternative to the old layered inferer setup, which
+This is an alternative to the old layered inferer setup, which
 tightly coupled the inner inferer with the wrapper state.
 
-```rust
+```rust,ignore
 let inferer = ...;
 // the root needs [`BaseCase`] passed as a base case.
 let wrappers = RecurrentTrackerWrapper::new(BaseCase, inferer);
@@ -17,6 +17,7 @@ let wrapped = StatefulInferer::new(wrappers, infere);
 let wrapped = inferer.into_stateful(wrappers);
 // or
 let wrapped = wrappers.wrap(inferer);
+```
 */
 
 use crate::batcher::ScratchPadView;

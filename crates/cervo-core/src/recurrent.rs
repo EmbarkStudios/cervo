@@ -332,6 +332,8 @@ impl<Inner: InfererWrapper> InfererWrapper for RecurrentTrackerWrapper<Inner> {
 #[cfg(test)]
 mod tests {
 
+    use std::sync::atomic::{AtomicBool, Ordering};
+
     use crate::{
         batcher::ScratchPadView,
         inferer::State,
@@ -341,8 +343,8 @@ mod tests {
     use super::RecurrentTracker;
 
     struct DummyInferer {
-        end_called: bool,
-        begin_called: bool,
+        end_called: AtomicBool,
+        begin_called: AtomicBool,
         inputs: Vec<(String, Vec<usize>)>,
         outputs: Vec<(String, Vec<usize>)>,
     }
@@ -366,8 +368,8 @@ mod tests {
             cell_name_out: &str,
         ) -> Self {
             Self {
-                end_called: false,
-                begin_called: false,
+                end_called: false.into(),
+                begin_called: false.into(),
                 inputs: vec![
                     (hidden_name_in.to_owned(), vec![2, 1]),
                     (cell_name_in.to_owned(), vec![2, 3]),
@@ -422,29 +424,29 @@ mod tests {
         }
 
         fn begin_agent(&self, _id: u64) {
-            self.begin_called = true;
+            self.begin_called.store(true, Ordering::Relaxed);
         }
         fn end_agent(&self, _id: u64) {
-            self.end_called = true;
+            self.end_called.store(true, Ordering::Relaxed);
         }
     }
 
     #[test]
     fn begin_end_forwarded() {
         let inferer = DummyInferer::default();
-        let mut recurrent = RecurrentTracker::wrap(inferer).unwrap();
+        let recurrent = RecurrentTracker::wrap(inferer).unwrap();
 
         recurrent.begin_agent(10);
-        assert!(recurrent.inner.begin_called);
+        assert!(recurrent.inner.begin_called.load(Ordering::Relaxed));
 
         recurrent.end_agent(10);
-        assert!(recurrent.inner.end_called);
+        assert!(recurrent.inner.end_called.into_inner());
     }
 
     #[test]
     fn begin_creates_state() {
         let inferer = DummyInferer::default();
-        let mut recurrent = RecurrentTracker::wrap(inferer).unwrap();
+        let recurrent = RecurrentTracker::wrap(inferer).unwrap();
 
         recurrent.begin_agent(10);
         assert!(recurrent.state.per_agent_states.read().contains_key(&10));
@@ -453,7 +455,7 @@ mod tests {
     #[test]
     fn end_removes_state() {
         let inferer = DummyInferer::default();
-        let mut recurrent = RecurrentTracker::wrap(inferer).unwrap();
+        let recurrent = RecurrentTracker::wrap(inferer).unwrap();
 
         recurrent.begin_agent(10);
         recurrent.end_agent(10);
@@ -472,7 +474,7 @@ mod tests {
     fn test_infer() {
         let inferer = DummyInferer::default();
         let mut batcher = Batcher::new(&inferer);
-        let mut recurrent = RecurrentTracker::wrap(inferer).unwrap();
+        let recurrent = RecurrentTracker::wrap(inferer).unwrap();
 
         recurrent.begin_agent(10);
         batcher.push(10, State::empty()).unwrap();
@@ -484,7 +486,7 @@ mod tests {
     fn test_infer_output() {
         let inferer = DummyInferer::default();
         let mut batcher = Batcher::new(&inferer);
-        let mut recurrent = RecurrentTracker::wrap(inferer).unwrap();
+        let recurrent = RecurrentTracker::wrap(inferer).unwrap();
 
         recurrent.begin_agent(10);
         batcher.push(10, State::empty()).unwrap();
@@ -502,7 +504,7 @@ mod tests {
     fn test_infer_twice_output() {
         let inferer = DummyInferer::default();
         let mut batcher = Batcher::new(&inferer);
-        let mut recurrent = RecurrentTracker::wrap(inferer).unwrap();
+        let recurrent = RecurrentTracker::wrap(inferer).unwrap();
 
         recurrent.begin_agent(10);
         batcher.push(10, State::empty()).unwrap();
@@ -524,7 +526,7 @@ mod tests {
     fn test_infer_twice_reuse_id() {
         let inferer = DummyInferer::default();
         let mut batcher = Batcher::new(&inferer);
-        let mut recurrent = RecurrentTracker::wrap(inferer).unwrap();
+        let recurrent = RecurrentTracker::wrap(inferer).unwrap();
 
         recurrent.begin_agent(10);
         batcher.push(10, State::empty()).unwrap();
@@ -550,7 +552,7 @@ mod tests {
     fn test_infer_multiple_agents() {
         let inferer = DummyInferer::default();
         let mut batcher = Batcher::new(&inferer);
-        let mut recurrent = RecurrentTracker::wrap(inferer).unwrap();
+        let recurrent = RecurrentTracker::wrap(inferer).unwrap();
 
         recurrent.begin_agent(10);
         recurrent.begin_agent(20);
