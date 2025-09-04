@@ -76,18 +76,40 @@ impl InfererWrapper for BaseWrapper {
     }
 }
 
+impl InfererWrapper for Box<dyn InfererWrapper> {
+    fn input_shapes<'a>(&'a self, inferer: &'a dyn Inferer) -> &'a [(String, Vec<usize>)] {
+        self.as_ref().input_shapes(inferer)
+    }
+
+    fn output_shapes<'a>(&'a self, inferer: &'a dyn Inferer) -> &'a [(String, Vec<usize>)] {
+        self.as_ref().output_shapes(inferer)
+    }
+
+    fn invoke(&self, inferer: &dyn Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()> {
+        self.as_ref().invoke(inferer, batch)
+    }
+
+    fn begin_agent(&self, inferer: &dyn Inferer, id: u64) {
+        self.as_ref().begin_agent(inferer, id);
+    }
+
+    fn end_agent(&self, inferer: &dyn Inferer, id: u64) {
+        self.as_ref().end_agent(inferer, id);
+    }
+}
+
 /// An inferer that maintains state in wrappers around an inferer.
 ///
 /// This is an alternative to direct wrapping of an inferer, which
 /// allows the inner inferer to be swapped out while maintaining
 /// state in the wrappers.
-pub struct StatefulInferer<WrapStack: InfererWrapper, Policy: Inferer> {
+pub struct StatefulInferer<WrapStack: InfererWrapper, Inf: Inferer> {
     wrapper_stack: WrapStack,
-    policy: Policy,
+    policy: Inf,
 }
 
-impl<WrapStack: InfererWrapper, Policy: Inferer> StatefulInferer<WrapStack, Policy> {
-    pub fn new(wrapper_stack: WrapStack, policy: Policy) -> Self {
+impl<WrapStack: InfererWrapper, Inf: Inferer> StatefulInferer<WrapStack, Inf> {
+    pub fn new(wrapper_stack: WrapStack, policy: Inf) -> Self {
         Self {
             wrapper_stack,
             policy,
@@ -100,10 +122,10 @@ impl<WrapStack: InfererWrapper, Policy: Inferer> StatefulInferer<WrapStack, Poli
     /// Requires that the shapes of the policies are compatible, but
     /// they may be different concrete inferer implementations. If
     /// this check fails, will return self unchanged.
-    pub fn with_new_inferer<NewPolicy: Inferer>(
+    pub fn with_new_inferer<NewInf: Inferer>(
         self,
-        new_policy: NewPolicy,
-    ) -> Result<StatefulInferer<WrapStack, NewPolicy>, (Self, anyhow::Error)> {
+        new_policy: NewInf,
+    ) -> Result<StatefulInferer<WrapStack, NewInf>, (Self, anyhow::Error)> {
         if let Err(e) = Self::check_compatible_shapes(&self.policy, &new_policy) {
             return Err((self, e));
         }
@@ -178,7 +200,7 @@ impl<WrapStack: InfererWrapper, Policy: Inferer> StatefulInferer<WrapStack, Poli
 }
 
 /// See [`Inferer`] for documentation.
-impl<WrapStack: InfererWrapper, Policy: Inferer> Inferer for StatefulInferer<WrapStack, Policy> {
+impl<WrapStack: InfererWrapper, Inf: Inferer> Inferer for StatefulInferer<WrapStack, Inf> {
     fn select_batch_size(&self, max_count: usize) -> usize {
         self.policy.select_batch_size(max_count)
     }
@@ -224,7 +246,7 @@ impl IntoStateful for FixedBatchInferer {}
 /// Extension trait to allow easy wrapping of an inferer with a wrapper stack.
 pub trait InfererWrapperExt: InfererWrapper + Sized {
     /// Construct a [`StatefulInferer`] by wrapping an inner inferer with this wrapper.
-    fn wrap<Policy: Inferer>(self, policy: Policy) -> StatefulInferer<Self, Policy> {
+    fn wrap<Inf: Inferer>(self, policy: Inf) -> StatefulInferer<Self, Inf> {
         StatefulInferer::new(self, policy)
     }
 }
