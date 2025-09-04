@@ -17,6 +17,7 @@ pub mod epsilon;
 pub mod inferer;
 mod model_api;
 pub mod recurrent;
+pub mod wrapper;
 
 /// Most core utilities are re-exported here.
 pub mod prelude {
@@ -31,4 +32,5 @@ pub mod prelude {
 
     pub use super::model_api::ModelApi;
     pub use super::recurrent::{RecurrentInfo, RecurrentTracker};
+    pub use super::wrapper::{InfererWrapper, InfererWrapperExt, IntoStateful, StatefulInferer};
 }

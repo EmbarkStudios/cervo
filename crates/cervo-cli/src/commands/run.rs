@@ -84,15 +84,7 @@ pub(super) fn run(config: Args) -> Result<()> {
 
     let elapsed = if let Some(epsilon) = config.with_epsilon.as_ref() {
         let inferer = inferer.with_default_epsilon(epsilon)?;
-        // TODO[TSolberg]: Issue #31.
-        let shapes = inferer
-            .raw_input_shapes()
-            .iter()
-            .filter(|(k, _)| k.as_str() != epsilon)
-            .cloned()
-            .collect::<Vec<_>>();
-
-        let observations = build_inputs_from_desc(config.batch_size as u64, &shapes);
+        let observations = build_inputs_from_desc(config.batch_size as u64, inferer.input_shapes());
 
         if config.print_input {
             print_input(&observations);

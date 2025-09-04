@@ -8,7 +8,7 @@ Utilities for filling noise inputs for an inference model.
 
 use std::cell::RefCell;
 
-use crate::{batcher::ScratchPadView, inferer::Inferer};
+use crate::{batcher::ScratchPadView, inferer::Inferer, prelude::InfererWrapper};
 use anyhow::{bail, Result};
 use perchance::PerchanceContext;
 use rand::thread_rng;
@@ -112,6 +112,13 @@ impl NoiseGenerator for HighQualityNoiseGenerator {
     }
 }
 
+struct EpsilonInjectorState<NG: NoiseGenerator> {
+    count: usize,
+    index: usize,
+    generator: NG,
+
+    inputs: Vec<(String, Vec<usize>)>,
+}
 /// The [`EpsilonInjector`] wraps an inferer to add noise values as one of the input data points. This is useful for
 /// continuous action policies where you might have trained your agent to follow a stochastic policy trained with the
 /// reparametrization trick.
@@ -120,11 +127,8 @@ impl NoiseGenerator for HighQualityNoiseGenerator {
 /// wrapper.
 pub struct EpsilonInjector<T: Inferer, NG: NoiseGenerator = HighQualityNoiseGenerator> {
     inner: T,
-    count: usize,
-    index: usize,
-    generator: NG,
 
-    inputs: Vec<(String, Vec<usize>)>,
+    state: EpsilonInjectorState<NG>,
 }
 
 impl<T> EpsilonInjector<T, HighQualityNoiseGenerator>
@@ -169,11 +173,12 @@ where
 
         Ok(Self {
             inner: inferer,
-            index,
-            count,
-            generator,
-
-            inputs,
+            state: EpsilonInjectorState {
+                index,
+                count,
+                generator,
+                inputs,
+            },
         })
     }
 }
@@ -188,15 +193,15 @@ where
     }
 
     fn infer_raw(&self, batch: &mut ScratchPadView<'_>) -> Result<(), anyhow::Error> {
-        let total_count = self.count * batch.len();
-        let output = batch.input_slot_mut(self.index);
-        self.generator.generate(total_count, output);
+        let total_count = self.state.count * batch.len();
+        let output = batch.input_slot_mut(self.state.index);
+        self.state.generator.generate(total_count, output);
 
         self.inner.infer_raw(batch)
     }
 
     fn input_shapes(&self) -> &[(String, Vec<usize>)] {
-        &self.inputs
+        &self.state.inputs
     }
 
     fn raw_input_shapes(&self) -> &[(String, Vec<usize>)] {
@@ -207,11 +212,105 @@ where
         self.inner.raw_output_shapes()
     }
 
-    fn begin_agent(&mut self, id: u64) {
+    fn begin_agent(&self, id: u64) {
         self.inner.begin_agent(id);
     }
 
-    fn end_agent(&mut self, id: u64) {
+    fn end_agent(&self, id: u64) {
         self.inner.end_agent(id);
+    }
+}
+
+pub struct EpsilonInjectorWrapper<Inner: InfererWrapper, NG: NoiseGenerator> {
+    inner: Inner,
+    state: EpsilonInjectorState<NG>,
+}
+
+impl<Inner: InfererWrapper> EpsilonInjectorWrapper<Inner, HighQualityNoiseGenerator> {
+    /// Wraps the provided `inferer` to automatically generate noise for the input named by `key`.
+    ///
+    /// This function will use [`HighQualityNoiseGenerator`] as the noise source.
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if the provided key doesn't match an input on the model.
+    pub fn wrap(
+        inner: Inner,
+        inferer: &dyn Inferer,
+        key: &str,
+    ) -> Result<EpsilonInjectorWrapper<Inner, HighQualityNoiseGenerator>> {
+        Self::with_generator(inner, inferer, HighQualityNoiseGenerator::default(), key)
+    }
+}
+
+impl<Inner, NG> EpsilonInjectorWrapper<Inner, NG>
+where
+    Inner: InfererWrapper,
+    NG: NoiseGenerator,
+{
+    /// Create a new injector for the provided `key`, using the custom `generator` as the noise source.
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if the provided key doesn't match an input on the model.
+    pub fn with_generator(
+        inner: Inner,
+        inferer: &dyn Inferer,
+        generator: NG,
+        key: &str,
+    ) -> Result<Self> {
+        let inputs = inferer.input_shapes();
+
+        let (index, count) = match inputs.iter().enumerate().find(|(_, (k, _))| k == key) {
+            Some((index, (_, shape))) => (index, shape.iter().product()),
+            None => bail!("model has no input key {:?}", key),
+        };
+
+        let inputs = inputs
+            .iter()
+            .filter(|(k, _)| *k != key)
+            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+            .collect::<Vec<_>>();
+
+        Ok(Self {
+            inner,
+            state: EpsilonInjectorState {
+                index,
+                count,
+                generator,
+                inputs,
+            },
+        })
+    }
+}
+
+impl<Inner, NG> InfererWrapper for EpsilonInjectorWrapper<Inner, NG>
+where
+    Inner: InfererWrapper,
+    NG: NoiseGenerator,
+{
+    fn invoke(&self, inferer: &dyn Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()> {
+        self.inner.invoke(inferer, batch)?;
+        let total_count = self.state.count * batch.len();
+        let output = batch.input_slot_mut(self.state.index);
+        self.state.generator.generate(total_count, output);
+
+        self.inner.invoke(inferer, batch)
+    }
+
+    fn input_shapes<'a>(&'a self, _inferer: &'a dyn Inferer) -> &'a [(String, Vec<usize>)] {
+        self.state.inputs.as_ref()
+    }
+
+    fn output_shapes<'a>(&'a self, inferer: &'a dyn Inferer) -> &'a [(String, Vec<usize>)] {
+        self.inner.output_shapes(inferer)
+    }
+
+    fn begin_agent(&self, inferer: &dyn Inferer, id: u64) {
+        self.inner.begin_agent(inferer, id);
+    }
+
+    fn end_agent(&self, inferer: &dyn Inferer, id: u64) {
+        self.inner.end_agent(inferer, id);
     }
 }

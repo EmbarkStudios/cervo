@@ -1,7 +1,9 @@
 use anyhow::{bail, Result};
 use cervo::asset::AssetData;
-use cervo::core::prelude::{Batcher, Inferer, InfererExt, State};
-use cervo::core::recurrent::{RecurrentInfo, RecurrentTracker};
+use cervo::core::epsilon::EpsilonInjectorWrapper;
+use cervo::core::prelude::{Batcher, Inferer, State};
+use cervo::core::recurrent::{RecurrentInfo, RecurrentTrackerWrapper};
+use cervo::core::wrapper::{BaseWrapper, InfererWrapper, InfererWrapperExt};
 use clap::Parser;
 use clap::ValueEnum;
 use serde::Serialize;
@@ -167,7 +169,7 @@ struct Record {
     total: f64,
 }
 
-fn execute_load_metrics<I: Inferer>(
+fn execute_load_metrics<I: Inferer + 'static>(
     batch_size: usize,
     data: HashMap<u64, State<'_>>,
     count: usize,
@@ -222,60 +224,14 @@ pub fn build_inputs_from_desc(
         .collect()
 }
 
-fn do_run(mut inferer: impl Inferer, batch_size: usize, config: &Args) -> Result<Record> {
-    let shapes = inferer.input_shapes().to_vec();
-    let observations = build_inputs_from_desc(batch_size as u64, &shapes);
-    for id in 0..batch_size {
-        inferer.begin_agent(id as u64);
-    }
-    let res = execute_load_metrics(batch_size, observations, config.count, &mut inferer)?;
-    for id in 0..batch_size {
-        inferer.end_agent(id as u64);
-    }
-
-    Ok(res)
-}
-
-fn run_apply_epsilon_config(
-    inferer: impl Inferer,
-    batch_size: usize,
+fn do_run(
+    wrapper: impl InfererWrapper + 'static,
+    inferer: impl Inferer + 'static,
     config: &Args,
-) -> Result<Record> {
-    if let Some(epsilon) = config.with_epsilon.as_ref() {
-        let inferer = inferer.with_default_epsilon(epsilon)?;
-        do_run(inferer, batch_size, config)
-    } else {
-        do_run(inferer, batch_size, config)
-    }
-}
+) -> Result<Vec<Record>> {
+    let mut model = wrapper.wrap(Box::new(inferer) as Box<dyn Inferer>);
 
-fn run_apply_recurrent(inferer: impl Inferer, batch_size: usize, config: &Args) -> Result<Record> {
-    if let Some(recurrent) = config.recurrent.as_ref() {
-        if matches!(recurrent, RecurrentConfig::None) {
-            run_apply_epsilon_config(inferer, batch_size, config)
-        } else {
-            let inferer = match recurrent {
-                RecurrentConfig::None => unreachable!(),
-                RecurrentConfig::Auto => RecurrentTracker::wrap(inferer),
-                RecurrentConfig::Mapped(map) => {
-                    let infos = map
-                        .iter()
-                        .cloned()
-                        .map(|(inkey, outkey)| RecurrentInfo { inkey, outkey })
-                        .collect::<Vec<_>>();
-                    RecurrentTracker::new(inferer, infos)
-                }
-            }?;
-
-            run_apply_epsilon_config(inferer, batch_size, config)
-        }
-    } else {
-        run_apply_epsilon_config(inferer, batch_size, config)
-    }
-}
-
-pub(super) fn run(config: Args) -> Result<()> {
-    let mut records: Vec<Record> = Vec::new();
+    let mut records = Vec::with_capacity(config.batch_sizes.len());
     for batch_size in config.batch_sizes.clone() {
         let mut reader = File::open(&config.file)?;
         let inferer = if cervo::nnef::is_nnef_tar(&config.file) {
@@ -289,18 +245,91 @@ pub(super) fn run(config: Args) -> Result<()> {
             }
         };
 
-        let record = run_apply_recurrent(inferer, batch_size, &config)?;
+        model = model
+            .with_new_inferer(Box::new(inferer) as Box<dyn Inferer>)
+            .map_err(|(_, e)| e)?;
+
+        let shapes = model.input_shapes().to_vec();
+        let observations = build_inputs_from_desc(batch_size as u64, &shapes);
+        for id in 0..batch_size {
+            model.begin_agent(id as u64);
+        }
+        let res = execute_load_metrics(batch_size, observations, config.count, &mut model)?;
 
         // Print Text
         if matches!(config.output, OutputFormat::Text) {
             println!(
                 "Batch Size {}: {:.2} ms ± {:.2} per element, {:.2} ms total",
-                record.batch_size, record.mean, record.stddev, record.total,
+                res.batch_size, res.mean, res.stddev, res.total,
             );
         }
 
-        records.push(record);
+        records.push(res);
+        for id in 0..batch_size {
+            model.end_agent(id as u64);
+        }
     }
+
+    Ok(records)
+}
+
+fn run_apply_epsilon_config(
+    wrapper: impl InfererWrapper + 'static,
+    inferer: impl Inferer + 'static,
+    config: &Args,
+) -> Result<Vec<Record>> {
+    if let Some(epsilon) = config.with_epsilon.as_ref() {
+        let wrapper = EpsilonInjectorWrapper::wrap(wrapper, &inferer, epsilon)?;
+        do_run(wrapper, inferer, config)
+    } else {
+        do_run(wrapper, inferer, config)
+    }
+}
+
+fn run_apply_recurrent(
+    wrapper: impl InfererWrapper + 'static,
+    inferer: impl Inferer + 'static,
+    config: &Args,
+) -> Result<Vec<Record>> {
+    if let Some(recurrent) = config.recurrent.as_ref() {
+        if matches!(recurrent, RecurrentConfig::None) {
+            run_apply_epsilon_config(wrapper, inferer, config)
+        } else {
+            let wrapper = match recurrent {
+                RecurrentConfig::None => unreachable!(),
+                RecurrentConfig::Auto => RecurrentTrackerWrapper::wrap(wrapper, &inferer),
+                RecurrentConfig::Mapped(map) => {
+                    let infos = map
+                        .iter()
+                        .cloned()
+                        .map(|(inkey, outkey)| RecurrentInfo { inkey, outkey })
+                        .collect::<Vec<_>>();
+                    RecurrentTrackerWrapper::new(wrapper, &inferer, infos)
+                }
+            }?;
+
+            run_apply_epsilon_config(wrapper, inferer, config)
+        }
+    } else {
+        run_apply_epsilon_config(wrapper, inferer, config)
+    }
+}
+
+pub(super) fn run(config: Args) -> Result<()> {
+    let mut reader = File::open(&config.file)?;
+    let inferer = if cervo::nnef::is_nnef_tar(&config.file) {
+        cervo::nnef::builder(&mut reader).build_basic()?
+    } else {
+        match config.file.extension().and_then(|ext| ext.to_str()) {
+            Some("onnx") => cervo::onnx::builder(&mut reader).build_basic()?,
+            Some("crvo") => AssetData::deserialize(&mut reader)?.load_basic()?,
+            Some(other) => bail!("unknown file type {:?}", other),
+            None => bail!("missing file extension {:?}", config.file),
+        }
+    };
+
+    let records = run_apply_recurrent(BaseWrapper, inferer, &config)?;
+
     // Print JSON
     if matches!(config.output, OutputFormat::Json) {
         let json = serde_json::to_string_pretty(&records)?;
