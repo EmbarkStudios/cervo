@@ -110,6 +110,6 @@ impl Inferer for DynamicInferer {
         &self.model_api.outputs
     }
 
-    fn begin_agent(&mut self, _id: u64) {}
-    fn end_agent(&mut self, _id: u64) {}
+    fn begin_agent(&self, _id: u64) {}
+    fn end_agent(&self, _id: u64) {}
 }

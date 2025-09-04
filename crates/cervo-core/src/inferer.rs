@@ -112,8 +112,8 @@ pub trait Inferer {
     /// Retrieve the name and shapes of the model outputs.
     fn raw_output_shapes(&self) -> &[(String, Vec<usize>)];
 
-    fn begin_agent(&mut self, id: u64);
-    fn end_agent(&mut self, id: u64);
+    fn begin_agent(&self, id: u64);
+    fn end_agent(&self, id: u64);
 }
 
 /// Helper trait to provide helper functions for loadable models.
@@ -242,12 +242,12 @@ impl Inferer for Box<dyn Inferer + Send> {
         self.as_ref().raw_output_shapes()
     }
 
-    fn begin_agent(&mut self, id: u64) {
-        self.as_mut().begin_agent(id);
+    fn begin_agent(&self, id: u64) {
+        self.as_ref().begin_agent(id);
     }
 
-    fn end_agent(&mut self, id: u64) {
-        self.as_mut().end_agent(id);
+    fn end_agent(&self, id: u64) {
+        self.as_ref().end_agent(id);
     }
 }
 
@@ -268,11 +268,11 @@ impl Inferer for Box<dyn Inferer> {
         self.as_ref().raw_output_shapes()
     }
 
-    fn begin_agent(&mut self, id: u64) {
-        self.as_mut().begin_agent(id);
+    fn begin_agent(&self, id: u64) {
+        self.as_ref().begin_agent(id);
     }
 
-    fn end_agent(&mut self, id: u64) {
-        self.as_mut().end_agent(id);
+    fn end_agent(&self, id: u64) {
+        self.as_ref().end_agent(id);
     }
 }

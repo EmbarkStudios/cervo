@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+
+- Breaking: `Inferer.begin_agent` and `Inferer.end_agent` now take
+  `&self`, changed from a mutable reference.
+
+### Wrapper rework
+
+To support a wider variety of uses, we have implemented a new category
+of wrappers that do not require ownership of the inferer. This allows
+for more flexible usage patterns, where the inferer policy can be
+replaced in a live application without losing any state kept in
+wrappers.
+
+This change is currently non-breaking and is implemented separately
+from the old wrapper system.
+
 ## [0.8.0] - 2025-05-28
 - Added a new `RecurrentTracker` wrapper to handle recurrent
   inputs/outputs if the recurrent data is only needed durign network

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{batcher::ScratchPadView, inferer::Inferer, prelude::ModelWrapper};
+use crate::{batcher::ScratchPadView, inferer::Inferer, prelude::InfererWrapper};
 use anyhow::{Context, Result};
 use itertools::Itertools;
 use parking_lot::RwLock;
@@ -193,7 +193,7 @@ where
         &self.state.outputs
     }
 
-    fn begin_agent(&mut self, id: u64) {
+    fn begin_agent(&self, id: u64) {
         self.state.per_agent_states.write().insert(
             id,
             vec![0.0; self.state.agent_state_size].into_boxed_slice(),
@@ -201,7 +201,7 @@ where
         self.inner.begin_agent(id);
     }
 
-    fn end_agent(&mut self, id: u64) {
+    fn end_agent(&self, id: u64) {
         self.state.per_agent_states.write().remove(&id);
         self.inner.end_agent(id);
     }
@@ -211,12 +211,12 @@ where
 ///
 /// This is an alternative to using [`RecurrentTracker`] which allows separate
 /// state tracking from the inferer itself.
-pub struct RecurrentTrackerWrapper<Inner: ModelWrapper> {
+pub struct RecurrentTrackerWrapper<Inner: InfererWrapper> {
     inner: Inner,
     state: RecurrentState,
 }
 
-impl<Inner: ModelWrapper> RecurrentTrackerWrapper<Inner> {
+impl<Inner: InfererWrapper> RecurrentTrackerWrapper<Inner> {
     /// Wraps the provided `inferer` to automatically track any keys that are both inputs/outputs.
     pub fn wrap<T: Inferer>(inner: Inner, inferer: &T) -> Result<RecurrentTrackerWrapper<Inner>> {
         let inputs = inferer.raw_input_shapes();
@@ -298,8 +298,8 @@ impl<Inner: ModelWrapper> RecurrentTrackerWrapper<Inner> {
     }
 }
 
-impl<Inner: ModelWrapper> ModelWrapper for RecurrentTrackerWrapper<Inner> {
-    fn invoke(&self, inferer: &impl Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()> {
+impl<Inner: InfererWrapper> InfererWrapper for RecurrentTrackerWrapper<Inner> {
+    fn invoke(&self, inferer: &dyn Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()> {
         self.state.apply(batch);
         self.inner.invoke(inferer, batch)?;
         self.state.extract(batch);
@@ -315,17 +315,17 @@ impl<Inner: ModelWrapper> ModelWrapper for RecurrentTrackerWrapper<Inner> {
         self.state.outputs.as_ref()
     }
 
-    fn begin_agent(&self, id: u64) {
+    fn begin_agent(&self, inferer: &dyn Inferer, id: u64) {
         self.state.per_agent_states.write().insert(
             id,
             vec![0.0; self.state.agent_state_size].into_boxed_slice(),
         );
-        self.inner.begin_agent(id);
+        self.inner.begin_agent(inferer, id);
     }
 
-    fn end_agent(&self, id: u64) {
+    fn end_agent(&self, inferer: &dyn Inferer, id: u64) {
         self.state.per_agent_states.write().remove(&id);
-        self.inner.end_agent(id);
+        self.inner.end_agent(inferer, id);
     }
 }
 
@@ -421,10 +421,10 @@ mod tests {
             &self.outputs
         }
 
-        fn begin_agent(&mut self, _id: u64) {
+        fn begin_agent(&self, _id: u64) {
             self.begin_called = true;
         }
-        fn end_agent(&mut self, _id: u64) {
+        fn end_agent(&self, _id: u64) {
             self.end_called = true;
         }
     }

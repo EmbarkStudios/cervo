@@ -1,9 +1,9 @@
 use anyhow::{bail, Result};
 use cervo::asset::AssetData;
 use cervo::core::epsilon::EpsilonInjectorWrapper;
-use cervo::core::model::{BaseCase, Model, ModelWrapper};
 use cervo::core::prelude::{Batcher, Inferer, State};
 use cervo::core::recurrent::{RecurrentInfo, RecurrentTrackerWrapper};
+use cervo::core::wrapper::{BaseWrapper, InfererWrapper, InfererWrapperExt};
 use clap::Parser;
 use clap::ValueEnum;
 use serde::Serialize;
@@ -169,7 +169,7 @@ struct Record {
     total: f64,
 }
 
-fn execute_load_metrics<I: Inferer>(
+fn execute_load_metrics<I: Inferer + 'static>(
     batch_size: usize,
     data: HashMap<u64, State<'_>>,
     count: usize,
@@ -225,11 +225,11 @@ pub fn build_inputs_from_desc(
 }
 
 fn do_run(
-    wrapper: impl ModelWrapper,
+    wrapper: impl InfererWrapper + 'static,
     inferer: impl Inferer + 'static,
     config: &Args,
 ) -> Result<Vec<Record>> {
-    let mut model = Model::new(wrapper, Box::new(inferer) as Box<dyn Inferer>);
+    let mut model = wrapper.wrap(Box::new(inferer) as Box<dyn Inferer>);
 
     let mut records = Vec::with_capacity(config.batch_sizes.len());
     for batch_size in config.batch_sizes.clone() {
@@ -246,7 +246,7 @@ fn do_run(
         };
 
         model = model
-            .with_new_policy(Box::new(inferer) as Box<dyn Inferer>)
+            .with_new_inferer(Box::new(inferer) as Box<dyn Inferer>)
             .map_err(|(_, e)| e)?;
 
         let shapes = model.input_shapes().to_vec();
@@ -274,7 +274,7 @@ fn do_run(
 }
 
 fn run_apply_epsilon_config(
-    wrapper: impl ModelWrapper,
+    wrapper: impl InfererWrapper + 'static,
     inferer: impl Inferer + 'static,
     config: &Args,
 ) -> Result<Vec<Record>> {
@@ -287,7 +287,7 @@ fn run_apply_epsilon_config(
 }
 
 fn run_apply_recurrent(
-    wrapper: impl ModelWrapper,
+    wrapper: impl InfererWrapper + 'static,
     inferer: impl Inferer + 'static,
     config: &Args,
 ) -> Result<Vec<Record>> {
@@ -328,7 +328,7 @@ pub(super) fn run(config: Args) -> Result<()> {
         }
     };
 
-    let records = run_apply_recurrent(BaseCase, inferer, &config)?;
+    let records = run_apply_recurrent(BaseWrapper, inferer, &config)?;
 
     // Print JSON
     if matches!(config.output, OutputFormat::Json) {

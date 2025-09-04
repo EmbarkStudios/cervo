@@ -8,7 +8,7 @@ Utilities for filling noise inputs for an inference model.
 
 use std::cell::RefCell;
 
-use crate::{batcher::ScratchPadView, inferer::Inferer, prelude::ModelWrapper};
+use crate::{batcher::ScratchPadView, inferer::Inferer, prelude::InfererWrapper};
 use anyhow::{bail, Result};
 use perchance::PerchanceContext;
 use rand::thread_rng;
@@ -212,21 +212,21 @@ where
         self.inner.raw_output_shapes()
     }
 
-    fn begin_agent(&mut self, id: u64) {
+    fn begin_agent(&self, id: u64) {
         self.inner.begin_agent(id);
     }
 
-    fn end_agent(&mut self, id: u64) {
+    fn end_agent(&self, id: u64) {
         self.inner.end_agent(id);
     }
 }
 
-pub struct EpsilonInjectorWrapper<Inner: ModelWrapper, NG: NoiseGenerator> {
+pub struct EpsilonInjectorWrapper<Inner: InfererWrapper, NG: NoiseGenerator> {
     inner: Inner,
     state: EpsilonInjectorState<NG>,
 }
 
-impl<Inner: ModelWrapper> EpsilonInjectorWrapper<Inner, HighQualityNoiseGenerator> {
+impl<Inner: InfererWrapper> EpsilonInjectorWrapper<Inner, HighQualityNoiseGenerator> {
     /// Wraps the provided `inferer` to automatically generate noise for the input named by `key`.
     ///
     /// This function will use [`HighQualityNoiseGenerator`] as the noise source.
@@ -245,7 +245,7 @@ impl<Inner: ModelWrapper> EpsilonInjectorWrapper<Inner, HighQualityNoiseGenerato
 
 impl<Inner, NG> EpsilonInjectorWrapper<Inner, NG>
 where
-    Inner: ModelWrapper,
+    Inner: InfererWrapper,
     NG: NoiseGenerator,
 {
     /// Create a new injector for the provided `key`, using the custom `generator` as the noise source.
@@ -284,12 +284,12 @@ where
     }
 }
 
-impl<Inner, NG> ModelWrapper for EpsilonInjectorWrapper<Inner, NG>
+impl<Inner, NG> InfererWrapper for EpsilonInjectorWrapper<Inner, NG>
 where
-    Inner: ModelWrapper,
+    Inner: InfererWrapper,
     NG: NoiseGenerator,
 {
-    fn invoke(&self, inferer: &impl Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()> {
+    fn invoke(&self, inferer: &dyn Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()> {
         self.inner.invoke(inferer, batch)?;
         let total_count = self.state.count * batch.len();
         let output = batch.input_slot_mut(self.state.index);
@@ -306,11 +306,11 @@ where
         self.inner.output_shapes(inferer)
     }
 
-    fn begin_agent(&self, id: u64) {
-        self.inner.begin_agent(id);
+    fn begin_agent(&self, inferer: &dyn Inferer, id: u64) {
+        self.inner.begin_agent(inferer, id);
     }
 
-    fn end_agent(&self, id: u64) {
-        self.inner.end_agent(id);
+    fn end_agent(&self, inferer: &dyn Inferer, id: u64) {
+        self.inner.end_agent(inferer, id);
     }
 }

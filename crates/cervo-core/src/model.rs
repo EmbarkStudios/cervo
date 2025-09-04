@@ -1,38 +1,92 @@
+/*!
+    Inferer wrappers with state separated from the inferer.
+
+    This allows separation of stateful logic from the inner inferer,
+    allowing the inner inferer to be swapped out while maintaining
+state in the wrappers.
+
+    This is an alternative to the old layered inferer setup, which
+tightly coupled the inner inferer with the wrapper state.
+
+```rust
+let inferer = ...;
+// the root needs [`BaseCase`] passed as a base case.
+let wrappers = RecurrentTrackerWrapper::new(BaseCase, inferer);
+let wrapped = StatefulInferer::new(wrappers, infere);
+// or
+let wrapped = inferer.into_stateful(wrappers);
+// or
+let wrapped = wrappers.wrap(inferer);
+*/
+
 use crate::batcher::ScratchPadView;
-use crate::inferer::Inferer;
-pub trait ModelWrapper {
+use crate::inferer::{
+    BasicInferer, DynamicInferer, FixedBatchInferer, Inferer, MemoizingDynamicInferer,
+};
+
+/// A trait for wrapping an inferer with additional functionality.
+///
+/// This works similar to the old layered inferer setup, but allows
+/// separation of wrapper state from the inner inferer. This allows
+/// swapping out the inner inferer while maintaining state in the
+/// wrappers.
+pub trait InfererWrapper {
+    /// Returns the input shapes after this wrapper has been applied.
     fn input_shapes<'a>(&'a self, inferer: &'a dyn Inferer) -> &'a [(String, Vec<usize>)];
+
+    /// Returns the output shapes after this wrapper has been applied.
     fn output_shapes<'a>(&'a self, inferer: &'a dyn Inferer) -> &'a [(String, Vec<usize>)];
-    fn invoke(&self, inferer: &impl Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()>;
-    fn begin_agent(&self, id: u64);
-    fn end_agent(&self, id: u64);
+
+    /// Invokes the inner inferer, applying any additional logic before
+    /// and after the call.
+    fn invoke(&self, inferer: &dyn Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()>;
+
+    /// Called when starting inference for a new agent.
+    fn begin_agent(&self, inferer: &dyn Inferer, id: u64);
+
+    /// Called when finishing inference for an agent.
+    fn end_agent(&self, inferer: &dyn Inferer, id: u64);
 }
 
-pub struct BaseCase;
+/// A no-op inferer wrapper that just calls the inner inferer directly. This is the base-case of wrapper stack.
+pub struct BaseWrapper;
 
-impl ModelWrapper for BaseCase {
+impl InfererWrapper for BaseWrapper {
+    /// Returns the input shapes after this wrapper has been applied.
     fn input_shapes<'a>(&'a self, inferer: &'a dyn Inferer) -> &'a [(String, Vec<usize>)] {
         inferer.input_shapes()
     }
 
+    /// Returns the output shapes after this wrapper has been applied.
     fn output_shapes<'a>(&'a self, inferer: &'a dyn Inferer) -> &'a [(String, Vec<usize>)] {
         inferer.output_shapes()
     }
 
-    fn invoke(&self, inferer: &impl Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()> {
+    /// Invokes the inner inferer.
+    fn invoke(&self, inferer: &dyn Inferer, batch: &mut ScratchPadView<'_>) -> anyhow::Result<()> {
         inferer.infer_raw(batch)
     }
 
-    fn begin_agent(&self, _id: u64) {}
-    fn end_agent(&self, _id: u64) {}
+    fn begin_agent(&self, inferer: &dyn Inferer, id: u64) {
+        inferer.begin_agent(id);
+    }
+
+    fn end_agent(&self, inferer: &dyn Inferer, id: u64) {
+        inferer.end_agent(id);
+    }
 }
 
-pub struct Model<WrapStack: ModelWrapper, Policy: Inferer> {
+/// An inferer that maintains state in wrappers around an inferer.
+///
+/// This is an alternative to direct wrapping of an inferer, which
+/// allows the inner inferer to be swapped out while maintaining
+/// state in the wrappers.
+pub struct StatefulInferer<WrapStack: InfererWrapper, Policy: Inferer> {
     wrapper_stack: WrapStack,
     policy: Policy,
 }
 
-impl<WrapStack: ModelWrapper, Policy: Inferer> Model<WrapStack, Policy> {
+impl<WrapStack: InfererWrapper, Policy: Inferer> StatefulInferer<WrapStack, Policy> {
     pub fn new(wrapper_stack: WrapStack, policy: Policy) -> Self {
         Self {
             wrapper_stack,
@@ -40,18 +94,20 @@ impl<WrapStack: ModelWrapper, Policy: Inferer> Model<WrapStack, Policy> {
         }
     }
 
-    /// Replace the inner policy with a new policy while maintaining any state in wrappers.
+    /// Replace the inner inferer with a new inferer while maintaining
+    /// any state in wrappers.
     ///
     /// Requires that the shapes of the policies are compatible, but
-    /// they may be different concrete inferer implementations.
-    pub fn with_new_policy<NewPolicy: Inferer>(
+    /// they may be different concrete inferer implementations. If
+    /// this check fails, will return self unchanged.
+    pub fn with_new_inferer<NewPolicy: Inferer>(
         self,
         new_policy: NewPolicy,
-    ) -> Result<Model<WrapStack, NewPolicy>, (Self, anyhow::Error)> {
+    ) -> Result<StatefulInferer<WrapStack, NewPolicy>, (Self, anyhow::Error)> {
         if let Err(e) = Self::check_compatible_shapes(&self.policy, &new_policy) {
             return Err((self, e));
         }
-        Ok(Model {
+        Ok(StatefulInferer {
             wrapper_stack: self.wrapper_stack,
             policy: new_policy,
         })
@@ -59,7 +115,7 @@ impl<WrapStack: ModelWrapper, Policy: Inferer> Model<WrapStack, Policy> {
 
     /// Validate that [`Old`] and [`New`] are compatible with each
     /// other.
-    fn check_compatible_shapes<Old: Inferer, New: Inferer>(
+    pub fn check_compatible_shapes<Old: Inferer, New: Inferer>(
         old: &Old,
         new: &New,
     ) -> Result<(), anyhow::Error> {
@@ -110,16 +166,19 @@ impl<WrapStack: ModelWrapper, Policy: Inferer> Model<WrapStack, Policy> {
         Ok(())
     }
 
+    /// Returns the input shapes after all wrappers have been applied.
     pub fn input_shapes(&self) -> &[(String, Vec<usize>)] {
         self.wrapper_stack.input_shapes(&self.policy)
     }
 
+    /// Returns the output shapes after all wrappers have been applied.
     pub fn output_shapes(&self) -> &[(String, Vec<usize>)] {
         self.wrapper_stack.output_shapes(&self.policy)
     }
 }
 
-impl<WrapStack: ModelWrapper, Policy: Inferer> Inferer for Model<WrapStack, Policy> {
+/// See [`Inferer`] for documentation.
+impl<WrapStack: InfererWrapper, Policy: Inferer> Inferer for StatefulInferer<WrapStack, Policy> {
     fn select_batch_size(&self, max_count: usize) -> usize {
         self.policy.select_batch_size(max_count)
     }
@@ -136,11 +195,38 @@ impl<WrapStack: ModelWrapper, Policy: Inferer> Inferer for Model<WrapStack, Poli
         self.policy.raw_output_shapes()
     }
 
-    fn begin_agent(&mut self, id: u64) {
-        self.wrapper_stack.begin_agent(id);
+    fn begin_agent(&self, id: u64) {
+        self.wrapper_stack.begin_agent(&self.policy, id);
     }
 
-    fn end_agent(&mut self, id: u64) {
-        self.wrapper_stack.end_agent(id);
+    fn end_agent(&self, id: u64) {
+        self.wrapper_stack.end_agent(&self.policy, id);
     }
 }
+
+/// Extension trait to allow easy wrapping of an inferer with a wrapper stack.
+pub trait IntoStateful: Inferer + Sized {
+    /// Construct a [`StatefulInferer`] by wrapping this concrete
+    /// inferer with the given wrapper stack.
+    fn into_stateful<WrapStack: InfererWrapper>(
+        self,
+        wrapper_stack: WrapStack,
+    ) -> StatefulInferer<WrapStack, Self> {
+        StatefulInferer::new(wrapper_stack, self)
+    }
+}
+
+impl IntoStateful for BasicInferer {}
+impl IntoStateful for DynamicInferer {}
+impl IntoStateful for MemoizingDynamicInferer {}
+impl IntoStateful for FixedBatchInferer {}
+
+/// Extension trait to allow easy wrapping of an inferer with a wrapper stack.
+pub trait InfererWrapperExt: InfererWrapper + Sized {
+    /// Construct a [`StatefulInferer`] by wrapping an inner inferer with this wrapper.
+    fn wrap<Policy: Inferer>(self, policy: Policy) -> StatefulInferer<Self, Policy> {
+        StatefulInferer::new(self, policy)
+    }
+}
+
+impl<T: InfererWrapper> InfererWrapperExt for T {}

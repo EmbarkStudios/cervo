@@ -15,9 +15,9 @@ pub use tract_hir;
 pub mod batcher;
 pub mod epsilon;
 pub mod inferer;
-pub mod model;
 mod model_api;
 pub mod recurrent;
+pub mod wrapper;
 
 /// Most core utilities are re-exported here.
 pub mod prelude {
@@ -30,7 +30,7 @@ pub mod prelude {
         InfererProvider, MemoizingDynamicInferer, Response, State,
     };
 
-    pub use super::model::ModelWrapper;
     pub use super::model_api::ModelApi;
     pub use super::recurrent::{RecurrentInfo, RecurrentTracker};
+    pub use super::wrapper::{InfererWrapper, InfererWrapperExt, IntoStateful, StatefulInferer};
 }
