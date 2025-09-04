@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+## [0.9.0] - 2025-09-04
 
 - Breaking: `Inferer.begin_agent` and `Inferer.end_agent` now take
   `&self`, changed from a mutable reference.
@@ -121,7 +122,8 @@ an ECS.
 Initial release.
 
 <!-- next-url -->
-[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.8.0...HEAD
+[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/EmbarkStudios/cervo/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/EmbarkStudios/cervo/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/EmbarkStudios/cervo/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/EmbarkStudios/cervo/compare/0.6.1...0.7.0
