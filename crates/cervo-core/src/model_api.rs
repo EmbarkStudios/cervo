@@ -56,6 +56,8 @@ impl ModelApi {
         Ok(Self { outputs, inputs })
     }
 
+    // Note[TS]: Clippy wants us to use name...clone_into(&name) but that's illegal.
+    #[allow(clippy::assigning_clones)]
     pub fn for_typed_model(model: &TypedModel) -> TractResult<Self> {
         let mut inputs: Vec<(String, Vec<usize>)> = Default::default();
 
