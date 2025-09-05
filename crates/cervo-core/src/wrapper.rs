@@ -110,6 +110,8 @@ pub struct StatefulInferer<WrapStack: InfererWrapper, Inf: Inferer> {
 }
 
 impl<WrapStack: InfererWrapper, Inf: Inferer> StatefulInferer<WrapStack, Inf> {
+    /// Construct a new [`StatefulInferer`] by wrapping the given
+    /// inferer with the given wrapper stack.
     pub fn new(wrapper_stack: WrapStack, inferer: Inf) -> Self {
         Self {
             wrapper_stack,
@@ -121,8 +123,8 @@ impl<WrapStack: InfererWrapper, Inf: Inferer> StatefulInferer<WrapStack, Inf> {
     /// any state in wrappers.
     ///
     /// Requires that the shapes of the policies are compatible, but
-    /// they may be different concrete inferer implementations. If
-    /// this check fails, will return self unchanged.
+    /// they may be different inferer types. If this check fails, will
+    /// return self unchanged.
     pub fn with_new_inferer<NewInf: Inferer>(
         self,
         new_inferer: NewInf,
@@ -134,6 +136,22 @@ impl<WrapStack: InfererWrapper, Inf: Inferer> StatefulInferer<WrapStack, Inf> {
             wrapper_stack: self.wrapper_stack,
             inferer: new_inferer,
         })
+    }
+
+    /// Replace the inner inferer with a new inferer while maintaining
+    /// any state in wrappers.
+    ///
+    /// Requires that the shapes of the policies are compatible If
+    /// this check fails, will not change self. Compared to
+    /// [`with_new_inferer`], also requires that the new inferer has
+    /// the same type as the old one.
+    pub fn replace_inferer(&mut self, new_inferer: Inf) -> anyhow::Result<()> {
+        if let Err(e) = Self::check_compatible_shapes(&self.inferer, &new_inferer) {
+            Err(e)
+        } else {
+            self.inferer = new_inferer;
+            Ok(())
+        }
     }
 
     /// Validate that [`Old`] and [`New`] are compatible with each

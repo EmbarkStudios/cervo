@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+
+- Add `StatefulInferer::replace_inferer` which works with a `&mut
+  StatefulInferer`, at the cost of requiring the inferer to be of the
+  same type.
+
 ## [0.9.0] - 2025-09-04
 
 - Breaking: `Inferer.begin_agent` and `Inferer.end_agent` now take
