@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `StatefulInferer::replace_inferer` which works with a `&mut
   StatefulInferer`, at the cost of requiring the inferer to be of the
   same type.
+- Fix bugs in the new wrapper setup where consumed and modified shapes
+  weren't respected during wrapper construction.
 
 ## [0.9.0] - 2025-09-04
 

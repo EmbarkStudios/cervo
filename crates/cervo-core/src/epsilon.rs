@@ -259,7 +259,7 @@ where
         generator: NG,
         key: &str,
     ) -> Result<Self> {
-        let inputs = inferer.input_shapes();
+        let inputs = inner.input_shapes(inferer);
 
         let (index, count) = match inputs.iter().enumerate().find(|(_, (k, _))| k == key) {
             Some((index, (_, shape))) => (index, shape.iter().product()),

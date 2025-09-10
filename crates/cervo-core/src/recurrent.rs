@@ -248,8 +248,8 @@ impl<Inner: InfererWrapper> RecurrentTrackerWrapper<Inner> {
     /// Create a new recurrency tracker for the model.
     ///
     pub fn new<T: Inferer>(inner: Inner, inferer: &T, info: Vec<RecurrentInfo>) -> Result<Self> {
-        let inputs = inferer.raw_input_shapes();
-        let outputs = inferer.raw_output_shapes();
+        let inputs = inner.input_shapes(inferer);
+        let outputs = inner.output_shapes(inferer);
 
         let mut offset = 0;
         let keys = info
