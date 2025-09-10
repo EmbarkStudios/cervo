@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+## [0.9.1] - 2025-09-10
 
 - Add `StatefulInferer::replace_inferer` which works with a `&mut
   StatefulInferer`, at the cost of requiring the inferer to be of the
@@ -129,7 +130,8 @@ an ECS.
 Initial release.
 
 <!-- next-url -->
-[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.9.0...HEAD
+[Unreleased]: https://github.com/EmbarkStudios/cervo/compare/0.9.1...HEAD
+[0.9.1]: https://github.com/EmbarkStudios/cervo/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/EmbarkStudios/cervo/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/EmbarkStudios/cervo/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/EmbarkStudios/cervo/compare/0.7.0...0.7.1
