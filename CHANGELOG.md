@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+- Fix bugs in the new wrapper setup where consumed and modified shapes
+  weren't respected during wrapper construction.
+
 ## [0.9.1] - 2025-09-10
 
 - Add `StatefulInferer::replace_inferer` which works with a `&mut
