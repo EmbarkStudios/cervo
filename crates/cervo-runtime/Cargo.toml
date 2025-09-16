@@ -1,6 +1,6 @@
 [package]
 name = "cervo-runtime"
-version = "0.9.1"
+version = "0.9.2"
 edition = "2021"
 authors = [
     "Tom Solberg <tom.solberg@embark-studios.com",
@@ -14,13 +14,13 @@ categories = [ "science" ]
 readme = "../../README.md"
 
 [dependencies]
-cervo-core = { version = "0.9.1", path = "../cervo-core"}
+cervo-core = { version = "0.9.2", path = "../cervo-core"}
 thiserror = "1.0"
 anyhow = "1.0.41"
 rayon = { version = "1.5", optional = true }
 
 [dev-dependencies]
-cervo-asset = { version = "0.9.1", path = "../cervo-asset"}
+cervo-asset = { version = "0.9.2", path = "../cervo-asset"}
 
 [features]
 threaded = ["rayon"]
