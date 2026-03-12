@@ -1,7 +1,9 @@
 use super::{helpers, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::{Context, Result};
-use tract_core::prelude::{tvec, TValue, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_core::prelude::{
+    tvec, Arc, TValue, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan,
+};
 use tract_hir::prelude::InferenceModel;
 
 /// A reliable batched inferer that is a good fit if you know how much data you'll have and want stable performance.
@@ -46,18 +48,17 @@ impl FixedBatchInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel, sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelApi::for_model(&model)?;
-
         let sizes = fixup_sizes(sizes);
 
         let models = sizes
             .into_iter()
             .map(|size| {
-                helpers::build_model(model.clone(), &model_api.inputs, size as i32)
+                helpers::build_model(model.clone(), size as i32)
                     .map(|m| BatchedModel { size, plan: m })
             })
             .collect::<Result<Vec<_>>>()?;
 
+        let model_api = ModelApi::for_typed_model(models[0].plan.model())?;
         Ok(Self { models, model_api })
     }
 
@@ -67,8 +68,6 @@ impl FixedBatchInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_typed(model: TypedModel, sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelApi::for_typed_model(&model.clone())?;
-
         let sizes = fixup_sizes(sizes);
 
         let models = sizes
@@ -79,6 +78,7 @@ impl FixedBatchInferer {
             })
             .collect::<Result<Vec<_>>>()?;
 
+        let model_api = ModelApi::for_typed_model(models[0].plan.model())?;
         Ok(Self { models, model_api })
     }
 }
@@ -117,7 +117,7 @@ impl Inferer for FixedBatchInferer {
 
 struct BatchedModel {
     size: usize,
-    plan: TypedSimplePlan<TypedModel>,
+    plan: Arc<TypedSimplePlan>,
 }
 
 impl BatchedModel {

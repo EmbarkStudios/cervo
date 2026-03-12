@@ -2,16 +2,16 @@
 // Copyright © 2022, Embark Studios AB, all rights reserved.
 // Created: 12 May 2022
 
+use std::sync::Arc;
 use tract_core::{
-    model::{TypedModel, TypedSimplePlan},
+    model::{IntoRunnable, TypedModel, TypedSimplePlan},
     prelude::{Symbol, SymbolValues, ToDim},
-    tract_data::{tvec, TractResult},
+    tract_data::TractResult,
 };
-use tract_hir::prelude::{Datum, InferenceFact, InferenceModel, InferenceModelExt};
+use tract_hir::prelude::{InferenceModel, InferenceModelExt};
 
 pub(super) fn build_symbolic_model(
     mut model: InferenceModel,
-    inputs: &[(String, Vec<usize>)],
 ) -> TractResult<(Symbol, TypedModel)> {
     let outlets = model.output_outlets().unwrap().len();
     for output in 0..outlets {
@@ -19,11 +19,10 @@ pub(super) fn build_symbolic_model(
     }
 
     let symbol = model.symbols.sym("N");
-    for (idx, (_name, shape)) in inputs.iter().enumerate() {
-        let mut full_shape = tvec!(symbol.to_dim());
-
-        full_shape.extend(shape.iter().map(|v| (*v as i32).into()));
-        model.set_input_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
+    for idx in 0..model.input_outlets()?.len() {
+        let mut fact = model.input_fact(idx)?.clone();
+        fact.shape.set_dim(0, symbol.to_dim());
+        model.set_input_fact(idx, fact)?;
     }
 
     let model = model.into_typed()?.into_decluttered()?;
@@ -32,19 +31,18 @@ pub(super) fn build_symbolic_model(
 
 pub(super) fn build_model<D: ToDim>(
     mut model: InferenceModel,
-    inputs: &[(String, Vec<usize>)],
     batch_dim: D,
-) -> TractResult<TypedSimplePlan<TypedModel>> {
+) -> TractResult<Arc<TypedSimplePlan>> {
     let outlets = model.output_outlets().unwrap().len();
     for output in 0..outlets {
         model.set_output_fact(output, Default::default())?;
     }
 
-    for (idx, (_name, shape)) in inputs.iter().enumerate() {
-        let mut full_shape = tvec!(batch_dim.to_dim());
-
-        full_shape.extend(shape.iter().map(|v| (*v as i32).into()));
-        model.set_input_fact(idx, InferenceFact::dt_shape(f32::datum_type(), full_shape))?;
+    let batch = batch_dim.to_dim();
+    for idx in 0..model.input_outlets()?.len() {
+        let mut fact = model.input_fact(idx)?.clone();
+        fact.shape.set_dim(0, batch.clone());
+        model.set_input_fact(idx, fact)?;
     }
 
     model
@@ -62,7 +60,7 @@ pub(super) fn build_symbolic_typed(model: &mut TypedModel) -> TractResult<Symbol
 pub(super) fn build_typed<D: ToDim>(
     model: TypedModel,
     batch_dim: D,
-) -> TractResult<TypedSimplePlan<TypedModel>> {
+) -> TractResult<Arc<TypedSimplePlan>> {
     let symbol = model.symbols.sym("N");
     let model = model.concretize_dims(
         &SymbolValues::default().with(&symbol, batch_dim.to_dim().to_i64().unwrap()),

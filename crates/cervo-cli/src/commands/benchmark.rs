@@ -189,7 +189,7 @@ fn execute_load_metrics<I: Inferer + 'static>(
         let start = Instant::now();
         let batch = data.clone();
         batcher.extend(batch)?;
-        black_box(&(batcher.execute(inferer)?));
+        black_box(batcher.execute(inferer)?);
         times.push(start.elapsed().as_secs_f64() * 1000.0 / batch_size as f64);
     }
 
@@ -251,6 +251,7 @@ fn do_run(
 
         let shapes = model.input_shapes().to_vec();
         let observations = build_inputs_from_desc(batch_size as u64, &shapes);
+
         for id in 0..batch_size {
             model.begin_agent(id as u64);
         }

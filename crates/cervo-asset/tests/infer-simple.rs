@@ -40,9 +40,9 @@ fn test_infer_once_basic_nnef() {
         .expect("a noise wrapper");
 
     let shapes = instance.raw_input_shapes().to_vec();
+    dbg!(&shapes);
     let observations = helpers::build_inputs_from_desc(1, &shapes);
     let result = instance.infer_batch(observations);
-    assert!(result.is_ok());
 
     let result = result.unwrap();
     assert_eq!(result.len(), 1);

@@ -1,7 +1,8 @@
 use super::{helpers, Inferer};
 use crate::{batcher::ScratchPadView, model_api::ModelApi};
 use anyhow::Result;
-use tract_core::prelude::{tvec, TValue, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan};
+use tract_core::prelude::{tvec, TValue, TVec, Tensor, TractResult, TypedModel, TypedSimplePlan, Arc};
+use tract_core::model::IntoRunnable;
 use tract_hir::prelude::InferenceModel;
 
 /// The dynamic inferer hits a spot between the raw simplicity of a [`crate::prelude::BasicInferer`] and the spikiness
@@ -19,7 +20,7 @@ use tract_hir::prelude::InferenceModel;
 /// * Small extra overhead for small extra performance
 /// * Worst option for small batch sizes
 pub struct DynamicInferer {
-    model: TypedSimplePlan<TypedModel>,
+    model: Arc<TypedSimplePlan>,
     model_api: ModelApi,
 }
 
@@ -30,9 +31,8 @@ impl DynamicInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel) -> TractResult<Self> {
-        let model_api = ModelApi::for_model(&model)?;
-
-        let (_, model) = helpers::build_symbolic_model(model, &model_api.inputs)?;
+        let (_, model) = helpers::build_symbolic_model(model)?;
+        let model_api = ModelApi::for_typed_model(&model)?;
         let this = Self {
             model: model.into_optimized()?.into_runnable()?,
             model_api,
@@ -47,9 +47,8 @@ impl DynamicInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_typed(mut model: TypedModel) -> TractResult<Self> {
-        let model_api = ModelApi::for_typed_model(&model)?;
-
         let _ = helpers::build_symbolic_typed(&mut model)?;
+        let model_api = ModelApi::for_typed_model(&model)?;
         let this = Self {
             model: model.into_optimized()?.into_runnable()?,
             model_api,

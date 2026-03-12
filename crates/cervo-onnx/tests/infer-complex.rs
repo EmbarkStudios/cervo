@@ -18,6 +18,8 @@ fn test_infer_once_complex() {
     .unwrap();
 
     let shapes = instance.raw_input_shapes().to_vec();
+    dbg!(&shapes);
+    dbg!(&instance.raw_output_shapes());
     let observations = helpers::build_inputs_from_desc(1, &shapes);
     let result = instance.infer_batch(observations);
 
@@ -86,8 +88,6 @@ fn test_infer_once_complex_fixed_batch() {
     let shapes = instance.raw_input_shapes().to_vec();
     let observations = helpers::build_inputs_from_desc(7, &shapes);
     let result = instance.infer_batch(observations);
-    assert!(result.is_ok());
-
     let result = result.unwrap();
     assert_eq!(result.len(), 7);
     assert_eq!(result[&0].data["tanh_stretch"].len(), 36);

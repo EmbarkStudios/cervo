@@ -16,8 +16,7 @@ pub struct ModelApi {
 }
 
 impl ModelApi {
-    /// Extract the model API from the provided inference model.
-    pub fn for_model(model: &InferenceModel) -> TractResult<Self> {
+    fn for_model_internal(model: &InferenceModel, drop_batch_dim: bool) -> TractResult<Self> {
         let mut inputs: Vec<(String, Vec<usize>)> = Default::default();
         for input_outlet in model.input_outlets()? {
             let node = model.node(input_outlet.node);
@@ -28,7 +27,9 @@ impl ModelApi {
                 name,
                 input_shape
                     .dims()
-                    .filter_map(|value| value.concretize().and_then(|v| v.to_i64().ok()))
+                    .enumerate()
+                    .filter(|(i, _)| !drop_batch_dim || *i != 0)
+                    .filter_map(|(_, value)| value.concretize().and_then(|v| v.to_i64().ok()))
                     .map(|val| val as usize)
                     .collect(),
             ));
@@ -47,7 +48,9 @@ impl ModelApi {
                 name,
                 output_shape
                     .dims()
-                    .filter_map(|value| value.concretize().and_then(|v| v.to_i64().ok()))
+                    .enumerate()
+                    .filter(|(i, _)| !drop_batch_dim || *i != 0)
+                    .filter_map(|(_, value)| value.concretize().and_then(|v| v.to_i64().ok()))
                     .map(|val| val as usize)
                     .collect(),
             ));
@@ -58,7 +61,7 @@ impl ModelApi {
 
     // Note[TS]: Clippy wants us to use name...clone_into(&name) but that's illegal.
     #[allow(clippy::assigning_clones)]
-    pub fn for_typed_model(model: &TypedModel) -> TractResult<Self> {
+    fn for_typed_model_internal(model: &TypedModel, drop_batch_dim: bool) -> TractResult<Self> {
         let mut inputs: Vec<(String, Vec<usize>)> = Default::default();
 
         for input_outlet in model.input_outlets()? {
@@ -67,13 +70,15 @@ impl ModelApi {
             if name.ends_with("_0") {
                 name = name.strip_suffix("_0").unwrap().to_owned();
             }
-            let input_shape = &model.input_fact(input_outlet.node)?.shape;
+            let input_shape = &model.outlet_fact(*input_outlet)?.shape;
 
             inputs.push((
                 name,
                 input_shape
                     .iter()
-                    .filter_map(|dim| dim.to_i64().map(|v| v as usize).ok())
+                    .enumerate()
+                    .filter(|(i, _)| !drop_batch_dim || *i != 0)
+                    .filter_map(|(_, dim)| dim.to_i64().map(|v| v as usize).ok())
                     .collect(),
             ));
         }
@@ -93,12 +98,34 @@ impl ModelApi {
             let output_shape = &model.output_fact(idx)?.shape;
             let clean_shape = output_shape
                 .iter()
-                .filter_map(|dim| dim.to_i64().map(|v| v as usize).ok())
+                .enumerate()
+                .filter(|(i, _)| !drop_batch_dim || *i != 0)
+                .filter_map(|(_, dim)| dim.to_i64().map(|v| v as usize).ok())
                 .collect();
 
             outputs.push((name, clean_shape));
         }
 
         Ok(Self { outputs, inputs })
+    }
+
+    /// Extract the model API from the provided inference model, including all dimensions.
+    pub fn for_model(model: &InferenceModel) -> TractResult<Self> {
+        Self::for_model_internal(model, false)
+    }
+
+    /// Extract the model API from the provided inference model, dropping the first (batch) dimension.
+    pub fn for_model_without_batch_dim(model: &InferenceModel) -> TractResult<Self> {
+        Self::for_model_internal(model, true)
+    }
+
+    /// Extract the model API from the provided typed model, dropping the first (batch) dimension.
+    pub fn for_typed_model(model: &TypedModel) -> TractResult<Self> {
+        Self::for_typed_model_internal(model, true)
+    }
+
+    /// Extract the model API from the provided typed model, including all dimensions.
+    pub fn for_typed_model_with_batch_dim(model: &TypedModel) -> TractResult<Self> {
+        Self::for_typed_model_internal(model, false)
     }
 }

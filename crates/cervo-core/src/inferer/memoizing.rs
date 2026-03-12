@@ -45,7 +45,7 @@ pub struct MemoizingDynamicInferer {
     symbol: Symbol,
     model: TypedModel,
     model_api: ModelApi,
-    model_cache: RwLock<HashMap<usize, TypedSimplePlan<TypedModel>>>,
+    model_cache: RwLock<HashMap<usize, Arc<TypedSimplePlan>>>,
 }
 
 impl MemoizingDynamicInferer {
@@ -55,9 +55,8 @@ impl MemoizingDynamicInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_model(model: InferenceModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelApi::for_model(&model)?;
-
-        let (symbol, model) = helpers::build_symbolic_model(model, &model_api.inputs)?;
+        let (symbol, model) = helpers::build_symbolic_model(model)?;
+        let model_api = ModelApi::for_typed_model(&model)?;
         let this = Self {
             symbol,
             model,
@@ -78,9 +77,8 @@ impl MemoizingDynamicInferer {
     ///
     /// Will only forward errors from the [`tract_core::model::Graph`] optimization and graph building steps.
     pub fn from_typed(mut model: TypedModel, preloaded_sizes: &[usize]) -> TractResult<Self> {
-        let model_api = ModelApi::for_typed_model(&model)?;
-
         let symbol = helpers::build_symbolic_typed(&mut model)?;
+        let model_api = ModelApi::for_typed_model(&model)?;
         let this = Self {
             symbol,
             model,
@@ -122,7 +120,7 @@ impl MemoizingDynamicInferer {
     fn get_concrete_model(
         &self,
         size: usize,
-    ) -> Result<impl Deref<Target = TypedSimplePlan<TypedModel>> + '_> {
+    ) -> Result<impl Deref<Target = Arc<TypedSimplePlan>> + '_> {
         let cache = self.model_cache.upgradable_read();
         let cache = {
             if !cache.contains_key(&size) {

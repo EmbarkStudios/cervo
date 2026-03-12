@@ -36,7 +36,11 @@ use tract_onnx::{prelude::*, tract_hir::infer::Factoid};
 pub use tract_onnx;
 
 fn model_for_reader(reader: &mut dyn Read) -> Result<InferenceModel> {
-    let onnx = tract_onnx::onnx().with_ignore_output_shapes(false);
+    let onnx = tract_onnx::onnx()
+        .with_ignore_output_shapes(true)
+        .with_ignore_output_types(true)
+        .with_ignore_value_info(true);
+
     onnx.model_for_read(reader)
 }
 
